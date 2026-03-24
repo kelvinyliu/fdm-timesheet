@@ -1,0 +1,6 @@
+export const Role = Object.freeze({
+  CONSULTANT:      'CONSULTANT',
+  LINE_MANAGER:    'LINE_MANAGER',
+  FINANCE_MANAGER: 'FINANCE_MANAGER',
+  SYSTEM_ADMIN:    'SYSTEM_ADMIN',
+})

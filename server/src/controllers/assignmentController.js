@@ -3,11 +3,12 @@ import {
   createAssignment,
   deleteAssignment,
 } from '../models/clientAssignmentModel.js'
+import { clientAssignmentDto } from '../dtos/clientAssignmentDto.js'
 
 export async function listAssignments(req, res, next) {
   try {
     const assignments = await getAssignmentsByConsultant(req.user.userId)
-    res.json(assignments)
+    res.json(assignments.map(clientAssignmentDto))
   } catch (err) {
     next(err)
   }
@@ -26,7 +27,7 @@ export async function createAssignmentHandler(req, res, next) {
     }
 
     const assignment = await createAssignment({ consultantId, clientName, hourlyRate })
-    res.status(201).json(assignment)
+    res.status(201).json(clientAssignmentDto(assignment))
   } catch (err) {
     next(err)
   }

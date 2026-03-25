@@ -3,11 +3,12 @@ import {
   createManagerAssignment,
   deleteManagerAssignment,
 } from '../models/lineManagerConsultantModel.js'
+import { managerAssignmentDto } from '../dtos/managerAssignmentDto.js'
 
 export async function listManagerAssignments(req, res, next) {
   try {
     const assignments = await getAllManagerAssignments()
-    res.json(assignments)
+    res.json(assignments.map(managerAssignmentDto))
   } catch (err) {
     next(err)
   }
@@ -22,7 +23,7 @@ export async function createManagerAssignmentHandler(req, res, next) {
     }
 
     const assignment = await createManagerAssignment({ managerId, consultantId })
-    res.status(201).json(assignment)
+    res.status(201).json(managerAssignmentDto(assignment))
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'Consultant is already assigned to a manager' })

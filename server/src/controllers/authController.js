@@ -1,6 +1,7 @@
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { findUserByEmail } from '../models/userModel.js'
+import { userDto } from '../dtos/userDto.js'
 
 export async function login(req, res, next) {
   try {
@@ -22,15 +23,7 @@ export async function login(req, res, next) {
       { expiresIn: process.env.JWT_EXPIRY ?? '8h' }
     )
 
-    res.json({
-      token,
-      user: {
-        userId: user.user_id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-      },
-    })
+    res.json({ token, user: userDto(user) })
   } catch (err) {
     next(err)
   }

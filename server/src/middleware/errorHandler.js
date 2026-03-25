@@ -1,6 +1,6 @@
 import logger from '../logger.js'
 
-export default function errorHandler(err, req, res, next) {
+export default function errorHandler(err, req, res, _next) {
   const status = err.status ?? 500
   const message = err.message ?? 'Internal server error'
 

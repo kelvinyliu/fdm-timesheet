@@ -9,6 +9,7 @@ import {
   updateEntries,
   submitTimesheet,
   autofillTimesheet,
+  reviewTimesheetHandler,
 } from '../controllers/timesheetController.js'
 
 const router = Router()
@@ -21,5 +22,6 @@ router.get('/:id', requireRole(Role.CONSULTANT, Role.LINE_MANAGER), getTimesheet
 router.put('/:id/entries', requireRole(Role.CONSULTANT), updateEntries)
 router.post('/:id/submit', requireRole(Role.CONSULTANT), submitTimesheet)
 router.get('/:id/autofill', requireRole(Role.CONSULTANT), autofillTimesheet)
+router.patch('/:id/review', requireRole(Role.LINE_MANAGER), reviewTimesheetHandler)
 
 export default router

@@ -5,10 +5,12 @@ import {
   createTimesheet,
   updateTimesheetStatus,
   getPreviousWeekEntries,
+  reviewTimesheet,
 } from '../models/timesheetModel.js'
 import { getEntriesByTimesheet, upsertEntries } from '../models/timesheetEntryModel.js'
 import { logAction } from '../models/auditModel.js'
 import { Role } from '../constants/roles.js'
+import { TimesheetStatus } from '../constants/timesheetStatus.js'
 import { timesheetDto, timesheetWithEntriesDto } from '../dtos/timesheetDto.js'
 import { entryDto } from '../dtos/entryDto.js'
 
@@ -96,7 +98,7 @@ export async function updateEntries(req, res, next) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
-    if (timesheet.status !== 'DRAFT') {
+    if (timesheet.status !== TimesheetStatus.DRAFT) {
       return res.status(409).json({ error: 'Timesheet cannot be edited after submission' })
     }
 
@@ -139,17 +141,61 @@ export async function submitTimesheet(req, res, next) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
-    if (timesheet.status !== 'DRAFT') {
+    if (timesheet.status !== TimesheetStatus.DRAFT) {
       return res.status(400).json({ error: 'Only draft timesheets can be submitted' })
     }
 
-    const updated = await updateTimesheetStatus(req.params.id, 'PENDING')
+    const updated = await updateTimesheetStatus(req.params.id, TimesheetStatus.PENDING)
 
     await logAction({
       action: 'SUBMISSION',
       performedBy: req.user.userId,
       timesheetId: req.params.id,
-      detail: { previousStatus: 'DRAFT' },
+      detail: { previousStatus: TimesheetStatus.DRAFT },
+    })
+
+    res.json(timesheetDto(updated))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function reviewTimesheetHandler(req, res, next) {
+  try {
+    const { action, comment } = req.body
+
+    if (action !== 'APPROVE' && action !== 'REJECT') {
+      return res.status(400).json({ error: 'action must be APPROVE or REJECT' })
+    }
+
+    if (action === 'REJECT' && !comment?.trim()) {
+      return res.status(400).json({ error: 'comment is required when rejecting' })
+    }
+
+    const timesheet = await getTimesheetById(req.params.id)
+
+    if (!timesheet) {
+      return res.status(404).json({ error: 'Timesheet not found' })
+    }
+
+    if (timesheet.status !== TimesheetStatus.PENDING) {
+      return res.status(409).json({ error: 'Only pending timesheets can be reviewed' })
+    }
+
+    const managed = await getTimesheetsForManager(req.user.userId)
+    const authorised = managed.some((t) => t.timesheet_id === timesheet.timesheet_id)
+    if (!authorised) {
+      return res.status(403).json({ error: 'Forbidden' })
+    }
+
+    const decision = action === 'APPROVE' ? TimesheetStatus.APPROVED : TimesheetStatus.REJECTED
+    const updated = await reviewTimesheet(req.params.id, req.user.userId, decision, comment?.trim() ?? null)
+
+    await logAction({
+      action: action === 'APPROVE' ? 'APPROVAL' : 'REJECTION',
+      performedBy: req.user.userId,
+      timesheetId: req.params.id,
+      detail: { decision, comment: comment?.trim() ?? null },
     })
 
     res.json(timesheetDto(updated))

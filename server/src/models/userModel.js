@@ -16,6 +16,14 @@ export async function findUserById(id) {
   return rows[0] ?? null
 }
 
+export async function findUserByIdWithHash(id) {
+  const { rows } = await pool.query(
+    'SELECT user_id, password_hash FROM users WHERE user_id = $1',
+    [id]
+  )
+  return rows[0] ?? null
+}
+
 export async function getAllUsers() {
   const { rows } = await pool.query(
     'SELECT user_id, name, email, role, created_at FROM users ORDER BY created_at DESC'

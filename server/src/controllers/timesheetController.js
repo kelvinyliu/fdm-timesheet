@@ -9,6 +9,8 @@ import {
 import { getEntriesByTimesheet, upsertEntries } from '../models/timesheetEntryModel.js'
 import { logAction } from '../models/auditModel.js'
 import { Role } from '../constants/roles.js'
+import { timesheetDto, timesheetWithEntriesDto } from '../dtos/timesheetDto.js'
+import { entryDto } from '../dtos/entryDto.js'
 
 export async function listTimesheets(req, res, next) {
   try {
@@ -18,8 +20,10 @@ export async function listTimesheets(req, res, next) {
       timesheets = await getTimesheetsByConsultant(req.user.userId)
     } else if (req.user.role === Role.LINE_MANAGER) {
       timesheets = await getTimesheetsForManager(req.user.userId)
+    } else {
+      timesheets = []
     }
-    res.json(timesheets)
+    res.json(timesheets.map(timesheetDto))
   } catch (err) {
     next(err)
   }
@@ -33,7 +37,7 @@ export async function createTimesheetHandler(req, res, next) {
       return res.status(400).json({ error: 'weekStart is required' })
     }
 
-    if (new Date(weekStart).getDay() !== 1) {
+    if (new Date(weekStart + 'T00:00:00Z').getUTCDay() !== 1) {
       return res.status(400).json({ error: 'week_start must be a Monday' })
     }
 
@@ -43,7 +47,7 @@ export async function createTimesheetHandler(req, res, next) {
       weekStart,
     })
 
-    res.status(201).json(timesheet)
+    res.status(201).json(timesheetDto(timesheet))
   } catch (err) {
     if (err.code === '23505') {
       return res.status(409).json({ error: 'A timesheet for this week already exists' })
@@ -66,7 +70,7 @@ export async function getTimesheet(req, res, next) {
       }
     } else if (req.user.role === Role.LINE_MANAGER) {
       const managed = await getTimesheetsForManager(req.user.userId)
-      const authorised = managed.some((t) => t.id === timesheet.id)
+      const authorised = managed.some((t) => t.timesheet_id === timesheet.timesheet_id)
       if (!authorised) {
         return res.status(403).json({ error: 'Forbidden' })
       }
@@ -74,7 +78,7 @@ export async function getTimesheet(req, res, next) {
 
     const entries = await getEntriesByTimesheet(req.params.id)
 
-    res.json({ ...timesheet, entries })
+    res.json(timesheetWithEntriesDto(timesheet, entries))
   } catch (err) {
     next(err)
   }
@@ -93,7 +97,7 @@ export async function updateEntries(req, res, next) {
     }
 
     if (timesheet.status !== 'DRAFT') {
-      return res.status(403).json({ error: 'Timesheet cannot be edited after submission' })
+      return res.status(409).json({ error: 'Timesheet cannot be edited after submission' })
     }
 
     const { entries } = req.body
@@ -117,7 +121,7 @@ export async function updateEntries(req, res, next) {
 
     const updated = await upsertEntries(req.params.id, entries)
 
-    res.json(updated)
+    res.json(updated.map(entryDto))
   } catch (err) {
     next(err)
   }
@@ -148,7 +152,7 @@ export async function submitTimesheet(req, res, next) {
       detail: { previousStatus: 'DRAFT' },
     })
 
-    res.json(updated)
+    res.json(timesheetDto(updated))
   } catch (err) {
     next(err)
   }
@@ -168,7 +172,7 @@ export async function autofillTimesheet(req, res, next) {
 
     const entries = await getPreviousWeekEntries(req.user.userId, timesheet.week_start)
 
-    res.json(entries)
+    res.json(entries.map(entryDto))
   } catch (err) {
     next(err)
   }

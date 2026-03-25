@@ -12,6 +12,7 @@ vi.mock('../models/timesheetModel.js', () => ({
   createTimesheet: vi.fn(),
   updateTimesheetStatus: vi.fn(),
   getPreviousWeekEntries: vi.fn(),
+  reviewTimesheet: vi.fn(),
 }))
 
 vi.mock('../models/timesheetEntryModel.js', () => ({
@@ -355,5 +356,134 @@ describe('GET /api/timesheets/:id/autofill', () => {
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(403)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PATCH /api/timesheets/:id/review
+// ---------------------------------------------------------------------------
+describe('PATCH /api/timesheets/:id/review', () => {
+  const pendingTimesheet = { ...fakeTimesheet, status: 'PENDING' }
+
+  it('returns 401 with no token', async () => {
+    const res = await request(app).patch('/api/timesheets/ts-1/review')
+    expect(res.status).toBe(401)
+  })
+
+  it('returns 403 when a consultant tries to review', async () => {
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', consultantToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(403)
+  })
+
+  it('returns 400 when action is invalid', async () => {
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'MAYBE' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/APPROVE or REJECT/)
+  })
+
+  it('returns 400 when rejecting without a comment', async () => {
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'REJECT' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/comment/)
+  })
+
+  it('returns 400 when rejecting with a blank comment', async () => {
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'REJECT', comment: '   ' })
+
+    expect(res.status).toBe(400)
+  })
+
+  it('returns 404 when timesheet does not exist', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(null)
+
+    const res = await request(app)
+      .patch('/api/timesheets/ts-999/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(404)
+  })
+
+  it('returns 409 when timesheet is not PENDING', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet) // status: DRAFT
+
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/pending/)
+  })
+
+  it('returns 403 when manager is not assigned to the consultant', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(pendingTimesheet)
+    timesheetModel.getTimesheetsForManager.mockResolvedValue([]) // no assigned timesheets
+
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(403)
+  })
+
+  it('approves a PENDING timesheet and logs an APPROVAL audit event', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(pendingTimesheet)
+    timesheetModel.getTimesheetsForManager.mockResolvedValue([pendingTimesheet])
+    timesheetModel.reviewTimesheet.mockResolvedValue({
+      ...pendingTimesheet, status: 'APPROVED', rejection_comment: null,
+    })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('APPROVED')
+    expect(res.body.rejectionComment).toBeNull()
+    expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith('ts-1', 'manager-1', 'APPROVED', null)
+    expect(auditModel.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'APPROVAL', timesheetId: 'ts-1' })
+    )
+  })
+
+  it('rejects a PENDING timesheet with a comment and logs a REJECTION audit event', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(pendingTimesheet)
+    timesheetModel.getTimesheetsForManager.mockResolvedValue([pendingTimesheet])
+    timesheetModel.reviewTimesheet.mockResolvedValue({
+      ...pendingTimesheet, status: 'REJECTED', rejection_comment: 'Missing Monday hours',
+    })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .patch('/api/timesheets/ts-1/review')
+      .set('Authorization', managerToken)
+      .send({ action: 'REJECT', comment: 'Missing Monday hours' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('REJECTED')
+    expect(res.body.rejectionComment).toBe('Missing Monday hours')
+    expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith('ts-1', 'manager-1', 'REJECTED', 'Missing Monday hours')
+    expect(auditModel.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'REJECTION', timesheetId: 'ts-1' })
+    )
   })
 })

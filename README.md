@@ -195,13 +195,13 @@ Removes a manager–consultant link.
 ### Timesheets
 
 #### `GET /api/timesheets`
-Requires `CONSULTANT` or `LINE_MANAGER`. Returns timesheets scoped to the caller's role — consultants see only their own; line managers see only their assigned consultants'.
+Requires `CONSULTANT`, `LINE_MANAGER`, or `FINANCE_MANAGER`. Returns timesheets scoped to the caller's role — consultants see only their own; line managers see only their assigned consultants'; finance managers see all `APPROVED` and `COMPLETED` timesheets.
 
 **Response `200`** — array of timesheet objects:
 ```json
 { "id": "uuid", "consultantId": "uuid", "assignmentId": "uuid|null", "weekStart": "YYYY-MM-DD",
-  "status": "DRAFT|PENDING|APPROVED|REJECTED", "rejectionComment": "string|null",
-  "createdAt": "iso8601", "updatedAt": "iso8601" }
+  "status": "DRAFT|PENDING|APPROVED|REJECTED|COMPLETED", "rejectionComment": "string|null",
+  "totalHours": 40, "createdAt": "iso8601", "updatedAt": "iso8601" }
 ```
 
 #### `POST /api/timesheets`
@@ -218,7 +218,7 @@ Requires `CONSULTANT`. Creates a new timesheet. At most one per consultant per w
 **Errors:** `400` missing `weekStart` or not a Monday · `409` timesheet for this week already exists
 
 #### `GET /api/timesheets/:id`
-Requires `CONSULTANT` or `LINE_MANAGER`. Returns a timesheet with its daily entries. Consultants can only access their own; line managers can only access their assigned consultants'.
+Requires `CONSULTANT`, `LINE_MANAGER`, or `FINANCE_MANAGER`. Returns a timesheet with its daily entries. Consultants can only access their own; line managers can only access their assigned consultants'; finance managers can access any timesheet.
 
 **Response `200`**
 ```json
@@ -251,9 +251,52 @@ Requires `CONSULTANT`. Transitions a `DRAFT` timesheet to `PENDING` and records 
 #### `GET /api/timesheets/:id/autofill`
 Requires `CONSULTANT`. Returns the daily entries from the previous week's timesheet (7 days before `weekStart`), to be used as a template.
 
-**Response `200`** — array of `{ entry_date, hours_worked }` (may be empty if no previous timesheet exists)
+**Response `200`** — array of `{ id, date, hoursWorked }` (may be empty if no previous timesheet exists)
 
 **Errors:** `403` not owner · `404` timesheet not found
+
+#### `PATCH /api/timesheets/:id/review`
+Requires `LINE_MANAGER`. Approves or rejects a `PENDING` timesheet. Manager must be assigned to the consultant. Records an `APPROVAL` or `REJECTION` audit event.
+
+**Request body**
+| Field | Type | Required |
+|---|---|---|
+| `action` | `APPROVE` \| `REJECT` | yes |
+| `comment` | string | required when `action` is `REJECT` |
+
+**Response `200`** — updated timesheet object
+
+**Errors:** `400` invalid action or missing rejection comment · `403` not authorised for this consultant · `404` not found · `409` timesheet not in `PENDING`
+
+#### `POST /api/timesheets/:id/payment`
+Requires `FINANCE_MANAGER`. Processes payment for an `APPROVED` timesheet. Calculates the amount as `dailyRate × totalHours / 8`, sets timesheet status to `COMPLETED`, and records a `PROCESSING` audit event. Can only be called once per timesheet.
+
+**Request body**
+| Field | Type | Required |
+|---|---|---|
+| `dailyRate` | number (> 0) | yes |
+| `notes` | string | no |
+
+**Response `200`**
+```json
+{ "id": "uuid", "timesheetId": "uuid", "processedBy": "uuid", "dailyRate": 440.00,
+  "amount": 2200.00, "status": "COMPLETED", "createdAt": "iso8601" }
+```
+
+**Errors:** `400` missing or invalid `dailyRate` · `404` timesheet not found · `409` timesheet not in `APPROVED` or payment already processed
+
+---
+
+### Audit
+
+#### `GET /api/audit`
+Requires `SYSTEM_ADMIN`. Returns the full audit log across all timesheets, ordered most-recent first.
+
+**Response `200`** — array of audit records:
+```json
+{ "id": "uuid", "action": "SUBMISSION|APPROVAL|REJECTION|PROCESSING", "performedBy": "uuid",
+  "timesheetId": "uuid|null", "detail": {}, "createdAt": "iso8601" }
+```
 
 ---
 

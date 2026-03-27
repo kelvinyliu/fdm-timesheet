@@ -8,6 +8,7 @@ import userRoutes from './routes/users.js'
 import assignmentRoutes from './routes/assignments.js'
 import managerAssignmentRoutes from './routes/managerAssignments.js'
 import timesheetRoutes from './routes/timesheets.js'
+import auditRoutes from './routes/audit.js'
 
 const app = express()
 
@@ -24,6 +25,7 @@ app.use('/api/users', userRoutes)
 app.use('/api/assignments', assignmentRoutes)
 app.use('/api/manager-assignments', managerAssignmentRoutes)
 app.use('/api/timesheets', timesheetRoutes)
+app.use('/api/audit', auditRoutes)
 
 app.use(errorHandler)
 

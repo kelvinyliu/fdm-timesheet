@@ -1,6 +1,7 @@
 import {
   getTimesheetsByConsultant,
   getTimesheetsForManager,
+  getApprovedTimesheets,
   getTimesheetById,
   createTimesheet,
   updateTimesheetStatus,
@@ -9,10 +10,12 @@ import {
 } from '../models/timesheetModel.js'
 import { getEntriesByTimesheet, upsertEntries } from '../models/timesheetEntryModel.js'
 import { logAction } from '../models/auditModel.js'
+import { getPaymentByTimesheet, createPayment, createFinancialNote } from '../models/paymentModel.js'
 import { Role } from '../constants/roles.js'
 import { TimesheetStatus } from '../constants/timesheetStatus.js'
 import { timesheetDto, timesheetWithEntriesDto } from '../dtos/timesheetDto.js'
 import { entryDto } from '../dtos/entryDto.js'
+import { paymentDto } from '../dtos/paymentDto.js'
 
 export async function listTimesheets(req, res, next) {
   try {
@@ -22,6 +25,8 @@ export async function listTimesheets(req, res, next) {
       timesheets = await getTimesheetsByConsultant(req.user.userId)
     } else if (req.user.role === Role.LINE_MANAGER) {
       timesheets = await getTimesheetsForManager(req.user.userId)
+    } else if (req.user.role === Role.FINANCE_MANAGER) {
+      timesheets = await getApprovedTimesheets()
     } else {
       timesheets = []
     }
@@ -76,6 +81,8 @@ export async function getTimesheet(req, res, next) {
       if (!authorised) {
         return res.status(403).json({ error: 'Forbidden' })
       }
+    } else if (req.user.role === Role.FINANCE_MANAGER) {
+      // Finance can view any timesheet
     }
 
     const entries = await getEntriesByTimesheet(req.params.id)
@@ -219,6 +226,61 @@ export async function autofillTimesheet(req, res, next) {
     const entries = await getPreviousWeekEntries(req.user.userId, timesheet.week_start)
 
     res.json(entries.map(entryDto))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function processPaymentHandler(req, res, next) {
+  try {
+    const { dailyRate, notes } = req.body
+
+    if (dailyRate === undefined || dailyRate === null || dailyRate <= 0) {
+      return res.status(400).json({ error: 'dailyRate is required and must be greater than 0' })
+    }
+
+    const timesheet = await getTimesheetById(req.params.id)
+
+    if (!timesheet) {
+      return res.status(404).json({ error: 'Timesheet not found' })
+    }
+
+    if (timesheet.status !== TimesheetStatus.APPROVED) {
+      return res.status(409).json({ error: 'Only approved timesheets can be processed for payment' })
+    }
+
+    const existingPayment = await getPaymentByTimesheet(req.params.id)
+    if (existingPayment) {
+      return res.status(409).json({ error: 'Payment has already been processed for this timesheet' })
+    }
+
+    const entries = await getEntriesByTimesheet(req.params.id)
+    const totalHours = entries.reduce((sum, e) => sum + parseFloat(e.hours_worked), 0)
+    const amount = parseFloat(((dailyRate * totalHours) / 8).toFixed(2))
+
+    const payment = await createPayment({
+      timesheetId: req.params.id,
+      processedBy: req.user.userId,
+      dailyRate,
+      amount,
+    })
+
+    if (notes?.trim()) {
+      await createFinancialNote({
+        timesheetId: req.params.id,
+        authoredBy: req.user.userId,
+        note: notes.trim(),
+      })
+    }
+
+    await logAction({
+      action: 'PROCESSING',
+      performedBy: req.user.userId,
+      timesheetId: req.params.id,
+      detail: { dailyRate, amount, totalHours },
+    })
+
+    res.json(paymentDto(payment))
   } catch (err) {
     next(err)
   }

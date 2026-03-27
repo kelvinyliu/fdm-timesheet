@@ -29,6 +29,19 @@ export async function getTimesheetsForManager(managerId) {
   return rows
 }
 
+export async function getApprovedTimesheets() {
+  const { rows } = await pool.query(
+    `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
+            t.created_at, t.updated_at, r.comment AS rejection_comment,
+            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
+     FROM timesheets t
+     LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
+     WHERE t.status IN ('APPROVED', 'COMPLETED')
+     ORDER BY t.week_start DESC`
+  )
+  return rows
+}
+
 export async function getTimesheetById(id) {
   const { rows } = await pool.query(
     `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
@@ -63,18 +76,28 @@ export async function updateTimesheetStatus(id, status) {
 }
 
 export async function reviewTimesheet(id, reviewerId, decision, comment) {
-  await pool.query(
-    `INSERT INTO reviews (timesheet_id, reviewer_id, decision, comment)
-     VALUES ($1, $2, $3, $4)`,
-    [id, reviewerId, decision, comment ?? null]
-  )
-  const { rows } = await pool.query(
-    `UPDATE timesheets SET status = $1, updated_at = NOW()
-     WHERE timesheet_id = $2
-     RETURNING *`,
-    [decision, id]
-  )
-  return { ...rows[0], rejection_comment: decision === 'REJECTED' ? comment : null }
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query(
+      `INSERT INTO reviews (timesheet_id, reviewer_id, decision, comment)
+       VALUES ($1, $2, $3, $4)`,
+      [id, reviewerId, decision, comment ?? null]
+    )
+    const { rows } = await client.query(
+      `UPDATE timesheets SET status = $1, updated_at = NOW()
+       WHERE timesheet_id = $2
+       RETURNING *`,
+      [decision, id]
+    )
+    await client.query('COMMIT')
+    return { ...rows[0], rejection_comment: decision === 'REJECTED' ? comment : null }
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
 }
 
 export async function getPreviousWeekEntries(consultantId, weekStart) {

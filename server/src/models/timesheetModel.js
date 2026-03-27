@@ -3,7 +3,8 @@ import pool from '../db.js'
 export async function getTimesheetsByConsultant(consultantId) {
   const { rows } = await pool.query(
     `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
-            t.created_at, t.updated_at, r.comment AS rejection_comment
+            t.created_at, t.updated_at, r.comment AS rejection_comment,
+            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
      FROM timesheets t
      LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
      WHERE t.consultant_id = $1
@@ -16,7 +17,8 @@ export async function getTimesheetsByConsultant(consultantId) {
 export async function getTimesheetsForManager(managerId) {
   const { rows } = await pool.query(
     `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
-            t.created_at, t.updated_at, r.comment AS rejection_comment
+            t.created_at, t.updated_at, r.comment AS rejection_comment,
+            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
      FROM timesheets t
      JOIN line_manager_consultants lmc ON lmc.consultant_id = t.consultant_id
      LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
@@ -30,7 +32,8 @@ export async function getTimesheetsForManager(managerId) {
 export async function getTimesheetById(id) {
   const { rows } = await pool.query(
     `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
-            t.created_at, t.updated_at, r.comment AS rejection_comment
+            t.created_at, t.updated_at, r.comment AS rejection_comment,
+            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
      FROM timesheets t
      LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
      WHERE t.timesheet_id = $1`,

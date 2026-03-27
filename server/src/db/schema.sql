@@ -1,7 +1,7 @@
 -- Enums
 CREATE TYPE user_role AS ENUM ('CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN');
-CREATE TYPE timesheet_status AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED');
-CREATE TYPE audit_action AS ENUM ('SUBMISSION', 'APPROVAL', 'REJECTION');
+CREATE TYPE timesheet_status AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED');
+CREATE TYPE audit_action AS ENUM ('SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING');
 CREATE TYPE payment_status AS ENUM ('COMPLETED', 'PENDING');
 
 -- Users (all roles in one table)
@@ -70,7 +70,6 @@ CREATE TABLE payments (
   daily_rate    NUMERIC(10,2) NOT NULL CHECK (daily_rate > 0),
   amount        NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
   status        payment_status NOT NULL DEFAULT 'PENDING',
-  strategy_used VARCHAR(50) NOT NULL,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

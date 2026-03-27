@@ -131,10 +131,10 @@ try {
   )
 
   // -- Charlie's timesheets (Barclays) --------------------------------------
-  // 3 weeks ago — APPROVED
+  // 3 weeks ago — COMPLETED (paid)
   const { rows: [c3] } = await client.query(
     `INSERT INTO timesheets (consultant_id, assignment_id, week_start, status)
-     VALUES ($1,$2,$3,'APPROVED') RETURNING timesheet_id`,
+     VALUES ($1,$2,$3,'COMPLETED') RETURNING timesheet_id`,
     [charlie.user_id, charlieAssign.assignment_id, monday(3)]
   )
   await insertEntries(client, c3.timesheet_id, weekEntries(monday(3), [8, 8, 7.5, 8, 8]))
@@ -143,12 +143,13 @@ try {
     [c3.timesheet_id, alice.user_id]
   )
   await client.query(
-    `INSERT INTO payments (timesheet_id, processed_by, daily_rate, amount, status, strategy_used)
-     VALUES ($1,$2,$3,$4,'COMPLETED','STANDARD')`,
-    [c3.timesheet_id, finance.user_id, 440.00, 2145.00]
+    `INSERT INTO payments (timesheet_id, processed_by, daily_rate, amount, status)
+     VALUES ($1,$2,$3,$4,'COMPLETED')`,
+    [c3.timesheet_id, finance.user_id, 440.00, 2172.50]
   )
   await logAudit(client, 'SUBMISSION', charlie.user_id, c3.timesheet_id, { previousStatus: 'DRAFT' })
   await logAudit(client, 'APPROVAL', alice.user_id, c3.timesheet_id, { decision: 'APPROVED' })
+  await logAudit(client, 'PROCESSING', finance.user_id, c3.timesheet_id, { dailyRate: 440.00, amount: 2172.50, totalHours: 39.5 })
 
   // 2 weeks ago — APPROVED
   const { rows: [c2] } = await client.query(
@@ -263,7 +264,7 @@ try {
   console.log('CONSULTANT      Frank Osei        frank@fdm.com')
   console.log('')
   console.log('Timesheet state summary:')
-  console.log('  Charlie  →  APPROVEDx2, PENDING, DRAFT')
+  console.log('  Charlie  →  COMPLETED, APPROVED, PENDING, DRAFT')
   console.log('  Diana    →  APPROVED, DRAFT')
   console.log('  Eve      →  REJECTED, DRAFT')
   console.log('  Frank    →  PENDING')

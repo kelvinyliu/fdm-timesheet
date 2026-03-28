@@ -11,6 +11,7 @@ import {
   autofillTimesheet,
   reviewTimesheetHandler,
   processPaymentHandler,
+  getNotesHandler,
 } from '../controllers/timesheetController.js'
 
 const router = Router()
@@ -25,5 +26,6 @@ router.post('/:id/submit', requireRole(Role.CONSULTANT), submitTimesheet)
 router.get('/:id/autofill', requireRole(Role.CONSULTANT), autofillTimesheet)
 router.patch('/:id/review', requireRole(Role.LINE_MANAGER), reviewTimesheetHandler)
 router.post('/:id/payment', requireRole(Role.FINANCE_MANAGER), processPaymentHandler)
+router.get('/:id/notes', requireRole(Role.FINANCE_MANAGER), getNotesHandler)
 
 export default router

@@ -15,7 +15,7 @@ import TextField from '@mui/material/TextField'
 import Stack from '@mui/material/Stack'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
-import { getTimesheet, processPayment } from '../../api/timesheets'
+import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 
 function getDayName(dateStr) {
@@ -44,12 +44,18 @@ export default function FinancePaymentPage() {
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [fetchedNotes, setFetchedNotes] = useState([])
 
   useEffect(() => {
     setLoading(true)
     setError(null)
     getTimesheet(id)
-      .then(setTimesheet)
+      .then((ts) => {
+        setTimesheet(ts)
+        if (ts.status === 'COMPLETED') {
+          getTimesheetNotes(id).then(setFetchedNotes).catch(() => {})
+        }
+      })
       .catch((err) => setError(err.message ?? 'Failed to load timesheet'))
       .finally(() => setLoading(false))
   }, [id, refreshKey])
@@ -213,12 +219,36 @@ export default function FinancePaymentPage() {
           )}
 
           {timesheet.status === 'COMPLETED' && (
-            <Alert severity="success" sx={{ mt: 2 }}>
-              <Typography fontWeight="bold" gutterBottom>
-                Payment Completed
-              </Typography>
-              This timesheet has been fully processed and payment has been recorded.
-            </Alert>
+            <>
+              <Alert severity="success" sx={{ mt: 2 }}>
+                <Typography fontWeight="bold" gutterBottom>
+                  Payment Completed
+                </Typography>
+                This timesheet has been fully processed and payment has been recorded.
+              </Alert>
+
+              {fetchedNotes.length > 0 && (
+                <Paper sx={{ p: 3, mt: 2 }}>
+                  <Typography variant="h6" gutterBottom>
+                    Finance Notes
+                  </Typography>
+                  <Stack spacing={2}>
+                    {fetchedNotes.map((n) => (
+                      <Box key={n.id}>
+                        <Typography variant="body2">{n.note}</Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {n.authoredByName ?? 'Finance'} &mdash;{' '}
+                          {new Date(n.createdAt).toLocaleString('en-GB', {
+                            day: '2-digit', month: 'short', year: 'numeric',
+                            hour: '2-digit', minute: '2-digit',
+                          })}
+                        </Typography>
+                      </Box>
+                    ))}
+                  </Stack>
+                </Paper>
+              )}
+            </>
           )}
         </>
       )}

@@ -45,3 +45,7 @@ export async function processPayment(id, body) {
     body: JSON.stringify(body),
   })
 }
+
+export async function getTimesheetNotes(id) {
+  return apiClient(`/api/timesheets/${id}/notes`)
+}

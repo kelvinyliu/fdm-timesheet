@@ -10,12 +10,13 @@ import {
 } from '../models/timesheetModel.js'
 import { getEntriesByTimesheet, upsertEntries } from '../models/timesheetEntryModel.js'
 import { logAction } from '../models/auditModel.js'
-import { getPaymentByTimesheet, createPayment, createFinancialNote } from '../models/paymentModel.js'
+import { getPaymentByTimesheet, createPayment, createFinancialNote, getFinancialNotes } from '../models/paymentModel.js'
 import { Role } from '../constants/roles.js'
 import { TimesheetStatus } from '../constants/timesheetStatus.js'
 import { timesheetDto, timesheetWithEntriesDto } from '../dtos/timesheetDto.js'
 import { entryDto } from '../dtos/entryDto.js'
 import { paymentDto } from '../dtos/paymentDto.js'
+import { financialNoteDto } from '../dtos/financialNoteDto.js'
 
 export async function listTimesheets(req, res, next) {
   try {
@@ -281,6 +282,18 @@ export async function processPaymentHandler(req, res, next) {
     })
 
     res.json(paymentDto(payment))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function getNotesHandler(req, res, next) {
+  try {
+    const timesheet = await getTimesheetById(req.params.id)
+    if (!timesheet) return res.status(404).json({ error: 'Timesheet not found' })
+
+    const notes = await getFinancialNotes(req.params.id)
+    res.json(notes.map(financialNoteDto))
   } catch (err) {
     next(err)
   }

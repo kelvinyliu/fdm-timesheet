@@ -33,6 +33,18 @@ export async function createPayment({ timesheetId, processedBy, dailyRate, amoun
   }
 }
 
+export async function getFinancialNotes(timesheetId) {
+  const { rows } = await pool.query(
+    `SELECT fn.*, u.name AS authored_by_name
+     FROM financial_notes fn
+     LEFT JOIN users u ON fn.authored_by = u.user_id
+     WHERE fn.timesheet_id = $1
+     ORDER BY fn.created_at ASC`,
+    [timesheetId]
+  )
+  return rows
+}
+
 export async function createFinancialNote({ timesheetId, authoredBy, note }) {
   const { rows } = await pool.query(
     `INSERT INTO financial_notes (timesheet_id, authored_by, note)

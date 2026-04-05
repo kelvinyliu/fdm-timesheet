@@ -4,6 +4,10 @@ export async function getAssignments() {
   return apiClient('/api/assignments')
 }
 
+export async function getAllAssignments() {
+  return apiClient('/api/assignments/all')
+}
+
 export async function createAssignment(body) {
   return apiClient('/api/assignments', {
     method: 'POST',

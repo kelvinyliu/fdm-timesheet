@@ -11,6 +11,15 @@ export async function getAssignmentsByConsultant(consultantId) {
   return rows
 }
 
+export async function getAllAssignments() {
+  const { rows } = await pool.query(
+    `SELECT assignment_id, consultant_id, client_name, hourly_rate, created_at
+     FROM client_assignments
+     ORDER BY created_at DESC`
+  )
+  return rows
+}
+
 export async function getAssignmentById(id) {
   const { rows } = await pool.query(
     `SELECT assignment_id, consultant_id, client_name, hourly_rate, created_at

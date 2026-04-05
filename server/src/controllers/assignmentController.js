@@ -1,5 +1,6 @@
 import {
   getAssignmentsByConsultant,
+  getAllAssignments,
   createAssignment,
   deleteAssignment,
 } from '../models/clientAssignmentModel.js'
@@ -17,11 +18,20 @@ export async function listAssignments(req, res, next) {
   }
 }
 
+export async function listAllAssignments(req, res, next) {
+  try {
+    const assignments = await getAllAssignments()
+    res.json(assignments.map(clientAssignmentDto))
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function createAssignmentHandler(req, res, next) {
   try {
     const { consultantId, clientName, hourlyRate } = req.body
 
-    if (!consultantId || !clientName || !hourlyRate) {
+    if (!consultantId || !clientName?.trim() || hourlyRate === undefined || hourlyRate === null || hourlyRate === '') {
       return res.status(400).json({ error: 'consultantId, clientName and hourlyRate are required' })
     }
 

@@ -27,7 +27,7 @@ import AddIcon from '@mui/icons-material/Add'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import {
-  getAssignments,
+  getAllAssignments,
   createAssignment,
   deleteAssignment,
   getManagerAssignments,
@@ -42,7 +42,16 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
-const EMPTY_CLIENT_FORM = { consultantId: '', clientName: '', startDate: '', endDate: '' }
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+const EMPTY_CLIENT_FORM = { consultantId: '', clientName: '', hourlyRate: '' }
 const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
 
 export default function AssignmentsPage() {
@@ -73,7 +82,7 @@ export default function AssignmentsPage() {
     setClientLoading(true)
     setClientError('')
     try {
-      const data = await getAssignments()
+      const data = await getAllAssignments()
       setClientAssignments(data)
     } catch (err) {
       setClientError(err.message || 'Failed to load client assignments.')
@@ -119,14 +128,22 @@ export default function AssignmentsPage() {
 
   async function handleCreateClientAssignment() {
     setClientFormError('')
-    const { consultantId, clientName, startDate } = clientForm
-    if (!consultantId || !clientName || !startDate) {
-      setClientFormError('Consultant, Client Name, and Start Date are required.')
+    const { consultantId, clientName, hourlyRate } = clientForm
+    const parsedHourlyRate = Number(hourlyRate)
+
+    if (!consultantId || !clientName || !hourlyRate) {
+      setClientFormError('Consultant, Client Name, and Hourly Rate are required.')
       return
     }
+
+    if (!Number.isFinite(parsedHourlyRate) || parsedHourlyRate <= 0) {
+      setClientFormError('Hourly Rate must be greater than 0.')
+      return
+    }
+
     setClientFormLoading(true)
     try {
-      await createAssignment({ consultantId, clientName, startDate, endDate: clientForm.endDate || null })
+      await createAssignment({ consultantId, clientName, hourlyRate: parsedHourlyRate })
       setClientDialogOpen(false)
       await fetchClientAssignments()
     } catch (err) {
@@ -210,6 +227,7 @@ export default function AssignmentsPage() {
                   <TableRow>
                     <TableCell>Consultant</TableCell>
                     <TableCell>Client Name</TableCell>
+                    <TableCell>Hourly Rate</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
@@ -223,6 +241,14 @@ export default function AssignmentsPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>{a.clientName}</TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
+                        >
+                          {formatCurrency(a.hourlyRate)}
+                        </Typography>
+                      </TableCell>
                       <TableCell>
                         <Typography
                           variant="body2"
@@ -247,7 +273,7 @@ export default function AssignmentsPage() {
                   {clientAssignments.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={4}
+                        colSpan={5}
                         align="center"
                         sx={{ py: 4, color: 'text.secondary' }}
                       >
@@ -374,22 +400,14 @@ export default function AssignmentsPage() {
             sx={{ mb: 2 }}
           />
           <TextField
-            label="Start Date"
-            type="date"
-            value={clientForm.startDate}
-            onChange={(e) => setClientForm((p) => ({ ...p, startDate: e.target.value }))}
+            label="Hourly Rate"
+            type="number"
+            value={clientForm.hourlyRate}
+            onChange={(e) => setClientForm((p) => ({ ...p, hourlyRate: e.target.value }))}
             fullWidth
             required
-            InputLabelProps={{ shrink: true }}
             sx={{ mb: 2 }}
-          />
-          <TextField
-            label="End Date"
-            type="date"
-            value={clientForm.endDate}
-            onChange={(e) => setClientForm((p) => ({ ...p, endDate: e.target.value }))}
-            fullWidth
-            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: '0.01', step: '0.01' }}
           />
         </DialogContent>
         <DialogActions>

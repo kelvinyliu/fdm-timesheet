@@ -139,6 +139,11 @@ Requires `CONSULTANT`. Returns the caller's client assignments.
 
 **Response `200`** — array of `{ id, consultantId, clientName, hourlyRate, createdAt }`
 
+#### `GET /api/assignments/all`
+Requires `SYSTEM_ADMIN`. Returns all client assignments.
+
+**Response `200`** — array of `{ id, consultantId, clientName, hourlyRate, createdAt }`
+
 #### `POST /api/assignments`
 Requires `SYSTEM_ADMIN`. Creates a client assignment for a consultant.
 

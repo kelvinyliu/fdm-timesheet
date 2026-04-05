@@ -1,12 +1,25 @@
 import pool from '../db.js'
 
+const TIMESHEET_SELECT = `
+  SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
+         t.created_at, t.updated_at,
+         lr.comment AS rejection_comment,
+         (SELECT COALESCE(SUM(te.hours_worked), 0)
+          FROM timesheet_entries te
+          WHERE te.timesheet_id = t.timesheet_id) AS total_hours
+  FROM timesheets t
+  LEFT JOIN LATERAL (
+    SELECT r.comment
+    FROM reviews r
+    WHERE r.timesheet_id = t.timesheet_id
+    ORDER BY r.review_date DESC, r.review_id DESC
+    LIMIT 1
+  ) lr ON TRUE
+`
+
 export async function getTimesheetsByConsultant(consultantId) {
   const { rows } = await pool.query(
-    `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
-            t.created_at, t.updated_at, r.comment AS rejection_comment,
-            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
-     FROM timesheets t
-     LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
+    `${TIMESHEET_SELECT}
      WHERE t.consultant_id = $1
      ORDER BY t.week_start DESC`,
     [consultantId]
@@ -16,12 +29,8 @@ export async function getTimesheetsByConsultant(consultantId) {
 
 export async function getTimesheetsForManager(managerId) {
   const { rows } = await pool.query(
-    `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
-            t.created_at, t.updated_at, r.comment AS rejection_comment,
-            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
-     FROM timesheets t
+    `${TIMESHEET_SELECT}
      JOIN line_manager_consultants lmc ON lmc.consultant_id = t.consultant_id
-     LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
      WHERE lmc.manager_id = $1
      ORDER BY t.week_start DESC`,
     [managerId]
@@ -31,11 +40,7 @@ export async function getTimesheetsForManager(managerId) {
 
 export async function getApprovedTimesheets() {
   const { rows } = await pool.query(
-    `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
-            t.created_at, t.updated_at, r.comment AS rejection_comment,
-            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
-     FROM timesheets t
-     LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
+    `${TIMESHEET_SELECT}
      WHERE t.status IN ('APPROVED', 'COMPLETED')
      ORDER BY t.week_start DESC`
   )
@@ -44,11 +49,7 @@ export async function getApprovedTimesheets() {
 
 export async function getTimesheetById(id) {
   const { rows } = await pool.query(
-    `SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
-            t.created_at, t.updated_at, r.comment AS rejection_comment,
-            (SELECT COALESCE(SUM(te.hours_worked), 0) FROM timesheet_entries te WHERE te.timesheet_id = t.timesheet_id) AS total_hours
-     FROM timesheets t
-     LEFT JOIN reviews r ON r.timesheet_id = t.timesheet_id
+    `${TIMESHEET_SELECT}
      WHERE t.timesheet_id = $1`,
     [id]
   )
@@ -79,17 +80,25 @@ export async function reviewTimesheet(id, reviewerId, decision, comment) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    const { rows } = await client.query(
+      `UPDATE timesheets SET status = $1, updated_at = NOW()
+       WHERE timesheet_id = $2 AND status = 'PENDING'
+       RETURNING *`,
+      [decision, id]
+    )
+
+    if (rows.length === 0) {
+      const err = new Error('Only pending timesheets can be reviewed')
+      err.status = 409
+      throw err
+    }
+
     await client.query(
       `INSERT INTO reviews (timesheet_id, reviewer_id, decision, comment)
        VALUES ($1, $2, $3, $4)`,
       [id, reviewerId, decision, comment ?? null]
     )
-    const { rows } = await client.query(
-      `UPDATE timesheets SET status = $1, updated_at = NOW()
-       WHERE timesheet_id = $2
-       RETURNING *`,
-      [decision, id]
-    )
+
     await client.query('COMMIT')
     return { ...rows[0], rejection_comment: decision === 'REJECTED' ? comment : null }
   } catch (err) {

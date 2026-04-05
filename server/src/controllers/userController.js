@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt'
 import { getAllUsers, createUser, updateUserRole, deleteUser } from '../models/userModel.js'
 import { Role } from '../constants/roles.js'
 import { userDto } from '../dtos/userDto.js'
+import { isUuid } from '../utils/validation.js'
 
 const VALID_ROLES = Object.values(Role)
 const SALT_ROUNDS = 10
@@ -27,6 +28,10 @@ export async function createUserHandler(req, res, next) {
       return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` })
     }
 
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'password must be at least 8 characters' })
+    }
+
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS)
     const user = await createUser({ name, email, passwordHash, role })
 
@@ -43,6 +48,10 @@ export async function updateRoleHandler(req, res, next) {
   try {
     const { id } = req.params
     const { role } = req.body
+
+    if (!isUuid(id)) {
+      return res.status(400).json({ error: 'id must be a valid UUID' })
+    }
 
     if (!role || !VALID_ROLES.includes(role)) {
       return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` })
@@ -67,6 +76,10 @@ export async function updateRoleHandler(req, res, next) {
 export async function deleteUserHandler(req, res, next) {
   try {
     const { id } = req.params
+
+    if (!isUuid(id)) {
+      return res.status(400).json({ error: 'id must be a valid UUID' })
+    }
 
     if (id === req.user.userId) {
       return res.status(400).json({ error: 'Cannot delete your own account' })

@@ -30,6 +30,8 @@ import * as entryModel from '../models/timesheetEntryModel.js'
 import * as auditModel from '../models/auditModel.js'
 
 const SECRET = 'test-secret'
+const TIMESHEET_ID = '11111111-1111-4111-8111-111111111111'
+const MISSING_TIMESHEET_ID = '22222222-2222-4222-8222-222222222222'
 
 function token(payload) {
   return `Bearer ${jwt.sign(payload, SECRET)}`
@@ -39,7 +41,7 @@ const consultantToken = token({ userId: 'consultant-1', role: 'CONSULTANT' })
 const managerToken   = token({ userId: 'manager-1',    role: 'LINE_MANAGER' })
 
 const fakeTimesheet = {
-  timesheet_id:  'ts-1',
+  timesheet_id:  TIMESHEET_ID,
   consultant_id: 'consultant-1',
   assignment_id: null,
   week_start:    '2025-03-24',
@@ -47,6 +49,12 @@ const fakeTimesheet = {
   rejection_comment: null,
   created_at:    '2025-03-24T00:00:00Z',
   updated_at:    '2025-03-24T00:00:00Z',
+}
+
+const rejectedTimesheet = {
+  ...fakeTimesheet,
+  status: 'REJECTED',
+  rejection_comment: 'Please correct Monday hours',
 }
 
 const fakeEntry = {
@@ -77,7 +85,7 @@ describe('GET /api/timesheets', () => {
 
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
-    expect(res.body[0].id).toBe('ts-1')
+    expect(res.body[0].id).toBe(TIMESHEET_ID)
     expect(timesheetModel.getTimesheetsByConsultant).toHaveBeenCalledWith('consultant-1')
   })
 
@@ -89,7 +97,7 @@ describe('GET /api/timesheets', () => {
       .set('Authorization', managerToken)
 
     expect(res.status).toBe(200)
-    expect(res.body[0].id).toBe('ts-1')
+    expect(res.body[0].id).toBe(TIMESHEET_ID)
     expect(timesheetModel.getTimesheetsForManager).toHaveBeenCalledWith('manager-1')
   })
 })
@@ -107,7 +115,7 @@ describe('POST /api/timesheets', () => {
       .send({ weekStart: '2025-03-24' })
 
     expect(res.status).toBe(201)
-    expect(res.body.id).toBe('ts-1')
+    expect(res.body.id).toBe(TIMESHEET_ID)
     expect(res.body.weekStart).toBe('2025-03-24')
   })
 
@@ -162,11 +170,11 @@ describe('GET /api/timesheets/:id', () => {
     entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
 
     const res = await request(app)
-      .get('/api/timesheets/ts-1')
+      .get(`/api/timesheets/${TIMESHEET_ID}`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(200)
-    expect(res.body.id).toBe('ts-1')
+    expect(res.body.id).toBe(TIMESHEET_ID)
     expect(res.body.entries).toHaveLength(1)
     expect(res.body.entries[0].hoursWorked).toBe(7.5)
   })
@@ -175,7 +183,7 @@ describe('GET /api/timesheets/:id', () => {
     timesheetModel.getTimesheetById.mockResolvedValue(null)
 
     const res = await request(app)
-      .get('/api/timesheets/ts-999')
+      .get(`/api/timesheets/${MISSING_TIMESHEET_ID}`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(404)
@@ -186,7 +194,7 @@ describe('GET /api/timesheets/:id', () => {
     timesheetModel.getTimesheetById.mockResolvedValue(otherTimesheet)
 
     const res = await request(app)
-      .get('/api/timesheets/ts-1')
+      .get(`/api/timesheets/${TIMESHEET_ID}`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(403)
@@ -197,7 +205,7 @@ describe('GET /api/timesheets/:id', () => {
     timesheetModel.getTimesheetsForManager.mockResolvedValue([])
 
     const res = await request(app)
-      .get('/api/timesheets/ts-1')
+      .get(`/api/timesheets/${TIMESHEET_ID}`)
       .set('Authorization', managerToken)
 
     expect(res.status).toBe(403)
@@ -215,7 +223,7 @@ describe('PUT /api/timesheets/:id/entries', () => {
     entryModel.upsertEntries.mockResolvedValue([fakeEntry])
 
     const res = await request(app)
-      .put('/api/timesheets/ts-1/entries')
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
       .send({ entries: validEntries })
 
@@ -223,11 +231,24 @@ describe('PUT /api/timesheets/:id/entries', () => {
     expect(res.body[0].hoursWorked).toBe(7.5)
   })
 
-  it('returns 409 when timesheet is not DRAFT', async () => {
-    timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'PENDING' })
+  it('saves entries for a REJECTED timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(rejectedTimesheet)
+    entryModel.upsertEntries.mockResolvedValue([fakeEntry])
 
     const res = await request(app)
-      .put('/api/timesheets/ts-1/entries')
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
+      .set('Authorization', consultantToken)
+      .send({ entries: validEntries })
+
+    expect(res.status).toBe(200)
+    expect(res.body[0].hoursWorked).toBe(7.5)
+  })
+
+  it('returns 409 when timesheet is not editable', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'APPROVED' })
+
+    const res = await request(app)
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
       .send({ entries: validEntries })
 
@@ -238,7 +259,7 @@ describe('PUT /api/timesheets/:id/entries', () => {
     timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
 
     const res = await request(app)
-      .put('/api/timesheets/ts-1/entries')
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
       .send({ entries: [] })
 
@@ -249,18 +270,42 @@ describe('PUT /api/timesheets/:id/entries', () => {
     timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
 
     const res = await request(app)
-      .put('/api/timesheets/ts-1/entries')
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
       .send({ entries: [{ date: '2025-03-24', hoursWorked: 25 }] })
 
     expect(res.status).toBe(400)
   })
 
+  it('returns 400 when an entry date is not in YYYY-MM-DD format', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+
+    const res = await request(app)
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
+      .set('Authorization', consultantToken)
+      .send({ entries: [{ date: '24/03/2025', hoursWorked: 7.5 }] })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/date/i)
+  })
+
+  it('returns 400 when an entry date falls outside the timesheet week', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+
+    const res = await request(app)
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
+      .set('Authorization', consultantToken)
+      .send({ entries: [{ date: '2025-03-31', hoursWorked: 7.5 }] })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/week/i)
+  })
+
   it('returns 403 when consultant does not own the timesheet', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, consultant_id: 'consultant-2' })
 
     const res = await request(app)
-      .put('/api/timesheets/ts-1/entries')
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
       .send({ entries: validEntries })
 
@@ -278,31 +323,47 @@ describe('POST /api/timesheets/:id/submit', () => {
     auditModel.logAction.mockResolvedValue({})
 
     const res = await request(app)
-      .post('/api/timesheets/ts-1/submit')
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('PENDING')
     expect(auditModel.logAction).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'SUBMISSION', timesheetId: 'ts-1' })
+      expect.objectContaining({ action: 'SUBMISSION', timesheetId: TIMESHEET_ID })
     )
   })
 
-  it('returns 400 when timesheet is already PENDING', async () => {
+  it('submits a REJECTED timesheet and logs a submission event', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(rejectedTimesheet)
+    timesheetModel.updateTimesheetStatus.mockResolvedValue({ ...rejectedTimesheet, status: 'PENDING' })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('PENDING')
+    expect(auditModel.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'SUBMISSION', timesheetId: TIMESHEET_ID })
+    )
+  })
+
+  it('returns 409 when timesheet is already PENDING', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'PENDING' })
 
     const res = await request(app)
-      .post('/api/timesheets/ts-1/submit')
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
       .set('Authorization', consultantToken)
 
-    expect(res.status).toBe(400)
+    expect(res.status).toBe(409)
   })
 
   it('returns 403 when consultant does not own the timesheet', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, consultant_id: 'consultant-2' })
 
     const res = await request(app)
-      .post('/api/timesheets/ts-1/submit')
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(403)
@@ -312,7 +373,7 @@ describe('POST /api/timesheets/:id/submit', () => {
     timesheetModel.getTimesheetById.mockResolvedValue(null)
 
     const res = await request(app)
-      .post('/api/timesheets/ts-1/submit')
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(404)
@@ -328,7 +389,7 @@ describe('GET /api/timesheets/:id/autofill', () => {
     timesheetModel.getPreviousWeekEntries.mockResolvedValue([fakeEntry])
 
     const res = await request(app)
-      .get('/api/timesheets/ts-1/autofill')
+      .get(`/api/timesheets/${TIMESHEET_ID}/autofill`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(200)
@@ -341,7 +402,7 @@ describe('GET /api/timesheets/:id/autofill', () => {
     timesheetModel.getPreviousWeekEntries.mockResolvedValue([])
 
     const res = await request(app)
-      .get('/api/timesheets/ts-1/autofill')
+      .get(`/api/timesheets/${TIMESHEET_ID}/autofill`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(200)
@@ -352,7 +413,7 @@ describe('GET /api/timesheets/:id/autofill', () => {
     timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, consultant_id: 'consultant-2' })
 
     const res = await request(app)
-      .get('/api/timesheets/ts-1/autofill')
+      .get(`/api/timesheets/${TIMESHEET_ID}/autofill`)
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(403)
@@ -366,13 +427,13 @@ describe('PATCH /api/timesheets/:id/review', () => {
   const pendingTimesheet = { ...fakeTimesheet, status: 'PENDING' }
 
   it('returns 401 with no token', async () => {
-    const res = await request(app).patch('/api/timesheets/ts-1/review')
+    const res = await request(app).patch(`/api/timesheets/${TIMESHEET_ID}/review`)
     expect(res.status).toBe(401)
   })
 
   it('returns 403 when a consultant tries to review', async () => {
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', consultantToken)
       .send({ action: 'APPROVE' })
 
@@ -381,7 +442,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
 
   it('returns 400 when action is invalid', async () => {
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'MAYBE' })
 
@@ -391,7 +452,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
 
   it('returns 400 when rejecting without a comment', async () => {
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'REJECT' })
 
@@ -401,7 +462,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
 
   it('returns 400 when rejecting with a blank comment', async () => {
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'REJECT', comment: '   ' })
 
@@ -412,7 +473,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
     timesheetModel.getTimesheetById.mockResolvedValue(null)
 
     const res = await request(app)
-      .patch('/api/timesheets/ts-999/review')
+      .patch(`/api/timesheets/${MISSING_TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'APPROVE' })
 
@@ -423,7 +484,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
     timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet) // status: DRAFT
 
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'APPROVE' })
 
@@ -436,7 +497,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
     timesheetModel.getTimesheetsForManager.mockResolvedValue([]) // no assigned timesheets
 
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'APPROVE' })
 
@@ -452,16 +513,16 @@ describe('PATCH /api/timesheets/:id/review', () => {
     auditModel.logAction.mockResolvedValue({})
 
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'APPROVE' })
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('APPROVED')
     expect(res.body.rejectionComment).toBeNull()
-    expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith('ts-1', 'manager-1', 'APPROVED', null)
+    expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith(TIMESHEET_ID, 'manager-1', 'APPROVED', null)
     expect(auditModel.logAction).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'APPROVAL', timesheetId: 'ts-1' })
+      expect.objectContaining({ action: 'APPROVAL', timesheetId: TIMESHEET_ID })
     )
   })
 
@@ -474,16 +535,16 @@ describe('PATCH /api/timesheets/:id/review', () => {
     auditModel.logAction.mockResolvedValue({})
 
     const res = await request(app)
-      .patch('/api/timesheets/ts-1/review')
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
       .set('Authorization', managerToken)
       .send({ action: 'REJECT', comment: 'Missing Monday hours' })
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('REJECTED')
     expect(res.body.rejectionComment).toBe('Missing Monday hours')
-    expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith('ts-1', 'manager-1', 'REJECTED', 'Missing Monday hours')
+    expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith(TIMESHEET_ID, 'manager-1', 'REJECTED', 'Missing Monday hours')
     expect(auditModel.logAction).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'REJECTION', timesheetId: 'ts-1' })
+      expect.objectContaining({ action: 'REJECTION', timesheetId: TIMESHEET_ID })
     )
   })
 })

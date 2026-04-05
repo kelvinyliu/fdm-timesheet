@@ -11,6 +11,16 @@ export async function getAssignmentsByConsultant(consultantId) {
   return rows
 }
 
+export async function getAssignmentById(id) {
+  const { rows } = await pool.query(
+    `SELECT assignment_id, consultant_id, client_name, hourly_rate, created_at
+     FROM client_assignments
+     WHERE assignment_id = $1`,
+    [id]
+  )
+  return rows[0] ?? null
+}
+
 export async function createAssignment({ consultantId, clientName, hourlyRate }) {
   const { rows } = await pool.query(
     `INSERT INTO client_assignments (consultant_id, client_name, hourly_rate)

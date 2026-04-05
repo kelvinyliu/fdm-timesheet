@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import Stack from '@mui/material/Stack'
 import Tooltip from '@mui/material/Tooltip'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -12,6 +13,8 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import VisibilityIcon from '@mui/icons-material/Visibility'
@@ -27,6 +30,8 @@ import {
 } from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetListPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
   const [timesheets, setTimesheets] = useState([])
   const [loading, setLoading] = useState(true)
@@ -124,63 +129,124 @@ export default function TimesheetListPage() {
       )}
 
       {!error && timesheets.length > 0 && (
-        <TableContainer component={Paper}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Week of</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell align="right">Total Hours</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {timesheets.map((ts) => (
-                <TableRow key={ts.id}>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={500}>
-                      {formatWeekStart(ts.weekStart)}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={ts.status} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Typography
+        isMobile ? (
+          <Stack spacing={1.5}>
+            {timesheets.map((ts) => {
+              const isEditable = isConsultantEditableStatus(ts.status)
+              const actionLabel = isEditable ? 'Edit Timesheet' : 'View Timesheet'
+              const ActionIcon = isEditable ? EditIcon : VisibilityIcon
+              const destination = isEditable
+                ? `/consultant/timesheets/${ts.id}/edit`
+                : `/consultant/timesheets/${ts.id}`
+
+              return (
+                <Paper key={ts.id} sx={{ p: 2.5 }}>
+                  <Stack spacing={2}>
+                    <Box
                       sx={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '0.85rem',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: 1.5,
                       }}
                     >
-                      {ts.totalHours ?? '-'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell align="right">
-                    {isConsultantEditableStatus(ts.status) ? (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={() => navigate(`/consultant/timesheets/${ts.id}/edit`)}
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Week of
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatWeekStart(ts.weekStart)}
+                        </Typography>
+                      </Box>
+                      <StatusBadge status={ts.status} />
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                        Total Hours
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '1rem',
+                          fontWeight: 600,
+                        }}
                       >
-                        Edit
-                      </Button>
-                    ) : (
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={() => navigate(`/consultant/timesheets/${ts.id}`)}
-                      >
-                        View
-                      </Button>
-                    )}
-                  </TableCell>
+                        {ts.totalHours ?? '-'}
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="outlined"
+                      startIcon={<ActionIcon sx={{ fontSize: '0.95rem' }} />}
+                      onClick={() => navigate(destination)}
+                    >
+                      {actionLabel}
+                    </Button>
+                  </Stack>
+                </Paper>
+              )
+            })}
+          </Stack>
+        ) : (
+          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Week of</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Total Hours</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+              </TableHead>
+              <TableBody>
+                {timesheets.map((ts) => (
+                  <TableRow key={ts.id}>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {formatWeekStart(ts.weekStart)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={ts.status} />
+                    </TableCell>
+                    <TableCell align="right">
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {ts.totalHours ?? '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right">
+                      {isConsultantEditableStatus(ts.status) ? (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
+                          onClick={() => navigate(`/consultant/timesheets/${ts.id}/edit`)}
+                        >
+                          Edit
+                        </Button>
+                      ) : (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
+                          onClick={() => navigate(`/consultant/timesheets/${ts.id}`)}
+                        >
+                          View
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )
       )}
     </Box>
   )

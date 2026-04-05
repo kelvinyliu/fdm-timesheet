@@ -12,6 +12,8 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -68,6 +70,8 @@ function formatDetail(action, detail) {
 }
 
 export default function AuditLogPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -118,14 +122,19 @@ export default function AuditLogPage() {
           </Alert>
         )}
 
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+        <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 3 }}>
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            flexWrap="wrap"
+            useFlexGap
+          >
             <Autocomplete
               options={ACTION_OPTIONS}
               value={actionFilter}
               onChange={(_e, value) => setActionFilter(value)}
               size="small"
-              sx={{ width: 200 }}
+              sx={{ width: { xs: '100%', sm: 200 } }}
               renderInput={(params) => <TextField {...params} label="Action" />}
             />
             <Autocomplete
@@ -133,7 +142,7 @@ export default function AuditLogPage() {
               value={authorFilter}
               onChange={(_e, value) => setAuthorFilter(value)}
               size="small"
-              sx={{ width: 220 }}
+              sx={{ width: { xs: '100%', sm: 220 } }}
               renderInput={(params) => <TextField {...params} label="Performed By" />}
             />
             <DatePicker
@@ -141,14 +150,14 @@ export default function AuditLogPage() {
               value={dateFrom}
               onChange={setDateFrom}
               slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
-              sx={{ width: 170 }}
+              sx={{ width: { xs: '100%', sm: 170 } }}
             />
             <DatePicker
               label="To"
               value={dateTo}
               onChange={setDateTo}
               slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
-              sx={{ width: 170 }}
+              sx={{ width: { xs: '100%', sm: 170 } }}
             />
           </Stack>
         </Paper>
@@ -156,8 +165,8 @@ export default function AuditLogPage() {
         {loading ? (
           <LoadingSpinner />
         ) : (
-          <TableContainer component={Paper}>
-            <Table size="small">
+          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 900 }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Timestamp</TableCell>
@@ -266,7 +275,7 @@ export default function AuditLogPage() {
                     </TableCell>
                     <TableCell
                       sx={{
-                        maxWidth: 320,
+                        maxWidth: { xs: 220, md: 320 },
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',

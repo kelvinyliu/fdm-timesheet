@@ -12,17 +12,23 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import EditIcon from '@mui/icons-material/Edit'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import DetailList from '../../components/shared/DetailList.jsx'
 import { getTimesheet } from '../../api/timesheets'
-import { formatWeekStart } from '../../utils/dateFormatters'
+import { formatDayName, formatLongDate, formatWeekStart } from '../../utils/dateFormatters'
 import { getClientAssignmentDisplayLabel } from '../../utils/displayLabels'
 import { isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetDetailPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const { id } = useParams()
   const navigate = useNavigate()
   const [timesheet, setTimesheet] = useState(null)
@@ -56,6 +62,41 @@ export default function TimesheetDetailPage() {
   }
 
   const entries = timesheet.entries ?? []
+  const detailItems = [
+    {
+      key: 'week',
+      label: 'Week of',
+      value: formatWeekStart(timesheet.weekStart),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      value: <StatusBadge status={timesheet.status} />,
+    },
+    {
+      key: 'hours',
+      label: 'Total Hours',
+      value: (
+        <Typography
+          variant="body2"
+          sx={{
+            fontFamily: '"JetBrains Mono", monospace',
+            fontWeight: 500,
+          }}
+        >
+          {timesheet.totalHours ?? '-'}
+        </Typography>
+      ),
+    },
+  ]
+
+  if (timesheet.assignmentId) {
+    detailItems.push({
+      key: 'assignment',
+      label: 'Client Assignment',
+      value: getClientAssignmentDisplayLabel(timesheet.assignmentClientName),
+    })
+  }
 
   return (
     <Box>
@@ -84,46 +125,8 @@ export default function TimesheetDetailPage() {
         </Alert>
       )}
 
-      <Paper sx={{ p: 3, mb: 3 }}>
-        <Box display="grid" gridTemplateColumns="140px 1fr" columnGap={2} rowGap={2}>
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-            Week of
-          </Typography>
-          <Typography variant="body2" fontWeight={500}>
-            {formatWeekStart(timesheet.weekStart)}
-          </Typography>
-
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-            Status
-          </Typography>
-          <Box>
-            <StatusBadge status={timesheet.status} />
-          </Box>
-
-          <Typography variant="body2" color="text.secondary" fontWeight={500}>
-            Total Hours
-          </Typography>
-          <Typography
-            variant="body2"
-            sx={{
-              fontFamily: '"JetBrains Mono", monospace',
-              fontWeight: 500,
-            }}
-          >
-            {timesheet.totalHours ?? '-'}
-          </Typography>
-
-          {timesheet.assignmentId && (
-            <>
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Client Assignment
-              </Typography>
-              <Typography variant="body2">
-                {getClientAssignmentDisplayLabel(timesheet.assignmentClientName)}
-              </Typography>
-            </>
-          )}
-        </Box>
+      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+        <DetailList items={detailItems} rowGap={2} />
       </Paper>
 
       <Divider sx={{ mb: 3 }} />
@@ -139,33 +142,69 @@ export default function TimesheetDetailPage() {
           </Typography>
         </Paper>
       ) : (
-        <TableContainer component={Paper}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Date</TableCell>
-                <TableCell align="right">Hours</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
+        isMobile ? (
+          <Paper sx={{ overflow: 'hidden' }}>
+            <Stack divider={<Divider flexItem />}>
               {entries.map((entry) => (
-                <TableRow key={entry.id ?? entry.date}>
-                  <TableCell>{formatWeekStart(entry.date)}</TableCell>
-                  <TableCell align="right">
+                <Box key={entry.id ?? entry.date} sx={{ px: 2, py: 1.75 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: 2,
+                      mb: 0.5,
+                    }}
+                  >
+                    <Typography variant="body2" fontWeight={600}>
+                      {formatDayName(entry.date)}
+                    </Typography>
                     <Typography
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
                         fontSize: '0.85rem',
+                        fontWeight: 600,
                       }}
                     >
                       {entry.hoursWorked}
                     </Typography>
-                  </TableCell>
-                </TableRow>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {formatLongDate(entry.date)}
+                  </Typography>
+                </Box>
               ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </Stack>
+          </Paper>
+        ) : (
+          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell>Date</TableCell>
+                  <TableCell align="right">Hours</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {entries.map((entry) => (
+                  <TableRow key={entry.id ?? entry.date}>
+                    <TableCell>{formatWeekStart(entry.date)}</TableCell>
+                    <TableCell align="right">
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.85rem',
+                        }}
+                      >
+                        {entry.hoursWorked}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )
       )}
     </Box>
   )

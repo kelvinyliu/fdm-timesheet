@@ -26,7 +26,7 @@ const NAV_LINKS = {
   ],
 }
 
-export default function Sidebar() {
+export default function Sidebar({ onNavigate }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -53,7 +53,10 @@ export default function Sidebar() {
         return (
           <ButtonBase
             key={path}
-            onClick={() => navigate(path)}
+            onClick={() => {
+              navigate(path)
+              onNavigate?.()
+            }}
             sx={{
               width: '100%',
               display: 'flex',

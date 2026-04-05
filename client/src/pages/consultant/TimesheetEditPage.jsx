@@ -14,6 +14,9 @@ import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Divider from '@mui/material/Divider'
+import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
@@ -38,6 +41,8 @@ function buildInitialHours(weekStart, existingEntries) {
 }
 
 export default function TimesheetEditPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -175,7 +180,6 @@ export default function TimesheetEditPage() {
       >
         <Button
           variant="outlined"
-          size="small"
           startIcon={<AutoFixHighIcon />}
           onClick={handleAutofill}
           disabled={isBusy}
@@ -184,69 +188,133 @@ export default function TimesheetEditPage() {
         </Button>
       </PageHeader>
 
-      <TableContainer component={Paper} sx={{ mb: 3 }}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Day</TableCell>
-              <TableCell>Date</TableCell>
-              <TableCell align="right">Hours Worked</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {weekDates.map((date, i) => {
-              const isWeekend = i >= 5
-              return (
-                <TableRow
-                  key={date}
-                  sx={isWeekend ? { backgroundColor: palette.overlayTextSoft } : {}}
-                >
-                  <TableCell>
+      {isMobile ? (
+        <Paper sx={{ mb: 3, overflow: 'hidden' }}>
+          {weekDates.map((date, i) => {
+            const isWeekend = i >= 5
+            return (
+              <Box
+                key={date}
+                sx={{
+                  px: 2,
+                  py: 2,
+                  backgroundColor: isWeekend ? palette.overlayTextSoft : 'transparent',
+                  borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
+                }}
+              >
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1.5 }}>
+                  <Box>
                     <Typography
                       variant="body2"
-                      fontWeight={isWeekend ? 400 : 500}
-                      sx={isWeekend ? { color: 'text.secondary' } : {}}
+                      fontWeight={isWeekend ? 400 : 600}
+                      sx={isWeekend ? { color: 'text.secondary' } : undefined}
                     >
                       {DAY_LABELS[i]}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
+                    <Typography variant="body2" color="text.secondary">
                       {formatWeekStart(date)}
                     </Typography>
-                  </TableCell>
-                  <TableCell align="right" sx={{ py: 0.5 }}>
-                    <TextField
-                      type="number"
-                      value={hours[i]}
-                      onChange={(e) => handleHoursChange(i, e.target.value)}
-                      size="small"
-                      slotProps={{
-                        htmlInput: {
-                          min: 0,
-                          max: 24,
-                          step: 0.5,
-                          style: {
-                            textAlign: 'right',
-                            width: 80,
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.85rem',
+                  </Box>
+                </Box>
+
+                <TextField
+                  label="Hours worked"
+                  type="number"
+                  fullWidth
+                  value={hours[i]}
+                  onChange={(e) => handleHoursChange(i, e.target.value)}
+                  size="small"
+                  slotProps={{
+                    htmlInput: {
+                      min: 0,
+                      max: 24,
+                      step: 0.5,
+                      style: {
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.9rem',
+                      },
+                    },
+                  }}
+                  disabled={isBusy}
+                />
+              </Box>
+            )
+          })}
+        </Paper>
+      ) : (
+        <TableContainer component={Paper} sx={{ mb: 3, overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
+              <TableRow>
+                <TableCell>Day</TableCell>
+                <TableCell>Date</TableCell>
+                <TableCell align="right">Hours Worked</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {weekDates.map((date, i) => {
+                const isWeekend = i >= 5
+                return (
+                  <TableRow
+                    key={date}
+                    sx={isWeekend ? { backgroundColor: palette.overlayTextSoft } : {}}
+                  >
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        fontWeight={isWeekend ? 400 : 500}
+                        sx={isWeekend ? { color: 'text.secondary' } : {}}
+                      >
+                        {DAY_LABELS[i]}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {formatWeekStart(date)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell align="right" sx={{ py: 0.5 }}>
+                      <TextField
+                        type="number"
+                        value={hours[i]}
+                        onChange={(e) => handleHoursChange(i, e.target.value)}
+                        size="small"
+                        slotProps={{
+                          htmlInput: {
+                            min: 0,
+                            max: 24,
+                            step: 0.5,
+                            style: {
+                              textAlign: 'right',
+                              width: 80,
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.85rem',
+                            },
                           },
-                        },
-                      }}
-                      disabled={isBusy}
-                    />
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                        }}
+                        disabled={isBusy}
+                      />
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       <Divider sx={{ mb: 2 }} />
 
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+      <Box
+        sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: { xs: 'flex-start', sm: 'center' },
+          flexDirection: { xs: 'column', sm: 'row' },
+          gap: 1,
+          mb: 3,
+        }}
+      >
         <Box>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 0.25 }}>
             Total Hours
@@ -264,7 +332,7 @@ export default function TimesheetEditPage() {
         </Box>
       </Box>
 
-      <Box display="flex" gap={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
         <Button
           variant="contained"
           color="primary"
@@ -290,7 +358,7 @@ export default function TimesheetEditPage() {
         >
           Cancel
         </Button>
-      </Box>
+      </Stack>
 
       <Snackbar
         open={snackbar.open}

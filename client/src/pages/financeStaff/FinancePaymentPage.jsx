@@ -13,17 +13,23 @@ import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Stack from '@mui/material/Stack'
+import Divider from '@mui/material/Divider'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import PaymentIcon from '@mui/icons-material/Payment'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import DetailList from '../../components/shared/DetailList.jsx'
 import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
 import { formatDayName, formatLongDate, formatWeekStart } from '../../utils/dateFormatters'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
 export default function FinancePaymentPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
   const { id } = useParams()
 
@@ -73,6 +79,38 @@ export default function FinancePaymentPage() {
 
   if (loading) return <LoadingSpinner />
 
+  const summaryItems = timesheet
+    ? [
+        {
+          key: 'consultant',
+          label: 'Consultant',
+          value: getConsultantDisplayLabel(timesheet.consultantName),
+        },
+        {
+          key: 'week',
+          label: 'Week of',
+          value: formatWeekStart(timesheet.weekStart),
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          value: <StatusBadge status={timesheet.status} />,
+        },
+        {
+          key: 'hours',
+          label: 'Total Hours',
+          value: (
+            <Typography
+              variant="body2"
+              sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}
+            >
+              {timesheet.totalHours ?? '-'}
+            </Typography>
+          ),
+        },
+      ]
+    : []
+
   return (
     <Box>
       <PageHeader title="Process Payment">
@@ -100,42 +138,11 @@ export default function FinancePaymentPage() {
       {timesheet && (
         <>
           {/* Summary */}
-          <Paper sx={{ p: 3, mb: 3 }}>
+          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Summary
             </Typography>
-            <Box display="grid" gridTemplateColumns="140px 1fr" columnGap={2} rowGap={1.5}>
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Consultant
-              </Typography>
-              <Typography variant="body2" fontWeight={500}>
-                {getConsultantDisplayLabel(timesheet.consultantName)}
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Week of
-              </Typography>
-              <Typography variant="body2" fontWeight={500}>
-                {formatWeekStart(timesheet.weekStart)}
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Status
-              </Typography>
-              <Box>
-                <StatusBadge status={timesheet.status} />
-              </Box>
-
-              <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Total Hours
-              </Typography>
-              <Typography
-                variant="body2"
-                sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}
-              >
-                {timesheet.totalHours ?? '-'}
-              </Typography>
-            </Box>
+            <DetailList items={summaryItems} />
           </Paper>
 
           {/* Entries */}
@@ -144,41 +151,75 @@ export default function FinancePaymentPage() {
               <Box sx={{ p: 2, pb: 1 }}>
                 <Typography variant="h6">Daily Entries</Typography>
               </Box>
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Day</TableCell>
-                      <TableCell>Date</TableCell>
-                      <TableCell align="right">Hours</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {timesheet.entries.map((entry) => (
-                      <TableRow key={entry.id ?? entry.date}>
-                        <TableCell>{formatDayName(entry.date)}</TableCell>
-                        <TableCell>{formatLongDate(entry.date)}</TableCell>
-                        <TableCell align="right">
-                          <Typography
-                            sx={{
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '0.85rem',
-                            }}
-                          >
-                            {entry.hoursWorked}
-                          </Typography>
-                        </TableCell>
+              {isMobile ? (
+                <Stack divider={<Divider flexItem />}>
+                  {timesheet.entries.map((entry) => (
+                    <Box key={entry.id ?? entry.date} sx={{ px: 2, py: 1.75 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'flex-start',
+                          gap: 2,
+                          mb: 0.5,
+                        }}
+                      >
+                        <Typography variant="body2" fontWeight={600}>
+                          {formatDayName(entry.date)}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.85rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {entry.hoursWorked}
+                        </Typography>
+                      </Box>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatLongDate(entry.date)}
+                      </Typography>
+                    </Box>
+                  ))}
+                </Stack>
+              ) : (
+                <TableContainer sx={{ overflowX: 'auto' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>Day</TableCell>
+                        <TableCell>Date</TableCell>
+                        <TableCell align="right">Hours</TableCell>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
+                    </TableHead>
+                    <TableBody>
+                      {timesheet.entries.map((entry) => (
+                        <TableRow key={entry.id ?? entry.date}>
+                          <TableCell>{formatDayName(entry.date)}</TableCell>
+                          <TableCell>{formatLongDate(entry.date)}</TableCell>
+                          <TableCell align="right">
+                            <Typography
+                              sx={{
+                                fontFamily: '"JetBrains Mono", monospace',
+                                fontSize: '0.85rem',
+                              }}
+                            >
+                              {entry.hoursWorked}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
             </Paper>
           )}
 
           {/* Payment form */}
           {timesheet.status === 'APPROVED' && (
-            <Paper sx={{ p: 3 }}>
+            <Paper sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Typography variant="h6" gutterBottom>
                 Payment Details
               </Typography>
@@ -190,7 +231,7 @@ export default function FinancePaymentPage() {
                   value={dailyRate}
                   onChange={(e) => setDailyRate(e.target.value)}
                   inputProps={{ min: 0.01, step: '0.01' }}
-                  sx={{ maxWidth: 240 }}
+                  sx={{ width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 240 } }}
                 />
 
                 <Box
@@ -243,6 +284,7 @@ export default function FinancePaymentPage() {
                     startIcon={<PaymentIcon />}
                     onClick={handleProcessPayment}
                     disabled={submitting || !isDailyRateValid}
+                    fullWidth={isMobile}
                   >
                     Process Payment
                   </Button>

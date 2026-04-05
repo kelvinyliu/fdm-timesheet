@@ -7,12 +7,13 @@ export default function PageHeader({ title, subtitle, children }) {
       sx={{
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        mb: 4,
-        gap: 2,
+        alignItems: { xs: 'stretch', sm: 'flex-start' },
+        flexDirection: { xs: 'column', sm: 'row' },
+        mb: { xs: 3, md: 4 },
+        gap: { xs: 1.5, sm: 2 },
       }}
     >
-      <Box>
+      <Box sx={{ minWidth: 0 }}>
         <Typography
           variant="h4"
           component="h1"
@@ -33,7 +34,22 @@ export default function PageHeader({ title, subtitle, children }) {
         )}
       </Box>
       {children && (
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexShrink: 0 }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 1.5,
+            alignItems: { xs: 'stretch', sm: 'center' },
+            flexShrink: 0,
+            width: { xs: '100%', sm: 'auto' },
+            '& > *': {
+              width: { xs: '100%', sm: 'auto' },
+            },
+            '& .MuiButton-root, & .MuiFormControl-root': {
+              width: { xs: '100%', sm: 'auto' },
+            },
+          }}
+        >
           {children}
         </Box>
       )}

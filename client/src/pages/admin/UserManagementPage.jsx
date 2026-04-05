@@ -12,6 +12,7 @@ import Paper from '@mui/material/Paper'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import IconButton from '@mui/material/IconButton'
+import Stack from '@mui/material/Stack'
 import Dialog from '@mui/material/Dialog'
 import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
@@ -19,6 +20,8 @@ import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
 import Alert from '@mui/material/Alert'
 import Tooltip from '@mui/material/Tooltip'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
@@ -31,6 +34,8 @@ const ROLES = ['CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN']
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'CONSULTANT' }
 
 export default function UserManagementPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -137,45 +142,46 @@ export default function UserManagementPage() {
         </Alert>
       )}
 
-      <TableContainer component={Paper}>
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Role</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
+      {isMobile ? (
+        users.length === 0 ? (
+          <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+            <Typography variant="body2" color="text.secondary">
+              No users found.
+            </Typography>
+          </Paper>
+        ) : (
+          <Stack spacing={1.5}>
             {users.map((u) => {
               const currentRole = pendingRoles[u.id] ?? u.role
               const isDirty = pendingRoles[u.id] !== undefined && pendingRoles[u.id] !== u.role
               return (
-                <TableRow key={u.id}>
-                  <TableCell>
-                    <Typography variant="body2" fontWeight={500}>
-                      {u.name}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '0.8rem',
-                      }}
-                    >
-                      {u.email}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1}>
+                <Paper key={u.id} sx={{ p: 2.5 }}>
+                  <Stack spacing={2}>
+                    <Box>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
+                        {u.name}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.78rem',
+                          color: 'text.secondary',
+                        }}
+                      >
+                        {u.email}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ display: 'block', mb: 0.75 }}>
+                        Role
+                      </Typography>
                       <Select
                         size="small"
+                        fullWidth
                         value={currentRole}
                         onChange={(e) => handleRoleSelectChange(u.id, e.target.value)}
-                        sx={{ minWidth: 160, fontSize: '0.8rem' }}
                       >
                         {ROLES.map((r) => (
                           <MenuItem key={r} value={r}>
@@ -183,47 +189,129 @@ export default function UserManagementPage() {
                           </MenuItem>
                         ))}
                       </Select>
-                      <Tooltip title="Save role">
-                        <span>
-                          <IconButton
-                            size="small"
-                            color="primary"
-                            disabled={!isDirty}
-                            onClick={() => handleSaveRole(u.id)}
-                          >
-                            <SaveIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
                     </Box>
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Delete user">
-                      <IconButton
-                        size="small"
+
+                    <Stack direction="row" spacing={1.5}>
+                      <Button
+                        fullWidth
+                        variant="contained"
+                        startIcon={<SaveIcon />}
+                        disabled={!isDirty}
+                        onClick={() => handleSaveRole(u.id)}
+                      >
+                        Save Role
+                      </Button>
+                      <Button
+                        fullWidth
+                        variant="outlined"
                         color="error"
+                        startIcon={<DeleteIcon />}
                         onClick={() => handleDelete(u.id, u.name)}
                       >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
+                        Delete
+                      </Button>
+                    </Stack>
+                  </Stack>
+                </Paper>
               )
             })}
-            {users.length === 0 && (
+          </Stack>
+        )
+      ) : (
+        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+          <Table size="small">
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                  No users found.
-                </TableCell>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {users.map((u) => {
+                const currentRole = pendingRoles[u.id] ?? u.role
+                const isDirty = pendingRoles[u.id] !== undefined && pendingRoles[u.id] !== u.role
+                return (
+                  <TableRow key={u.id}>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {u.name}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.8rem',
+                        }}
+                      >
+                        {u.email}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <Select
+                          size="small"
+                          value={currentRole}
+                          onChange={(e) => handleRoleSelectChange(u.id, e.target.value)}
+                          sx={{ minWidth: 160, fontSize: '0.8rem' }}
+                        >
+                          {ROLES.map((r) => (
+                            <MenuItem key={r} value={r}>
+                              {r.replace(/_/g, ' ')}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                        <Tooltip title="Save role">
+                          <span>
+                            <IconButton
+                              size="small"
+                              color="primary"
+                              disabled={!isDirty}
+                              onClick={() => handleSaveRole(u.id)}
+                            >
+                              <SaveIcon fontSize="small" />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                    <TableCell align="right">
+                      <Tooltip title="Delete user">
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => handleDelete(u.id, u.name)}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+              {users.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    No users found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+      )}
 
       {/* Create User Dialog */}
-      <Dialog open={dialogOpen} onClose={closeDialog} maxWidth="xs" fullWidth>
+      <Dialog
+        open={dialogOpen}
+        onClose={closeDialog}
+        maxWidth="xs"
+        fullWidth
+        fullScreen={isMobile}
+      >
         <DialogTitle>Create User</DialogTitle>
         <DialogContent>
           {formError && (

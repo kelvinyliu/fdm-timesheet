@@ -10,6 +10,7 @@ import FormControlLabel from '@mui/material/FormControlLabel'
 import Checkbox from '@mui/material/Checkbox'
 import Alert from '@mui/material/Alert'
 import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { palette } from '../../theme.js'
@@ -103,7 +104,7 @@ export default function TimesheetCreatePage() {
         subtitle={`Week of ${formatWeekStart(weekStart)}`}
       />
 
-      <Paper sx={{ p: 4, maxWidth: 480 }}>
+      <Paper sx={{ p: { xs: 2.5, sm: 4 }, maxWidth: 480 }}>
         <Box component="form" onSubmit={handleSubmit} noValidate>
           {submitError && (
             <Alert severity="error" sx={{ mb: 3 }}>
@@ -145,7 +146,7 @@ export default function TimesheetCreatePage() {
             sx={{ mb: 3, display: 'block' }}
           />
 
-          <Box display="flex" gap={2}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <Button type="submit" variant="contained" disabled={submitting}>
               {submitting ? 'Creating...' : 'Create Timesheet'}
             </Button>
@@ -156,7 +157,7 @@ export default function TimesheetCreatePage() {
             >
               Cancel
             </Button>
-          </Box>
+          </Stack>
         </Box>
       </Paper>
     </Box>

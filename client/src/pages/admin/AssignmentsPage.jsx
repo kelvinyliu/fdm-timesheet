@@ -22,6 +22,9 @@ import FormControl from '@mui/material/FormControl'
 import Alert from '@mui/material/Alert'
 import Tooltip from '@mui/material/Tooltip'
 import Grid from '@mui/material/Grid'
+import Stack from '@mui/material/Stack'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
@@ -56,6 +59,8 @@ const EMPTY_CLIENT_FORM = { consultantId: '', clientName: '', hourlyRate: '' }
 const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
 
 export default function AssignmentsPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [users, setUsers] = useState([])
 
   const [clientAssignments, setClientAssignments] = useState([])
@@ -199,7 +204,16 @@ export default function AssignmentsPage() {
       <Grid container spacing={4}>
         {/* Client Assignments */}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'stretch', sm: 'center' },
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 1.5,
+              mb: 2,
+            }}
+          >
             <Typography variant="h6">
               Client Assignments
             </Typography>
@@ -221,8 +235,93 @@ export default function AssignmentsPage() {
 
           {clientLoading ? (
             <LoadingSpinner />
+          ) : isMobile ? (
+            clientAssignments.length === 0 ? (
+              <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+                <Typography variant="body2" color="text.secondary">
+                  No client assignments found.
+                </Typography>
+              </Paper>
+            ) : (
+              <Stack spacing={1.5}>
+                {clientAssignments.map((a) => (
+                  <Paper key={a.id} sx={{ p: 2.5 }}>
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Consultant
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {getConsultantDisplayLabel(
+                            users.find((u) => u.id === a.consultantId)?.name ?? null
+                          )}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.72rem',
+                            color: 'text.secondary',
+                            mt: 0.5,
+                          }}
+                        >
+                          {a.consultantId}
+                        </Typography>
+                      </Box>
+
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                          gap: 1.5,
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                            Client
+                          </Typography>
+                          <Typography variant="body2">{a.clientName}</Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                            Hourly Rate
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
+                          >
+                            {formatCurrency(a.hourlyRate)}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Created
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
+                        >
+                          {formatDate(a.createdAt)}
+                        </Typography>
+                      </Box>
+
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleDeleteClientAssignment(a.id)}
+                      >
+                        Remove Assignment
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            )
           ) : (
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -305,7 +404,16 @@ export default function AssignmentsPage() {
 
         {/* Manager Assignments */}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+          <Box
+            sx={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: { xs: 'stretch', sm: 'center' },
+              flexDirection: { xs: 'column', sm: 'row' },
+              gap: 1.5,
+              mb: 2,
+            }}
+          >
             <Typography variant="h6">
               Manager Assignments
             </Typography>
@@ -327,8 +435,49 @@ export default function AssignmentsPage() {
 
           {managerLoading ? (
             <LoadingSpinner />
+          ) : isMobile ? (
+            managerAssignments.length === 0 ? (
+              <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+                <Typography variant="body2" color="text.secondary">
+                  No manager assignments found.
+                </Typography>
+              </Paper>
+            ) : (
+              <Stack spacing={1.5}>
+                {managerAssignments.map((a) => (
+                  <Paper key={a.id} sx={{ p: 2.5 }}>
+                    <Stack spacing={2}>
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Manager
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {a.managerName}
+                        </Typography>
+                      </Box>
+
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Consultant
+                        </Typography>
+                        <Typography variant="body2">{a.consultantName}</Typography>
+                      </Box>
+
+                      <Button
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                        onClick={() => handleDeleteManagerAssignment(a.id)}
+                      >
+                        Remove Assignment
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            )
           ) : (
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -387,6 +536,7 @@ export default function AssignmentsPage() {
         onClose={() => setClientDialogOpen(false)}
         maxWidth="xs"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>Add Client Assignment</DialogTitle>
         <DialogContent>
@@ -446,6 +596,7 @@ export default function AssignmentsPage() {
         onClose={() => setManagerDialogOpen(false)}
         maxWidth="xs"
         fullWidth
+        fullScreen={isMobile}
       >
         <DialogTitle>Add Manager Assignment</DialogTitle>
         <DialogContent>

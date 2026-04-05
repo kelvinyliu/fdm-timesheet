@@ -1,6 +1,9 @@
 import pg from 'pg'
 
-const { Pool } = pg
+const { Pool, types } = pg
+
+// Keep DATE columns as YYYY-MM-DD strings so calendar dates are never shifted by timezone/DST.
+types.setTypeParser(types.builtins.DATE, (value) => value)
 
 const pool = new Pool({
   host: process.env.DB_HOST,

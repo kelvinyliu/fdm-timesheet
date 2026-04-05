@@ -19,6 +19,7 @@ import { entryDto } from '../dtos/entryDto.js'
 import { paymentDto } from '../dtos/paymentDto.js'
 import { financialNoteDto } from '../dtos/financialNoteDto.js'
 import logger from '../logger.js'
+import { formatDateOnly } from '../utils/dateOnly.js'
 import { isUuid, isIsoDate, toUtcDate } from '../utils/validation.js'
 
 function requireUuid(res, value, fieldName) {
@@ -30,7 +31,7 @@ function requireUuid(res, value, fieldName) {
 }
 
 function formatDateValue(value) {
-  return value instanceof Date ? value.toISOString().slice(0, 10) : value
+  return formatDateOnly(value)
 }
 
 async function tryLogAction(payload, req) {

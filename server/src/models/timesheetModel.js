@@ -6,7 +6,8 @@ const TIMESHEET_SELECT = `
          lr.comment AS rejection_comment,
          (SELECT COALESCE(SUM(te.hours_worked), 0)
           FROM timesheet_entries te
-          WHERE te.timesheet_id = t.timesheet_id) AS total_hours
+          WHERE te.timesheet_id = t.timesheet_id
+            AND te.entry_date BETWEEN t.week_start AND t.week_start + 6) AS total_hours
   FROM timesheets t
   LEFT JOIN LATERAL (
     SELECT r.comment
@@ -116,6 +117,7 @@ export async function getPreviousWeekEntries(consultantId, weekStart) {
      JOIN timesheets t ON t.timesheet_id = te.timesheet_id
      WHERE t.consultant_id = $1
        AND t.week_start = $2::date - INTERVAL '7 days'
+       AND te.entry_date BETWEEN t.week_start AND t.week_start + 6
      ORDER BY te.entry_date`,
     [consultantId, weekStart]
   )

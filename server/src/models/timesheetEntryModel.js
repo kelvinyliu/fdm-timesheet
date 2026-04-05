@@ -4,7 +4,9 @@ export async function getEntriesByTimesheet(timesheetId) {
   const { rows } = await pool.query(
     `SELECT entry_id, entry_date, hours_worked
      FROM timesheet_entries
-     WHERE timesheet_id = $1
+     JOIN timesheets t ON t.timesheet_id = timesheet_entries.timesheet_id
+     WHERE timesheet_entries.timesheet_id = $1
+       AND entry_date BETWEEN t.week_start AND t.week_start + 6
      ORDER BY entry_date`,
     [timesheetId]
   )
@@ -23,11 +25,21 @@ export async function upsertEntries(timesheetId, entries) {
         [timesheetId, date, hoursWorked]
       )
     }
+    await client.query(
+      `DELETE FROM timesheet_entries te
+       USING timesheets t
+       WHERE te.timesheet_id = $1
+         AND t.timesheet_id = te.timesheet_id
+         AND (te.entry_date < t.week_start OR te.entry_date > t.week_start + 6)`,
+      [timesheetId]
+    )
     await client.query('COMMIT')
     const { rows } = await client.query(
       `SELECT entry_id, entry_date, hours_worked
        FROM timesheet_entries
-       WHERE timesheet_id = $1
+       JOIN timesheets t ON t.timesheet_id = timesheet_entries.timesheet_id
+       WHERE timesheet_entries.timesheet_id = $1
+         AND entry_date BETWEEN t.week_start AND t.week_start + 6
        ORDER BY entry_date`,
       [timesheetId]
     )

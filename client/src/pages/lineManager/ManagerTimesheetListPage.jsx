@@ -21,6 +21,7 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
+import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
 export default function ManagerTimesheetListPage() {
   const navigate = useNavigate()
@@ -81,7 +82,7 @@ export default function ManagerTimesheetListPage() {
           <Table>
             <TableHead>
               <TableRow>
-                <TableCell>Consultant ID</TableCell>
+                <TableCell>Consultant</TableCell>
                 <TableCell>Week of</TableCell>
                 <TableCell>Status</TableCell>
                 <TableCell align="right">Total Hours</TableCell>
@@ -92,11 +93,8 @@ export default function ManagerTimesheetListPage() {
               {filtered.map((ts) => (
                 <TableRow key={ts.id}>
                   <TableCell>
-                    <Typography
-                      variant="body2"
-                      sx={{ fontFamily: '"JetBrains Mono", monospace' }}
-                    >
-                      {ts.consultantId}
+                    <Typography variant="body2" fontWeight={500}>
+                      {getConsultantDisplayLabel(ts.consultantName)}
                     </Typography>
                   </TableCell>
                   <TableCell>

@@ -5,7 +5,9 @@ export function timesheetDto(row) {
   return {
     id: row.timesheet_id,
     consultantId: row.consultant_id,
+    consultantName: row.consultant_name ?? null,
     assignmentId: row.assignment_id,
+    assignmentClientName: row.assignment_client_name ?? null,
     weekStart: formatDateOnly(row.week_start),
     status: row.status,
     rejectionComment: row.rejection_comment ?? null,

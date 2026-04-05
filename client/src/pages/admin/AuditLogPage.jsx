@@ -20,6 +20,10 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { palette } from '../../theme.js'
 import { getAuditLog } from '../../api/audit'
+import {
+  getAuditActorDisplayLabel,
+  getAuditTimesheetDisplayLabel,
+} from '../../utils/displayLabels'
 
 const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING']
 
@@ -91,13 +95,13 @@ export default function AuditLogPage() {
     fetchLog()
   }, [])
 
-  const authorOptions = [...new Set(entries.map((e) => e.performedByName).filter(Boolean))].sort()
+  const authorOptions = [...new Set(entries.map((e) => getAuditActorDisplayLabel(e.performedByName)))].sort()
 
   const hasFilters = actionFilter || authorFilter || dateFrom || dateTo
 
   const filtered = entries.filter((e) => {
     if (actionFilter && e.action !== actionFilter) return false
-    if (authorFilter && e.performedByName !== authorFilter) return false
+    if (authorFilter && getAuditActorDisplayLabel(e.performedByName) !== authorFilter) return false
     if (dateFrom && dayjs(e.createdAt).isBefore(dateFrom, 'day')) return false
     if (dateTo && dayjs(e.createdAt).isAfter(dateTo, 'day')) return false
     return true
@@ -159,7 +163,7 @@ export default function AuditLogPage() {
                   <TableCell>Timestamp</TableCell>
                   <TableCell>Action</TableCell>
                   <TableCell>Performed By</TableCell>
-                  <TableCell>Timesheet ID</TableCell>
+                  <TableCell>Timesheet</TableCell>
                   <TableCell>Detail</TableCell>
                 </TableRow>
               </TableHead>
@@ -218,19 +222,47 @@ export default function AuditLogPage() {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {e.performedByName ?? e.performedBy ?? '-'}
-                      </Typography>
+                      <Box>
+                        <Typography variant="body2" fontWeight={500}>
+                          {getAuditActorDisplayLabel(e.performedByName)}
+                        </Typography>
+                        {e.performedBy && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.68rem',
+                              color: palette.textMuted,
+                            }}
+                          >
+                            {e.performedBy}
+                          </Typography>
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.78rem',
-                        }}
-                      >
-                        {e.timesheetId ?? '-'}
-                      </Typography>
+                      <Box>
+                        <Typography variant="body2" fontWeight={500}>
+                          {getAuditTimesheetDisplayLabel({
+                            consultantName: e.timesheetConsultantName,
+                            weekStart: e.timesheetWeekStart,
+                          })}
+                        </Typography>
+                        {e.timesheetId && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.68rem',
+                              color: palette.textMuted,
+                            }}
+                          >
+                            {e.timesheetId}
+                          </Typography>
+                        )}
+                      </Box>
                     </TableCell>
                     <TableCell
                       sx={{

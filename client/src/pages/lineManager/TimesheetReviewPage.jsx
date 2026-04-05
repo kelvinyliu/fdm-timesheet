@@ -22,6 +22,7 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet, reviewTimesheet } from '../../api/timesheets'
 import { formatLongDate, formatWeekStart, formatDayName } from '../../utils/dateFormatters'
+import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
 export default function TimesheetReviewPage() {
   const navigate = useNavigate()
@@ -109,10 +110,10 @@ export default function TimesheetReviewPage() {
             </Typography>
             <Box display="grid" gridTemplateColumns="140px 1fr" columnGap={2} rowGap={1.5}>
               <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Consultant ID
+                Consultant
               </Typography>
-              <Typography variant="body2" sx={{ fontFamily: '"JetBrains Mono", monospace' }}>
-                {timesheet.consultantId}
+              <Typography variant="body2" fontWeight={500}>
+                {getConsultantDisplayLabel(timesheet.consultantName)}
               </Typography>
 
               <Typography variant="body2" color="text.secondary" fontWeight={500}>

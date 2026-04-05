@@ -1,7 +1,9 @@
 import pool from '../db.js'
 
 const TIMESHEET_SELECT = `
-  SELECT t.timesheet_id, t.consultant_id, t.assignment_id, t.week_start, t.status,
+  SELECT t.timesheet_id, t.consultant_id, consultant.name AS consultant_name,
+         t.assignment_id, assignment.client_name AS assignment_client_name,
+         t.week_start, t.status,
          t.created_at, t.updated_at,
          lr.comment AS rejection_comment,
          (SELECT COALESCE(SUM(te.hours_worked), 0)
@@ -9,6 +11,8 @@ const TIMESHEET_SELECT = `
           WHERE te.timesheet_id = t.timesheet_id
             AND te.entry_date BETWEEN t.week_start AND t.week_start + 6) AS total_hours
   FROM timesheets t
+  LEFT JOIN users consultant ON consultant.user_id = t.consultant_id
+  LEFT JOIN client_assignments assignment ON assignment.assignment_id = t.assignment_id
   LEFT JOIN LATERAL (
     SELECT r.comment
     FROM reviews r
@@ -17,6 +21,15 @@ const TIMESHEET_SELECT = `
     LIMIT 1
   ) lr ON TRUE
 `
+
+async function getTimesheetByIdWithDb(db, id) {
+  const { rows } = await db.query(
+    `${TIMESHEET_SELECT}
+     WHERE t.timesheet_id = $1`,
+    [id]
+  )
+  return rows[0] ?? null
+}
 
 export async function getTimesheetsByConsultant(consultantId) {
   const { rows } = await pool.query(
@@ -49,32 +62,28 @@ export async function getApprovedTimesheets() {
 }
 
 export async function getTimesheetById(id) {
-  const { rows } = await pool.query(
-    `${TIMESHEET_SELECT}
-     WHERE t.timesheet_id = $1`,
-    [id]
-  )
-  return rows[0] ?? null
+  return getTimesheetByIdWithDb(pool, id)
 }
 
 export async function createTimesheet({ consultantId, assignmentId, weekStart }) {
   const { rows } = await pool.query(
     `INSERT INTO timesheets (consultant_id, assignment_id, week_start)
      VALUES ($1, $2, $3)
-     RETURNING *`,
+     RETURNING timesheet_id`,
     [consultantId, assignmentId, weekStart]
   )
-  return rows[0]
+  return getTimesheetById(rows[0].timesheet_id)
 }
 
 export async function updateTimesheetStatus(id, status) {
   const { rows } = await pool.query(
     `UPDATE timesheets SET status = $1, updated_at = NOW()
      WHERE timesheet_id = $2
-     RETURNING *`,
+     RETURNING timesheet_id`,
     [status, id]
   )
-  return rows[0] ?? null
+  if (rows.length === 0) return null
+  return getTimesheetById(rows[0].timesheet_id)
 }
 
 export async function reviewTimesheet(id, reviewerId, decision, comment) {
@@ -100,8 +109,9 @@ export async function reviewTimesheet(id, reviewerId, decision, comment) {
       [id, reviewerId, decision, comment ?? null]
     )
 
+    const hydrated = await getTimesheetByIdWithDb(client, id)
     await client.query('COMMIT')
-    return { ...rows[0], rejection_comment: decision === 'REJECTED' ? comment : null }
+    return hydrated
   } catch (err) {
     await client.query('ROLLBACK')
     throw err

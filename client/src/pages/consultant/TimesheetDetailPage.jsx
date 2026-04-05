@@ -19,6 +19,7 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
+import { getClientAssignmentDisplayLabel } from '../../utils/displayLabels'
 import { isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetDetailPage() {
@@ -115,13 +116,10 @@ export default function TimesheetDetailPage() {
           {timesheet.assignmentId && (
             <>
               <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Assignment ID
+                Client Assignment
               </Typography>
-              <Typography
-                variant="body2"
-                sx={{ fontFamily: '"JetBrains Mono", monospace' }}
-              >
-                {timesheet.assignmentId}
+              <Typography variant="body2">
+                {getClientAssignmentDisplayLabel(timesheet.assignmentClientName)}
               </Typography>
             </>
           )}

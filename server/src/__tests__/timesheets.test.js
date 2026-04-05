@@ -43,12 +43,20 @@ const managerToken   = token({ userId: 'manager-1',    role: 'LINE_MANAGER' })
 const fakeTimesheet = {
   timesheet_id:  TIMESHEET_ID,
   consultant_id: 'consultant-1',
+  consultant_name: 'Alex Consultant',
   assignment_id: null,
+  assignment_client_name: null,
   week_start:    '2025-03-24',
   status:        'DRAFT',
   rejection_comment: null,
   created_at:    '2025-03-24T00:00:00Z',
   updated_at:    '2025-03-24T00:00:00Z',
+}
+
+const assignedTimesheet = {
+  ...fakeTimesheet,
+  assignment_id: '33333333-3333-4333-8333-333333333333',
+  assignment_client_name: 'Acme Corp',
 }
 
 const rejectedTimesheet = {
@@ -86,6 +94,7 @@ describe('GET /api/timesheets', () => {
     expect(res.status).toBe(200)
     expect(res.body).toHaveLength(1)
     expect(res.body[0].id).toBe(TIMESHEET_ID)
+    expect(res.body[0].consultantName).toBe('Alex Consultant')
     expect(timesheetModel.getTimesheetsByConsultant).toHaveBeenCalledWith('consultant-1')
   })
 
@@ -98,6 +107,7 @@ describe('GET /api/timesheets', () => {
 
     expect(res.status).toBe(200)
     expect(res.body[0].id).toBe(TIMESHEET_ID)
+    expect(res.body[0].consultantName).toBe('Alex Consultant')
     expect(timesheetModel.getTimesheetsForManager).toHaveBeenCalledWith('manager-1')
   })
 })
@@ -117,6 +127,7 @@ describe('POST /api/timesheets', () => {
     expect(res.status).toBe(201)
     expect(res.body.id).toBe(TIMESHEET_ID)
     expect(res.body.weekStart).toBe('2025-03-24')
+    expect(res.body.consultantName).toBe('Alex Consultant')
   })
 
   it('returns 400 when weekStart is missing', async () => {
@@ -166,7 +177,7 @@ describe('POST /api/timesheets', () => {
 // ---------------------------------------------------------------------------
 describe('GET /api/timesheets/:id', () => {
   it('returns the timesheet with entries for the owning consultant', async () => {
-    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+    timesheetModel.getTimesheetById.mockResolvedValue(assignedTimesheet)
     entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
 
     const res = await request(app)
@@ -175,6 +186,8 @@ describe('GET /api/timesheets/:id', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.id).toBe(TIMESHEET_ID)
+    expect(res.body.consultantName).toBe('Alex Consultant')
+    expect(res.body.assignmentClientName).toBe('Acme Corp')
     expect(res.body.entries).toHaveLength(1)
     expect(res.body.entries[0].hoursWorked).toBe(7.5)
   })
@@ -328,6 +341,7 @@ describe('POST /api/timesheets/:id/submit', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('PENDING')
+    expect(res.body.consultantName).toBe('Alex Consultant')
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'SUBMISSION', timesheetId: TIMESHEET_ID })
     )
@@ -344,6 +358,7 @@ describe('POST /api/timesheets/:id/submit', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('PENDING')
+    expect(res.body.consultantName).toBe('Alex Consultant')
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'SUBMISSION', timesheetId: TIMESHEET_ID })
     )
@@ -519,6 +534,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('APPROVED')
+    expect(res.body.consultantName).toBe('Alex Consultant')
     expect(res.body.rejectionComment).toBeNull()
     expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith(TIMESHEET_ID, 'manager-1', 'APPROVED', null)
     expect(auditModel.logAction).toHaveBeenCalledWith(
@@ -541,6 +557,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
 
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('REJECTED')
+    expect(res.body.consultantName).toBe('Alex Consultant')
     expect(res.body.rejectionComment).toBe('Missing Monday hours')
     expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith(TIMESHEET_ID, 'manager-1', 'REJECTED', 'Missing Monday hours')
     expect(auditModel.logAction).toHaveBeenCalledWith(

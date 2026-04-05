@@ -35,6 +35,7 @@ import {
   deleteManagerAssignment,
 } from '../../api/assignments'
 import { getUsers } from '../../api/users'
+import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
 function formatDate(dateStr) {
   if (!dateStr) return '-'
@@ -236,9 +237,24 @@ export default function AssignmentsPage() {
                   {clientAssignments.map((a) => (
                     <TableRow key={a.id}>
                       <TableCell>
-                        <Typography variant="body2" fontWeight={500}>
-                          {users.find((u) => u.id === a.consultantId)?.name ?? a.consultantId}
-                        </Typography>
+                        <Box>
+                          <Typography variant="body2" fontWeight={500}>
+                            {getConsultantDisplayLabel(
+                              users.find((u) => u.id === a.consultantId)?.name ?? null
+                            )}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.68rem',
+                              color: 'text.secondary',
+                            }}
+                          >
+                            {a.consultantId}
+                          </Typography>
+                        </Box>
                       </TableCell>
                       <TableCell>{a.clientName}</TableCell>
                       <TableCell>

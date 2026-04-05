@@ -21,6 +21,7 @@ import PageHeader from '../../components/shared/PageHeader'
 import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
 import { formatDayName, formatLongDate, formatWeekStart } from '../../utils/dateFormatters'
+import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
 export default function FinancePaymentPage() {
   const navigate = useNavigate()
@@ -105,10 +106,10 @@ export default function FinancePaymentPage() {
             </Typography>
             <Box display="grid" gridTemplateColumns="140px 1fr" columnGap={2} rowGap={1.5}>
               <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                Consultant ID
+                Consultant
               </Typography>
-              <Typography variant="body2" sx={{ fontFamily: '"JetBrains Mono", monospace' }}>
-                {timesheet.consultantId}
+              <Typography variant="body2" fontWeight={500}>
+                {getConsultantDisplayLabel(timesheet.consultantName)}
               </Typography>
 
               <Typography variant="body2" color="text.secondary" fontWeight={500}>

@@ -7,7 +7,7 @@ export async function getAssignments() {
 export async function createAssignment(body) {
   return apiClient('/api/assignments', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
   })
 }
 
@@ -24,7 +24,7 @@ export async function getManagerAssignments() {
 export async function createManagerAssignment(body) {
   return apiClient('/api/manager-assignments', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
   })
 }
 

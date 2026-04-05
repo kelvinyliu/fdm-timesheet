@@ -9,6 +9,7 @@ import CircularProgress from '@mui/material/CircularProgress'
 import { useAuth } from '../../context/useAuth.js'
 import { loginRequest } from '../../api/auth'
 import { ROLE_ROUTES } from '../../constants/routes.js'
+import { decodeJwtPayload } from '../../utils/jwt.js'
 
 export default function LoginPage() {
   const { login, token, user } = useAuth()
@@ -29,8 +30,15 @@ export default function LoginPage() {
     setLoading(true)
     try {
       const data = await loginRequest(email, password)
-      login(data.token, data.user)
-      const destination = ROLE_ROUTES[data.user.role] ?? '/'
+      const tokenPayload = decodeJwtPayload(data.token)
+      if (!tokenPayload) {
+        throw new Error('Invalid login response.')
+      }
+
+      const nextUser = data.user ?? tokenPayload
+      login(data.token, nextUser)
+      const role = nextUser?.role ?? tokenPayload.role
+      const destination = ROLE_ROUTES[role] ?? '/'
       navigate(destination, { replace: true })
     } catch (err) {
       setError(err.message || 'Invalid email or password.')

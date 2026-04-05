@@ -1,24 +1,36 @@
 import { apiClient } from './apiClient.js'
 
+function normalizeTimesheet(timesheet) {
+  if (!timesheet?.entries) return timesheet
+  return {
+    ...timesheet,
+    entries: timesheet.entries.map((entry) => ({
+      ...entry,
+      id: entry.id ?? entry.date,
+    })),
+  }
+}
+
 export async function getTimesheets() {
   return apiClient('/api/timesheets')
 }
 
 export async function getTimesheet(id) {
-  return apiClient(`/api/timesheets/${id}`)
+  const timesheet = await apiClient(`/api/timesheets/${id}`)
+  return normalizeTimesheet(timesheet)
 }
 
 export async function createTimesheet(body) {
   return apiClient('/api/timesheets', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
   })
 }
 
 export async function updateEntries(id, entries) {
   return apiClient(`/api/timesheets/${id}/entries`, {
     method: 'PUT',
-    body: JSON.stringify({ entries }),
+    body: { entries },
   })
 }
 
@@ -35,14 +47,14 @@ export async function autofillTimesheet(id) {
 export async function reviewTimesheet(id, body) {
   return apiClient(`/api/timesheets/${id}/review`, {
     method: 'PATCH',
-    body: JSON.stringify(body),
+    body,
   })
 }
 
 export async function processPayment(id, body) {
   return apiClient(`/api/timesheets/${id}/payment`, {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
   })
 }
 

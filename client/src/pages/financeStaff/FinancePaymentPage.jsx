@@ -19,21 +19,7 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
-import { formatWeekStart } from '../../utils/dateFormatters'
-
-function getDayName(dateStr) {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-GB', { weekday: 'long' })
-}
-
-function formatEntryDate(dateStr) {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
+import { formatDayName, formatLongDate, formatWeekStart } from '../../utils/dateFormatters'
 
 export default function FinancePaymentPage() {
   const navigate = useNavigate()
@@ -65,13 +51,11 @@ export default function FinancePaymentPage() {
 
   const totalHours = timesheet?.totalHours ? Number(timesheet.totalHours) : 0
   const dailyRateNum = parseFloat(dailyRate)
-  const totalPayment =
-    dailyRate !== '' && !isNaN(dailyRateNum) && dailyRateNum >= 0
-      ? ((dailyRateNum * totalHours) / 8).toFixed(2)
-      : null
+  const isDailyRateValid = Number.isFinite(dailyRateNum) && dailyRateNum > 0
+  const totalPayment = isDailyRateValid ? ((dailyRateNum * totalHours) / 8).toFixed(2) : null
 
   async function handleProcessPayment() {
-    if (!dailyRate || isNaN(dailyRateNum) || dailyRateNum < 0) return
+    if (!isDailyRateValid) return
     setSubmitting(true)
     setFeedback(null)
     try {
@@ -169,9 +153,9 @@ export default function FinancePaymentPage() {
                   </TableHead>
                   <TableBody>
                     {timesheet.entries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{getDayName(entry.date)}</TableCell>
-                        <TableCell>{formatEntryDate(entry.date)}</TableCell>
+                      <TableRow key={entry.id ?? entry.date}>
+                        <TableCell>{formatDayName(entry.date)}</TableCell>
+                        <TableCell>{formatLongDate(entry.date)}</TableCell>
                         <TableCell align="right">
                           <Typography
                             sx={{
@@ -203,7 +187,7 @@ export default function FinancePaymentPage() {
                   required
                   value={dailyRate}
                   onChange={(e) => setDailyRate(e.target.value)}
-                  inputProps={{ min: 0, step: '0.01' }}
+                  inputProps={{ min: 0.01, step: '0.01' }}
                   sx={{ maxWidth: 240 }}
                 />
 
@@ -256,12 +240,7 @@ export default function FinancePaymentPage() {
                     color="primary"
                     startIcon={<PaymentIcon />}
                     onClick={handleProcessPayment}
-                    disabled={
-                      submitting ||
-                      !dailyRate ||
-                      isNaN(dailyRateNum) ||
-                      dailyRateNum < 0
-                    }
+                    disabled={submitting || !isDailyRateValid}
                   >
                     Process Payment
                   </Button>

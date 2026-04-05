@@ -7,14 +7,14 @@ export async function getUsers() {
 export async function createUser(body) {
   return apiClient('/api/users', {
     method: 'POST',
-    body: JSON.stringify(body),
+    body,
   })
 }
 
 export async function updateUserRole(id, role) {
   return apiClient(`/api/users/${id}/role`, {
     method: 'PATCH',
-    body: JSON.stringify({ role }),
+    body: { role },
   })
 }
 

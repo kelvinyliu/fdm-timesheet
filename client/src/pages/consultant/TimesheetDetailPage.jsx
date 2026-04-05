@@ -19,16 +19,7 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
-
-function formatEntryDate(dateStr) {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
+import { isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetDetailPage() {
   const { id } = useParams()
@@ -68,7 +59,7 @@ export default function TimesheetDetailPage() {
   return (
     <Box>
       <PageHeader title="Timesheet Detail">
-        {timesheet.status === 'DRAFT' && (
+        {isConsultantEditableStatus(timesheet.status) && (
           <Button
             variant="contained"
             startIcon={<EditIcon />}
@@ -161,7 +152,7 @@ export default function TimesheetDetailPage() {
             <TableBody>
               {entries.map((entry) => (
                 <TableRow key={entry.id ?? entry.date}>
-                  <TableCell>{formatEntryDate(entry.date)}</TableCell>
+                  <TableCell>{formatWeekStart(entry.date)}</TableCell>
                   <TableCell align="right">
                     <Typography
                       sx={{

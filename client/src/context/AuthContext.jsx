@@ -1,28 +1,63 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AuthContext } from './useAuth.js'
+import { decodeJwtPayload, isJwtExpired } from '../utils/jwt.js'
 
-function decodeToken(token) {
+const AUTH_TOKEN_KEY = 'token'
+const AUTH_USER_KEY = 'auth_user'
+
+function getStoredUser() {
+  const rawUser = localStorage.getItem(AUTH_USER_KEY)
+  if (!rawUser) return null
+
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]))
-    return payload
+    return JSON.parse(rawUser)
   } catch {
+    localStorage.removeItem(AUTH_USER_KEY)
     return null
   }
 }
 
-function isTokenExpired(payload) {
-  if (!payload || !payload.exp) return false
-  return Date.now() / 1000 > payload.exp
+function getUserId(user) {
+  return user?.id ?? user?.userId ?? null
+}
+
+function isStoredUserCompatible(storedUser, payload) {
+  if (!storedUser || !payload) return false
+  return getUserId(storedUser) === payload.userId && storedUser.role === payload.role
 }
 
 function getStoredAuth() {
-  const stored = localStorage.getItem('token')
-  if (!stored) return { token: null, user: null }
-  const payload = decodeToken(stored)
-  if (payload && !isTokenExpired(payload)) return { token: stored, user: payload }
-  localStorage.removeItem('token')
-  return { token: null, user: null }
+  const storedToken = localStorage.getItem(AUTH_TOKEN_KEY)
+  if (!storedToken) {
+    localStorage.removeItem(AUTH_USER_KEY)
+    return { token: null, user: null }
+  }
+
+  const payload = decodeJwtPayload(storedToken)
+  if (!payload || isJwtExpired(payload)) {
+    localStorage.removeItem(AUTH_TOKEN_KEY)
+    localStorage.removeItem(AUTH_USER_KEY)
+    return { token: null, user: null }
+  }
+
+  const storedUser = getStoredUser()
+  if (isStoredUserCompatible(storedUser, payload)) {
+    return { token: storedToken, user: storedUser }
+  }
+
+  localStorage.removeItem(AUTH_USER_KEY)
+  return { token: storedToken, user: payload }
+}
+
+function persistAuth(token, user) {
+  localStorage.setItem(AUTH_TOKEN_KEY, token)
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
+}
+
+function clearAuth() {
+  localStorage.removeItem(AUTH_TOKEN_KEY)
+  localStorage.removeItem(AUTH_USER_KEY)
 }
 
 export function AuthProvider({ children }) {
@@ -32,17 +67,17 @@ export function AuthProvider({ children }) {
   const navigate = useNavigate()
 
   function login(newToken, userFromResponse) {
-    const payload = decodeToken(newToken)
+    const payload = decodeJwtPayload(newToken)
     if (!payload) return
-    localStorage.setItem('token', newToken)
+
+    const nextUser = userFromResponse ?? payload
+    persistAuth(newToken, nextUser)
     setToken(newToken)
-    // Use the response body user object (camelCase DTOs) if provided,
-    // otherwise fall back to the JWT payload for backward compatibility
-    setUser(userFromResponse ?? payload)
+    setUser(nextUser)
   }
 
   function logout() {
-    localStorage.removeItem('token')
+    clearAuth()
     setToken(null)
     setUser(null)
     navigate('/login')
@@ -54,4 +89,3 @@ export function AuthProvider({ children }) {
     </AuthContext.Provider>
   )
 }
-

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useParams, useLocation } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -20,19 +20,13 @@ import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
-import { formatWeekStart } from '../../utils/dateFormatters'
+import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
+import {
+  buildAutofillHours,
+  isConsultantEditableStatus,
+} from '../../utils/timesheetWorkflow.js'
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-function addDays(dateStr, days) {
-  const date = new Date(dateStr + 'T00:00:00')
-  date.setDate(date.getDate() + days)
-  return date.toISOString().slice(0, 10)
-}
-
-function buildWeekDates(weekStart) {
-  return Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-}
 
 function buildInitialHours(weekStart, existingEntries) {
   const dates = buildWeekDates(weekStart)
@@ -45,6 +39,8 @@ function buildInitialHours(weekStart, existingEntries) {
 export default function TimesheetEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
+  const autofillWarningShown = useRef(false)
 
   const [timesheet, setTimesheet] = useState(null)
   const [hours, setHours] = useState(Array(7).fill('0'))
@@ -58,9 +54,27 @@ export default function TimesheetEditPage() {
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   useEffect(() => {
+    const autofillFeedback =
+      location.state?.autofillFeedback ??
+      (location.state?.autofillWarning
+        ? { severity: 'warning', message: location.state.autofillWarning }
+        : null)
+
+    if (!autofillFeedback || autofillWarningShown.current) return
+
+    autofillWarningShown.current = true
+    setSnackbar({
+      open: true,
+      message: autofillFeedback.message,
+      severity: autofillFeedback.severity,
+    })
+    navigate(location.pathname, { replace: true, state: null })
+  }, [location.pathname, location.state, navigate])
+
+  useEffect(() => {
     getTimesheet(id)
       .then((ts) => {
-        if (ts.status !== 'DRAFT') {
+        if (!isConsultantEditableStatus(ts.status)) {
           navigate(`/consultant/timesheets/${id}`, { replace: true })
           return
         }
@@ -123,14 +137,7 @@ export default function TimesheetEditPage() {
         showSnackbar('No previous week entries found.', 'info')
         return
       }
-      const dates = buildWeekDates(timesheet.weekStart)
-      const newHours = dates.map((date) => {
-        const match = prevEntries.find(
-          (e) => e.date === date || e.date?.slice(0, 10) === date
-        )
-        return match ? String(parseFloat(match.hoursWorked) || 0) : '0'
-      })
-      setHours(newHours)
+      setHours(buildAutofillHours(timesheet.weekStart, prevEntries))
       showSnackbar('Hours filled from previous week.')
     } catch (err) {
       showSnackbar(err.message ?? 'Autofill failed.', 'error')

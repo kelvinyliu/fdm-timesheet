@@ -21,6 +21,10 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
+import {
+  getTimesheetForWeek,
+  isConsultantEditableStatus,
+} from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetListPage() {
   const navigate = useNavigate()
@@ -37,28 +41,27 @@ export default function TimesheetListPage() {
 
   if (loading) return <LoadingSpinner />
 
-  const activeDraft = timesheets.find(
-    (ts) => ts.status === 'DRAFT' || ts.status === 'PENDING'
-  )
   const currentMonday = getCurrentMonday()
-  const hasTimesheetThisWeek = timesheets.some((ts) => ts.weekStart === currentMonday)
-  const canCreate = !activeDraft && !hasTimesheetThisWeek
+  const currentWeekTimesheet = getTimesheetForWeek(timesheets, currentMonday)
+  const canCreate = !currentWeekTimesheet
 
   function renderActionButton() {
-    if (activeDraft) {
+    if (currentWeekTimesheet) {
+      const isEditable = isConsultantEditableStatus(currentWeekTimesheet.status)
+      const ActionIcon = isEditable ? ArrowForwardIcon : VisibilityIcon
       return (
         <Button
           variant="contained"
-          startIcon={<ArrowForwardIcon />}
+          startIcon={<ActionIcon />}
           onClick={() =>
             navigate(
-              activeDraft.status === 'DRAFT'
-                ? `/consultant/timesheets/${activeDraft.id}/edit`
-                : `/consultant/timesheets/${activeDraft.id}`
+              isEditable
+                ? `/consultant/timesheets/${currentWeekTimesheet.id}/edit`
+                : `/consultant/timesheets/${currentWeekTimesheet.id}`
             )
           }
         >
-          Continue Timesheet
+          {isEditable ? 'Continue Timesheet' : 'View Timesheet'}
         </Button>
       )
     }
@@ -153,7 +156,7 @@ export default function TimesheetListPage() {
                     </Typography>
                   </TableCell>
                   <TableCell align="right">
-                    {ts.status === 'DRAFT' ? (
+                    {isConsultantEditableStatus(ts.status) ? (
                       <Button
                         size="small"
                         variant="outlined"

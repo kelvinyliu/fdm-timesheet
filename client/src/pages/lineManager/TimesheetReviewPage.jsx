@@ -21,22 +21,7 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet, reviewTimesheet } from '../../api/timesheets'
-import { formatWeekStart } from '../../utils/dateFormatters'
-
-function formatEntryDate(dateStr) {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
-
-function getDayName(dateStr) {
-  const date = new Date(dateStr + 'T00:00:00')
-  return date.toLocaleDateString('en-GB', { weekday: 'long' })
-}
+import { formatLongDate, formatWeekStart, formatDayName } from '../../utils/dateFormatters'
 
 export default function TimesheetReviewPage() {
   const navigate = useNavigate()
@@ -182,9 +167,9 @@ export default function TimesheetReviewPage() {
                   </TableHead>
                   <TableBody>
                     {timesheet.entries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>{getDayName(entry.date)}</TableCell>
-                        <TableCell>{formatEntryDate(entry.date)}</TableCell>
+                      <TableRow key={entry.id ?? entry.date}>
+                        <TableCell>{formatDayName(entry.date)}</TableCell>
+                        <TableCell>{formatLongDate(entry.date)}</TableCell>
                         <TableCell align="right">
                           <Typography
                             sx={{

@@ -15,6 +15,11 @@ import PageHeader from '../../components/shared/PageHeader'
 import { createTimesheet, autofillTimesheet, updateEntries, getTimesheets } from '../../api/timesheets'
 import { getAssignments } from '../../api/assignments'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
+import {
+  buildAutofillEntries,
+  getTimesheetForWeek,
+  isConsultantEditableStatus,
+} from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetCreatePage() {
   const navigate = useNavigate()
@@ -29,22 +34,14 @@ export default function TimesheetCreatePage() {
   useEffect(() => {
     Promise.all([getAssignments(), getTimesheets()])
       .then(([fetchedAssignments, all]) => {
-        const activeDraft = all.find(
-          (ts) => ts.status === 'DRAFT' || ts.status === 'PENDING'
-        )
-        if (activeDraft) {
+        const currentWeekTimesheet = getTimesheetForWeek(all, weekStart)
+        if (currentWeekTimesheet) {
           navigate(
-            activeDraft.status === 'DRAFT'
-              ? `/consultant/timesheets/${activeDraft.id}/edit`
-              : `/consultant/timesheets/${activeDraft.id}`,
+            isConsultantEditableStatus(currentWeekTimesheet.status)
+              ? `/consultant/timesheets/${currentWeekTimesheet.id}/edit`
+              : `/consultant/timesheets/${currentWeekTimesheet.id}`,
             { replace: true }
           )
-          return
-        }
-
-        const hasTimesheetThisWeek = all.some((ts) => ts.weekStart === getCurrentMonday())
-        if (hasTimesheetThisWeek) {
-          navigate('/consultant/timesheets', { replace: true })
           return
         }
 
@@ -52,7 +49,7 @@ export default function TimesheetCreatePage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [navigate])
+  }, [navigate, weekStart])
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -64,23 +61,32 @@ export default function TimesheetCreatePage() {
 
       const newTimesheet = await createTimesheet(body)
       const newId = newTimesheet.id
+      let autofillFeedback = null
 
       if (autofill) {
         try {
           const prevEntries = await autofillTimesheet(newId)
           if (prevEntries && prevEntries.length > 0) {
-            const entries = prevEntries.map((e) => ({
-              date: e.date,
-              hoursWorked: parseFloat(e.hoursWorked) || 0,
-            }))
+            const entries = buildAutofillEntries(weekStart, prevEntries)
             await updateEntries(newId, entries)
+          } else {
+            autofillFeedback = {
+              severity: 'info',
+              message: 'No previous week entries were found to copy.',
+            }
           }
-        } catch {
-          // Autofill failing is non-fatal
+        } catch (err) {
+          autofillFeedback = {
+            severity: 'warning',
+            message: err.message ?? 'Autofill failed after creating the timesheet.',
+          }
         }
       }
 
-      navigate(`/consultant/timesheets/${newId}/edit`)
+      navigate(`/consultant/timesheets/${newId}/edit`, {
+        replace: true,
+        state: autofillFeedback ? { autofillFeedback } : undefined,
+      })
     } catch (err) {
       setSubmitError(err.message ?? 'Failed to create timesheet.')
       setSubmitting(false)

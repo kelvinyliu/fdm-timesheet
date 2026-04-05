@@ -41,7 +41,7 @@ export default function Sidebar() {
           fontWeight: 600,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.3)',
+          color: palette.textInverseMuted,
           px: 1.5,
           mb: 1,
         }}
@@ -65,16 +65,16 @@ export default function Sidebar() {
               borderRadius: '8px',
               textAlign: 'left',
               justifyContent: 'flex-start',
-              color: isActive ? '#FFFFFF' : 'rgba(255,255,255,0.55)',
-              backgroundColor: isActive ? 'rgba(61,90,128,0.25)' : 'transparent',
+              color: isActive ? palette.textInverse : palette.textInverseMuted,
+              backgroundColor: isActive ? palette.overlayPrimaryMuted : 'transparent',
               transition: 'all 0.15s ease',
               position: 'relative',
               overflow: 'hidden',
               '&:hover': {
                 backgroundColor: isActive
-                  ? 'rgba(61,90,128,0.3)'
-                  : 'rgba(255,255,255,0.06)',
-                color: '#FFFFFF',
+                  ? 'rgba(var(--ui-primary-rgb), 0.24)'
+                  : palette.overlayWhiteSoft,
+                color: palette.textInverse,
               },
               '&::before': isActive
                 ? {
@@ -85,7 +85,7 @@ export default function Sidebar() {
                     bottom: '20%',
                     width: 3,
                     borderRadius: '0 3px 3px 0',
-                    backgroundColor: palette.coral,
+                    backgroundColor: palette.primary,
                   }
                 : {},
             }}

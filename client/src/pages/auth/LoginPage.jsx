@@ -10,6 +10,7 @@ import { useAuth } from '../../context/useAuth.js'
 import { loginRequest } from '../../api/auth'
 import { ROLE_ROUTES } from '../../constants/routes.js'
 import { decodeJwtPayload } from '../../utils/jwt.js'
+import { palette } from '../../theme.js'
 
 export default function LoginPage() {
   const { login, token, user } = useAuth()
@@ -59,7 +60,7 @@ export default function LoginPage() {
         sx={{
           display: { xs: 'none', md: 'flex' },
           width: '45%',
-          background: 'linear-gradient(135deg, #1A1A2E 0%, #252540 50%, #1A1A2E 100%)',
+          background: `linear-gradient(135deg, ${palette.sidebarBg} 0%, ${palette.sidebarBgAlt} 60%, ${palette.sidebarBg} 100%)`,
           position: 'relative',
           overflow: 'hidden',
           flexDirection: 'column',
@@ -82,15 +83,15 @@ export default function LoginPage() {
                 45deg,
                 transparent,
                 transparent 40px,
-                rgba(255,255,255,0.5) 40px,
-                rgba(255,255,255,0.5) 41px
+                rgba(var(--ui-white-rgb), 0.5) 40px,
+                rgba(var(--ui-white-rgb), 0.5) 41px
               ),
               repeating-linear-gradient(
                 -45deg,
                 transparent,
                 transparent 40px,
-                rgba(255,255,255,0.5) 40px,
-                rgba(255,255,255,0.5) 41px
+                rgba(var(--ui-white-rgb), 0.5) 40px,
+                rgba(var(--ui-white-rgb), 0.5) 41px
               )
             `,
           }}
@@ -105,7 +106,7 @@ export default function LoginPage() {
             width: 300,
             height: 300,
             borderRadius: '50%',
-            border: '1px solid rgba(61,90,128,0.3)',
+            border: `1px solid ${palette.overlayPrimaryMuted}`,
           }}
         />
         <Box
@@ -116,7 +117,7 @@ export default function LoginPage() {
             width: 200,
             height: 200,
             borderRadius: '50%',
-            border: '1px solid rgba(238,108,77,0.2)',
+            border: `1px solid ${palette.overlayWhiteMuted}`,
           }}
         />
 
@@ -125,8 +126,8 @@ export default function LoginPage() {
           <Typography
             sx={{
               fontFamily: '"Instrument Serif", Georgia, serif',
-              fontSize: '5rem',
-              color: '#FFFFFF',
+              fontSize: '10rem',
+              color: palette.textInverse,
               lineHeight: 1,
               letterSpacing: '-0.03em',
               mb: 1,
@@ -138,7 +139,7 @@ export default function LoginPage() {
             sx={{
               width: 60,
               height: 3,
-              background: 'linear-gradient(90deg, #3D5A80, #EE6C4D)',
+              background: `linear-gradient(90deg, ${palette.primary}, ${palette.primaryHover})`,
               borderRadius: 2,
               mx: 'auto',
               mb: 2,
@@ -150,7 +151,7 @@ export default function LoginPage() {
               fontSize: '0.75rem',
               letterSpacing: '0.25em',
               textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.4)',
+              color: palette.textInverseMuted,
             }}
           >
             Timesheet Management
@@ -167,7 +168,7 @@ export default function LoginPage() {
             fontFamily: '"Instrument Serif", Georgia, serif',
             fontStyle: 'italic',
             fontSize: '1.1rem',
-            color: 'rgba(255,255,255,0.2)',
+            color: 'rgba(var(--ui-white-rgb), 0.28)',
             textAlign: 'center',
             lineHeight: 1.5,
           }}
@@ -184,7 +185,7 @@ export default function LoginPage() {
           justifyContent: 'center',
           alignItems: 'center',
           p: 4,
-          backgroundColor: '#FAFAF7',
+          backgroundColor: palette.bg,
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 400 }}>
@@ -199,8 +200,8 @@ export default function LoginPage() {
             <Typography
               sx={{
                 fontFamily: '"Instrument Serif", Georgia, serif',
-                fontSize: '2.5rem',
-                color: '#1A1A2E',
+                fontSize: '3.1rem',
+                color: palette.textPrimary,
                 lineHeight: 1,
               }}
             >
@@ -211,7 +212,7 @@ export default function LoginPage() {
                 fontSize: '0.65rem',
                 letterSpacing: '0.2em',
                 textTransform: 'uppercase',
-                color: '#9CA3AF',
+                color: palette.textMuted,
                 mt: 0.5,
               }}
             >
@@ -270,7 +271,21 @@ export default function LoginPage() {
               size="large"
               disabled={loading}
               startIcon={loading ? <CircularProgress size={18} color="inherit" /> : null}
-              sx={{ py: 1.5 }}
+              sx={{
+                py: 1.6,
+                borderRadius: 2,
+                backgroundColor: palette.textPrimary,
+                color: palette.textInverse,
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                letterSpacing: '0.02em',
+                border: `1px solid ${palette.textPrimary}`,
+                '&:hover': {
+                  backgroundColor: palette.primary,
+                  color: palette.primaryContrast,
+                  borderColor: palette.primary,
+                },
+              }}
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>

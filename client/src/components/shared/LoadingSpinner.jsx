@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import CircularProgress from '@mui/material/CircularProgress'
 import Typography from '@mui/material/Typography'
+import { palette } from '../../theme.js'
 
 export default function LoadingSpinner() {
   return (
@@ -15,14 +16,14 @@ export default function LoadingSpinner() {
       <CircularProgress
         size={32}
         thickness={3}
-        sx={{ color: '#3D5A80' }}
+        sx={{ color: palette.primary }}
       />
       <Typography
         sx={{
           fontSize: '0.7rem',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          color: '#9CA3AF',
+          color: palette.textMuted,
           fontWeight: 500,
         }}
       >

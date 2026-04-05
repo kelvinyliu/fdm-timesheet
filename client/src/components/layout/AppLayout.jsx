@@ -70,8 +70,8 @@ export default function AppLayout() {
         sx={{
           width: SIDEBAR_WIDTH,
           flexShrink: 0,
-          background: `linear-gradient(180deg, ${palette.navy} 0%, #151528 100%)`,
-          color: '#E2E2E8',
+          background: `linear-gradient(180deg, ${palette.sidebarBg} 0%, ${palette.sidebarBgAlt} 100%)`,
+          color: palette.textInverse,
           display: 'flex',
           flexDirection: 'column',
           position: 'fixed',
@@ -97,14 +97,14 @@ export default function AppLayout() {
           sx={{
             p: '28px 24px 20px',
             position: 'relative',
-            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            borderBottom: `1px solid ${palette.sidebarScrim}`,
           }}
         >
           <Typography
             sx={{
               fontFamily: '"Instrument Serif", Georgia, serif',
-              fontSize: '1.5rem',
-              color: '#FFFFFF',
+              fontSize: '5rem',
+              color: palette.textInverse,
               letterSpacing: '-0.01em',
               lineHeight: 1,
             }}
@@ -117,7 +117,7 @@ export default function AppLayout() {
               fontSize: '0.65rem',
               letterSpacing: '0.2em',
               textTransform: 'uppercase',
-              color: 'rgba(255,255,255,0.4)',
+              color: palette.textInverseMuted,
               mt: 0.5,
             }}
           >
@@ -134,7 +134,7 @@ export default function AppLayout() {
         <Box
           sx={{
             p: '16px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.06)',
+            borderTop: `1px solid ${palette.sidebarScrim}`,
             position: 'relative',
             display: 'flex',
             alignItems: 'center',
@@ -146,13 +146,13 @@ export default function AppLayout() {
               width: 32,
               height: 32,
               borderRadius: '8px',
-              background: `linear-gradient(135deg, ${palette.steel} 0%, ${palette.coral} 100%)`,
+              background: `linear-gradient(135deg, ${palette.primary} 0%, ${palette.primaryHover} 100%)`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '0.75rem',
               fontWeight: 700,
-              color: '#fff',
+              color: palette.primaryContrast,
               flexShrink: 0,
             }}
           >
@@ -163,7 +163,7 @@ export default function AppLayout() {
               sx={{
                 fontSize: '0.8rem',
                 fontWeight: 500,
-                color: '#E2E2E8',
+                color: palette.textInverse,
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -174,7 +174,7 @@ export default function AppLayout() {
             <Typography
               sx={{
                 fontSize: '0.65rem',
-                color: 'rgba(255,255,255,0.35)',
+                color: palette.textInverseMuted,
                 letterSpacing: '0.06em',
                 textTransform: 'uppercase',
               }}
@@ -187,8 +187,8 @@ export default function AppLayout() {
               size="small"
               onClick={() => setPwOpen(true)}
               sx={{
-                color: 'rgba(255,255,255,0.4)',
-                '&:hover': { color: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' },
+                color: palette.textInverseMuted,
+                '&:hover': { color: palette.textInverse, backgroundColor: palette.overlayWhiteSoft },
               }}
             >
               <LockResetIcon fontSize="small" />
@@ -199,8 +199,8 @@ export default function AppLayout() {
               size="small"
               onClick={logout}
               sx={{
-                color: 'rgba(255,255,255,0.4)',
-                '&:hover': { color: palette.coral, backgroundColor: 'rgba(238,108,77,0.1)' },
+                color: palette.textInverseMuted,
+                '&:hover': { color: palette.primary, backgroundColor: palette.overlayWhiteSoft },
               }}
             >
               <LogoutIcon fontSize="small" />
@@ -226,7 +226,7 @@ export default function AppLayout() {
             px: 4,
             py: 2,
             borderBottom: `1px solid ${palette.border}`,
-            backgroundColor: 'rgba(255,255,255,0.8)',
+            backgroundColor: 'rgba(var(--ui-white-rgb), 0.84)',
             backdropFilter: 'blur(10px)',
             position: 'sticky',
             top: 0,

@@ -7,8 +7,8 @@
 body {
   margin: 0;
   font-family: 'Outfit', system-ui, sans-serif;
-  background-color: #FAFAF7;
-  color: #1A1A2E;
+  background-color: var(--ui-bg);
+  color: var(--ui-text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -33,13 +33,13 @@ button {
 
 /* Selection color */
 ::selection {
-  background-color: rgba(61, 90, 128, 0.15);
-  color: #1A1A2E;
+  background-color: var(--ui-selection-bg);
+  color: var(--ui-text);
 }
 
 /* Focus-visible outline */
 :focus-visible {
-  outline: 2px solid #3D5A80;
+  outline: 2px solid var(--ui-primary);
   outline-offset: 2px;
 }
 

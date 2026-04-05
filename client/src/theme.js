@@ -1,65 +1,83 @@
-import { createTheme, alpha } from '@mui/material'
+import { createTheme } from '@mui/material'
 
 const palette = {
-  navy: '#1A1A2E',
-  navyLight: '#252540',
-  navyLighter: '#2F2F4A',
-  steel: '#3D5A80',
-  steelDark: '#2C4057',
-  steelLight: '#5B7EA1',
-  coral: '#EE6C4D',
-  coralDark: '#D45A3C',
-  cream: '#FAFAF7',
-  warmWhite: '#FFFFFF',
-  border: '#E5E2DD',
-  borderLight: '#F0EDE8',
-  textPrimary: '#1A1A2E',
-  textSecondary: '#6B7280',
-  textMuted: '#9CA3AF',
-  success: '#4A7C59',
-  successBg: '#EDF5F0',
-  warning: '#D4A843',
-  warningBg: '#FDF6E3',
-  error: '#C4453C',
-  errorBg: '#FDF0EF',
-  infoBg: '#EDF2F7',
+  bg: '#f7f6f5',
+  surface: '#ffffff',
+  surfaceMuted: '#efecea',
+  surfaceRaised: '#fcfbfa',
+  textPrimary: '#1e1e1e',
+  textSecondary: '#50504b',
+  textMuted: '#6c6c6b',
+  textInverse: '#ffffff',
+  textInverseMuted: 'rgba(255,255,255,0.68)',
+  border: '#d7d2cb',
+  borderStrong: '#bcb4aa',
+  primary: '#b2c784',
+  primaryHover: '#9fb56b',
+  primaryContrast: '#1e1e1e',
+  focusRing: 'rgba(178,199,132,0.28)',
+  selectionBg: 'rgba(178,199,132,0.22)',
+  sidebarBg: '#1f2118',
+  sidebarBgAlt: '#161711',
+  sidebarScrim: 'rgba(255,255,255,0.06)',
+  shadowSoft: '0 8px 24px rgba(30,30,30,0.08)',
+  shadowStrong: '0 20px 60px rgba(30,30,30,0.16)',
+  success: '#2f6b36',
+  successBg: '#eef8e6',
+  warning: '#8a5a00',
+  warningBg: '#fff2cf',
+  error: '#ff4e48',
+  errorBg: '#fff0ee',
+  info: '#26556f',
+  infoBg: '#e9f7ff',
+  overlayTextSoft: 'rgba(30,30,30,0.04)',
+  overlayTextMuted: 'rgba(30,30,30,0.08)',
+  overlayPrimarySoft: 'rgba(178,199,132,0.12)',
+  overlayPrimaryMuted: 'rgba(178,199,132,0.18)',
+  overlayWhiteSoft: 'rgba(255,255,255,0.08)',
+  overlayWhiteMuted: 'rgba(255,255,255,0.14)',
 }
 
 const theme = createTheme({
   palette: {
     primary: {
-      main: palette.steel,
-      dark: palette.steelDark,
-      light: palette.steelLight,
-      contrastText: '#FFFFFF',
+      main: palette.primary,
+      dark: palette.primaryHover,
+      light: palette.overlayPrimaryMuted,
+      contrastText: palette.primaryContrast,
     },
     secondary: {
-      main: palette.coral,
-      dark: palette.coralDark,
-      contrastText: '#FFFFFF',
+      main: palette.surfaceMuted,
+      dark: palette.borderStrong,
+      contrastText: palette.textPrimary,
     },
     success: {
       main: palette.success,
       light: palette.successBg,
+      contrastText: palette.textInverse,
     },
     warning: {
       main: palette.warning,
       light: palette.warningBg,
+      contrastText: palette.textPrimary,
     },
     error: {
       main: palette.error,
       light: palette.errorBg,
+      contrastText: palette.textInverse,
     },
     background: {
-      default: palette.cream,
-      paper: palette.warmWhite,
+      default: palette.bg,
+      paper: palette.surface,
     },
     text: {
       primary: palette.textPrimary,
       secondary: palette.textSecondary,
     },
     divider: palette.border,
-    navy: palette.navy,
+    sidebar: {
+      main: palette.sidebarBg,
+    },
   },
   typography: {
     fontFamily: '"Outfit", system-ui, sans-serif',
@@ -137,27 +155,35 @@ const theme = createTheme({
   },
   shadows: [
     'none',
-    '0 1px 2px rgba(26,26,46,0.04)',
-    '0 1px 4px rgba(26,26,46,0.06)',
-    '0 2px 8px rgba(26,26,46,0.06)',
-    '0 4px 12px rgba(26,26,46,0.08)',
-    '0 6px 16px rgba(26,26,46,0.08)',
-    '0 8px 24px rgba(26,26,46,0.10)',
-    ...Array(18).fill('0 8px 24px rgba(26,26,46,0.10)'),
+    '0 1px 2px rgba(30,30,30,0.04)',
+    '0 1px 4px rgba(30,30,30,0.05)',
+    '0 2px 8px rgba(30,30,30,0.06)',
+    '0 4px 12px rgba(30,30,30,0.08)',
+    '0 6px 16px rgba(30,30,30,0.09)',
+    '0 8px 24px rgba(30,30,30,0.1)',
+    ...Array(18).fill('0 8px 24px rgba(30,30,30,0.1)'),
   ],
   components: {
     MuiCssBaseline: {
       styleOverrides: {
+        ':root': {
+          colorScheme: 'light',
+        },
+        '::selection': {
+          backgroundColor: palette.selectionBg,
+          color: palette.textPrimary,
+        },
         body: {
-          backgroundColor: palette.cream,
+          backgroundColor: palette.bg,
+          color: palette.textPrimary,
           '&::-webkit-scrollbar': {
             width: 8,
           },
           '&::-webkit-scrollbar-track': {
-            background: palette.cream,
+            background: palette.bg,
           },
           '&::-webkit-scrollbar-thumb': {
-            background: palette.border,
+            background: palette.borderStrong,
             borderRadius: 4,
             '&:hover': {
               background: palette.textMuted,
@@ -167,6 +193,7 @@ const theme = createTheme({
         '*': {
           '&::-webkit-scrollbar': {
             width: 6,
+            height: 6,
           },
           '&::-webkit-scrollbar-track': {
             background: 'transparent',
@@ -189,37 +216,40 @@ const theme = createTheme({
           transition: 'all 0.2s ease',
         },
         contained: {
+          boxShadow: 'none',
           '&:hover': {
             transform: 'translateY(-1px)',
-            boxShadow: '0 4px 12px rgba(61,90,128,0.25)',
+            boxShadow: palette.shadowSoft,
           },
         },
         containedPrimary: {
-          background: `linear-gradient(135deg, ${palette.steel} 0%, ${palette.steelDark} 100%)`,
+          background: palette.primary,
+          color: palette.primaryContrast,
           '&:hover': {
-            background: `linear-gradient(135deg, ${palette.steelLight} 0%, ${palette.steel} 100%)`,
+            background: palette.primaryHover,
           },
         },
         containedSuccess: {
-          background: `linear-gradient(135deg, ${palette.success} 0%, #3D6B4A 100%)`,
+          background: palette.success,
+          color: palette.textInverse,
           '&:hover': {
-            background: `linear-gradient(135deg, #5A8C69 0%, ${palette.success} 100%)`,
-            boxShadow: '0 4px 12px rgba(74,124,89,0.25)',
+            background: '#25562b',
           },
         },
         containedError: {
-          background: `linear-gradient(135deg, ${palette.error} 0%, #A83832 100%)`,
+          background: palette.error,
+          color: palette.textInverse,
           '&:hover': {
-            background: `linear-gradient(135deg, #D45550 0%, ${palette.error} 100%)`,
-            boxShadow: '0 4px 12px rgba(196,69,60,0.25)',
+            background: '#d7433c',
           },
         },
         outlined: {
-          borderColor: palette.border,
+          borderColor: palette.borderStrong,
           color: palette.textPrimary,
+          backgroundColor: 'transparent',
           '&:hover': {
-            borderColor: palette.steel,
-            backgroundColor: alpha(palette.steel, 0.04),
+            borderColor: palette.textPrimary,
+            backgroundColor: palette.overlayTextSoft,
           },
         },
         sizeSmall: {
@@ -240,6 +270,8 @@ const theme = createTheme({
         root: {
           border: `1px solid ${palette.border}`,
           borderRadius: 10,
+          backgroundColor: palette.surface,
+          backgroundImage: 'none',
         },
       },
     },
@@ -251,6 +283,8 @@ const theme = createTheme({
         root: {
           border: `1px solid ${palette.border}`,
           borderRadius: 12,
+          backgroundColor: palette.surface,
+          backgroundImage: 'none',
         },
       },
     },
@@ -266,7 +300,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiTableCell-head': {
-            backgroundColor: palette.cream,
+            backgroundColor: palette.surfaceMuted,
             fontFamily: '"Outfit", system-ui, sans-serif',
             fontWeight: 600,
             fontSize: '0.7rem',
@@ -285,10 +319,10 @@ const theme = createTheme({
           '& .MuiTableRow-root': {
             transition: 'background-color 0.15s ease',
             '&:nth-of-type(even)': {
-              backgroundColor: alpha(palette.cream, 0.5),
+              backgroundColor: palette.surfaceRaised,
             },
             '&:hover': {
-              backgroundColor: alpha(palette.steel, 0.04),
+              backgroundColor: palette.overlayPrimarySoft,
             },
             '&:last-child td': {
               borderBottom: 'none',
@@ -300,7 +334,7 @@ const theme = createTheme({
     MuiTableCell: {
       styleOverrides: {
         root: {
-          borderBottom: `1px solid ${palette.borderLight}`,
+          borderBottom: `1px solid ${palette.border}`,
           padding: '12px 16px',
           fontSize: '0.85rem',
         },
@@ -312,17 +346,27 @@ const theme = createTheme({
       },
       styleOverrides: {
         root: {
+          '& .MuiInputLabel-root': {
+            color: palette.textSecondary,
+            '&.Mui-focused': {
+              color: palette.textPrimary,
+            },
+          },
           '& .MuiOutlinedInput-root': {
             borderRadius: 8,
+            backgroundColor: palette.surface,
             transition: 'box-shadow 0.2s ease',
+            '& fieldset': {
+              borderColor: palette.borderStrong,
+            },
             '&:hover .MuiOutlinedInput-notchedOutline': {
-              borderColor: palette.steel,
+              borderColor: palette.textPrimary,
             },
             '&.Mui-focused': {
-              boxShadow: `0 0 0 3px ${alpha(palette.steel, 0.12)}`,
+              boxShadow: `0 0 0 3px ${palette.focusRing}`,
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: palette.steel,
+              borderColor: palette.primary,
               borderWidth: 1.5,
             },
           },
@@ -333,6 +377,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 8,
+          backgroundColor: palette.surface,
         },
       },
     },
@@ -341,10 +386,11 @@ const theme = createTheme({
         paper: {
           borderRadius: 14,
           border: `1px solid ${palette.border}`,
-          boxShadow: '0 20px 60px rgba(26,26,46,0.15)',
+          boxShadow: palette.shadowStrong,
+          backgroundColor: palette.surface,
         },
         backdrop: {
-          backgroundColor: 'rgba(26,26,46,0.4)',
+          backgroundColor: 'rgba(30,30,30,0.4)',
           backdropFilter: 'blur(4px)',
         },
       },
@@ -383,23 +429,23 @@ const theme = createTheme({
         },
         standardError: {
           backgroundColor: palette.errorBg,
-          borderColor: alpha(palette.error, 0.2),
+          borderColor: 'var(--ui-status-rejected-border)',
           color: palette.error,
         },
         standardSuccess: {
           backgroundColor: palette.successBg,
-          borderColor: alpha(palette.success, 0.2),
+          borderColor: 'var(--ui-status-approved-border)',
           color: palette.success,
         },
         standardWarning: {
           backgroundColor: palette.warningBg,
-          borderColor: alpha(palette.warning, 0.2),
-          color: '#8B6914',
+          borderColor: 'var(--ui-status-pending-border)',
+          color: palette.warning,
         },
         standardInfo: {
           backgroundColor: palette.infoBg,
-          borderColor: alpha(palette.steel, 0.15),
-          color: palette.steel,
+          borderColor: 'var(--ui-status-completed-border)',
+          color: palette.info,
         },
       },
     },
@@ -407,7 +453,7 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiAlert-root': {
-            boxShadow: '0 8px 32px rgba(26,26,46,0.12)',
+            boxShadow: palette.shadowSoft,
           },
         },
       },
@@ -422,7 +468,8 @@ const theme = createTheme({
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          backgroundColor: palette.navy,
+          backgroundColor: palette.sidebarBg,
+          color: palette.textInverse,
           fontSize: '0.75rem',
           borderRadius: 6,
           padding: '6px 12px',
@@ -464,7 +511,7 @@ const theme = createTheme({
       styleOverrides: {
         paper: {
           borderRadius: 10,
-          boxShadow: '0 8px 24px rgba(26,26,46,0.12)',
+          boxShadow: palette.shadowSoft,
           border: `1px solid ${palette.border}`,
         },
       },

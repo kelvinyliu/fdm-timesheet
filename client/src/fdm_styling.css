@@ -1,0 +1,74 @@
+:root {
+    --color-bg: #f7f6f5;
+    --color-surface: #efecea;
+    --color-white: #ffffff;
+    --color-black: #000000;
+    --color-text: #1e1e1e;
+    --color-text-muted: #303030;
+    --color-border-muted: #98a2b3;
+    --color-placeholder: #6c6c6b;
+    --color-accent: #b2c784;
+    --color-accent-hover: #9fb56b;
+    --color-error: #ff4e48;
+    --color-pink: #ff74ff;
+    --color-blue: #70d8ff;
+    --color-orange: #ff7f00;
+    --color-purple: #a44cff;
+    --color-social-facebook: #3b5999;
+    --color-social-twitter: #55acee;
+    --color-social-linkedin: #007bb5;
+    --color-social-pinterest: #cb2027;
+    --color-social-instagram: #8a3ab9;
+
+    --ui-bg: var(--color-bg);
+    --ui-surface: var(--color-white);
+    --ui-surface-muted: var(--color-surface);
+    --ui-surface-raised: #fcfbfa;
+    --ui-text: var(--color-text);
+    --ui-text-secondary: #50504b;
+    --ui-text-muted: var(--color-placeholder);
+    --ui-text-inverse: var(--color-white);
+    --ui-text-inverse-muted: rgba(255,255,255,0.68);
+    --ui-border: #d7d2cb;
+    --ui-border-strong: #bcb4aa;
+    --ui-primary: var(--color-accent);
+    --ui-primary-hover: #9fb56b;
+    --ui-primary-contrast: var(--color-text);
+    --ui-focus-ring: rgba(178,199,132,0.28);
+    --ui-sidebar-bg: #1f2118;
+    --ui-sidebar-bg-alt: #161711;
+    --ui-sidebar-scrim: rgba(255,255,255,0.06);
+    --ui-selection-bg: rgba(178,199,132,0.22);
+    --ui-shadow-soft: 0 8px 24px rgba(30,30,30,0.08);
+    --ui-shadow-strong: 0 20px 60px rgba(30,30,30,0.16);
+
+    --ui-success: #2f6b36;
+    --ui-success-bg: #eef8e6;
+    --ui-warning: #8a5a00;
+    --ui-warning-bg: #fff2cf;
+    --ui-error: var(--color-error);
+    --ui-error-bg: #fff0ee;
+    --ui-info: #26556f;
+    --ui-info-bg: #e9f7ff;
+
+    --ui-status-draft: #5f6258;
+    --ui-status-draft-bg: #f1eee9;
+    --ui-status-draft-border: #d8d1c7;
+    --ui-status-pending: #8a5a00;
+    --ui-status-pending-bg: #fff2cf;
+    --ui-status-pending-border: #ecd79f;
+    --ui-status-approved: #2f6b36;
+    --ui-status-approved-bg: #eef8e6;
+    --ui-status-approved-border: #b6d8aa;
+    --ui-status-rejected: var(--color-error);
+    --ui-status-rejected-bg: #fff0ee;
+    --ui-status-rejected-border: #efc0bc;
+    --ui-status-completed: #26556f;
+    --ui-status-completed-bg: #e9f7ff;
+    --ui-status-completed-border: #b5d9e9;
+
+    --ui-text-rgb: 30, 30, 30;
+    --ui-primary-rgb: 178, 199, 132;
+    --ui-primary-hover-rgb: 159, 181, 107;
+    --ui-white-rgb: 255, 255, 255;
+}

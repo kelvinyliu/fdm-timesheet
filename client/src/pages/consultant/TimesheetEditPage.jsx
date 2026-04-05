@@ -19,6 +19,7 @@ import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { palette } from '../../theme.js'
 import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import {
@@ -198,7 +199,7 @@ export default function TimesheetEditPage() {
               return (
                 <TableRow
                   key={date}
-                  sx={isWeekend ? { backgroundColor: 'rgba(0,0,0,0.015)' } : {}}
+                  sx={isWeekend ? { backgroundColor: palette.overlayTextSoft } : {}}
                 >
                   <TableCell>
                     <Typography
@@ -255,7 +256,7 @@ export default function TimesheetEditPage() {
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '1.5rem',
               fontWeight: 600,
-              color: '#1A1A2E',
+              color: palette.textPrimary,
             }}
           >
             {totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}

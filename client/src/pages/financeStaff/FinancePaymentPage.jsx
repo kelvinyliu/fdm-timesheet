@@ -18,6 +18,7 @@ import PaymentIcon from '@mui/icons-material/Payment'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
 import { formatDayName, formatLongDate, formatWeekStart } from '../../utils/dateFormatters'
 
@@ -195,8 +196,8 @@ export default function FinancePaymentPage() {
                   sx={{
                     p: 2.5,
                     borderRadius: 2,
-                    border: '1px solid #E5E2DD',
-                    backgroundColor: '#FAFAF7',
+                    border: `1px solid ${palette.border}`,
+                    backgroundColor: palette.surfaceMuted,
                   }}
                 >
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
@@ -207,7 +208,7 @@ export default function FinancePaymentPage() {
                       fontFamily: '"JetBrains Mono", monospace',
                       fontSize: '1.75rem',
                       fontWeight: 600,
-                      color: '#1A1A2E',
+                      color: palette.textPrimary,
                     }}
                   >
                     {totalPayment !== null ? `\u00A3${totalPayment}` : '-'}
@@ -217,7 +218,7 @@ export default function FinancePaymentPage() {
                     sx={{
                       fontFamily: '"JetBrains Mono", monospace',
                       fontSize: '0.65rem',
-                      color: '#9CA3AF',
+                      color: palette.textMuted,
                     }}
                   >
                     daily rate x total hours / 8
@@ -271,8 +272,8 @@ export default function FinancePaymentPage() {
                         sx={{
                           p: 2,
                           borderRadius: 1.5,
-                          backgroundColor: '#FAFAF7',
-                          border: '1px solid #E5E2DD',
+                          backgroundColor: palette.surfaceMuted,
+                          border: `1px solid ${palette.border}`,
                         }}
                       >
                         <Typography variant="body2">{n.note}</Typography>

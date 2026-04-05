@@ -18,15 +18,16 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { palette } from '../../theme.js'
 import { getAuditLog } from '../../api/audit'
 
 const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING']
 
 const ACTION_COLORS = {
-  SUBMISSION: '#3D5A80',
-  APPROVAL: '#4A7C59',
-  REJECTION: '#C4453C',
-  PROCESSING: '#D4A843',
+  SUBMISSION: 'var(--ui-info)',
+  APPROVAL: 'var(--ui-success)',
+  REJECTION: 'var(--ui-error)',
+  PROCESSING: 'var(--ui-warning)',
 }
 
 function formatTimestamp(isoString) {
@@ -185,8 +186,22 @@ export default function AuditLogPage() {
                           px: 1,
                           py: 0.3,
                           borderRadius: '5px',
-                          backgroundColor: `${ACTION_COLORS[e.action] ?? '#6B7280'}12`,
-                          border: `1px solid ${ACTION_COLORS[e.action] ?? '#6B7280'}25`,
+                          backgroundColor:
+                            e.action === 'APPROVAL'
+                              ? 'var(--ui-success-bg)'
+                              : e.action === 'REJECTION'
+                                ? 'var(--ui-error-bg)'
+                                : e.action === 'PROCESSING'
+                                  ? 'var(--ui-warning-bg)'
+                                  : 'var(--ui-info-bg)',
+                          border:
+                            e.action === 'APPROVAL'
+                              ? '1px solid var(--ui-status-approved-border)'
+                              : e.action === 'REJECTION'
+                                ? '1px solid var(--ui-status-rejected-border)'
+                                : e.action === 'PROCESSING'
+                                  ? '1px solid var(--ui-status-pending-border)'
+                                  : '1px solid var(--ui-status-completed-border)',
                         }}
                       >
                         <Typography
@@ -194,7 +209,7 @@ export default function AuditLogPage() {
                           sx={{
                             fontSize: '0.68rem',
                             fontWeight: 600,
-                            color: ACTION_COLORS[e.action] ?? '#6B7280',
+                            color: ACTION_COLORS[e.action] ?? palette.textSecondary,
                             letterSpacing: '0.03em',
                           }}
                         >
@@ -230,7 +245,7 @@ export default function AuditLogPage() {
                         sx={{
                           fontFamily: '"JetBrains Mono", monospace',
                           fontSize: '0.72rem',
-                          color: '#6B7280',
+                          color: palette.textSecondary,
                         }}
                       >
                         {formatDetail(e.action, e.detail)}
@@ -256,7 +271,7 @@ export default function AuditLogPage() {
               mt: 1.5,
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.7rem',
-              color: '#9CA3AF',
+              color: palette.textMuted,
             }}
           >
             Showing {filtered.length} of {entries.length} entries

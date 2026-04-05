@@ -3,29 +3,29 @@ import Typography from '@mui/material/Typography'
 
 const STATUS_STYLES = {
   DRAFT: {
-    bg: '#F3F4F6',
-    color: '#4B5563',
-    border: '#E5E7EB',
+    bg: 'var(--ui-status-draft-bg)',
+    color: 'var(--ui-status-draft)',
+    border: 'var(--ui-status-draft-border)',
   },
   PENDING: {
-    bg: '#FDF6E3',
-    color: '#8B6914',
-    border: '#F0DCA0',
+    bg: 'var(--ui-status-pending-bg)',
+    color: 'var(--ui-status-pending)',
+    border: 'var(--ui-status-pending-border)',
   },
   APPROVED: {
-    bg: '#EDF5F0',
-    color: '#2D6A3F',
-    border: '#B8D8C3',
+    bg: 'var(--ui-status-approved-bg)',
+    color: 'var(--ui-status-approved)',
+    border: 'var(--ui-status-approved-border)',
   },
   REJECTED: {
-    bg: '#FDF0EF',
-    color: '#B03A33',
-    border: '#E8B4B0',
+    bg: 'var(--ui-status-rejected-bg)',
+    color: 'var(--ui-status-rejected)',
+    border: 'var(--ui-status-rejected-border)',
   },
   COMPLETED: {
-    bg: '#EDF2F7',
-    color: '#2C4057',
-    border: '#B4C7D9',
+    bg: 'var(--ui-status-completed-bg)',
+    color: 'var(--ui-status-completed)',
+    border: 'var(--ui-status-completed-border)',
   },
 }
 

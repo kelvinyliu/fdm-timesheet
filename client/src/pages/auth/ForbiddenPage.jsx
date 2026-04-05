@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import { palette } from '../../theme.js'
 
 export default function ForbiddenPage() {
   const navigate = useNavigate()
@@ -16,14 +17,14 @@ export default function ForbiddenPage() {
       gap={2}
       textAlign="center"
       px={2}
-      sx={{ backgroundColor: '#FAFAF7' }}
+      sx={{ backgroundColor: palette.bg }}
     >
       <Typography
         sx={{
           fontFamily: '"Instrument Serif", Georgia, serif',
           fontSize: '6rem',
           fontWeight: 400,
-          color: '#C4453C',
+          color: palette.error,
           lineHeight: 1,
         }}
       >
@@ -33,7 +34,7 @@ export default function ForbiddenPage() {
         variant="h5"
         sx={{
           fontFamily: '"Instrument Serif", Georgia, serif',
-          color: '#1A1A2E',
+          color: palette.textPrimary,
           mb: 1,
         }}
       >

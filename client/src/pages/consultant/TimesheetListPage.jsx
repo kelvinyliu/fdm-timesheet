@@ -12,8 +12,13 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
+import AddIcon from '@mui/icons-material/Add'
+import EditIcon from '@mui/icons-material/Edit'
+import VisibilityIcon from '@mui/icons-material/Visibility'
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 
@@ -44,6 +49,7 @@ export default function TimesheetListPage() {
       return (
         <Button
           variant="contained"
+          startIcon={<ArrowForwardIcon />}
           onClick={() =>
             navigate(
               activeDraft.status === 'DRAFT'
@@ -58,7 +64,11 @@ export default function TimesheetListPage() {
     }
     if (canCreate) {
       return (
-        <Button variant="contained" onClick={() => navigate('/consultant/timesheets/new')}>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => navigate('/consultant/timesheets/new')}
+        >
           New Timesheet
         </Button>
       )
@@ -66,7 +76,7 @@ export default function TimesheetListPage() {
     return (
       <Tooltip title="A new timesheet will be available on Monday">
         <span>
-          <Button variant="contained" disabled>
+          <Button variant="contained" disabled startIcon={<AddIcon />}>
             New Timesheet
           </Button>
         </span>
@@ -76,23 +86,38 @@ export default function TimesheetListPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h1">
-          My Timesheets
-        </Typography>
+      <PageHeader title="My Timesheets" subtitle="View and manage your weekly timesheets">
         {renderActionButton()}
-      </Box>
+      </PageHeader>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
       {!error && timesheets.length === 0 && (
-        <Typography color="text.secondary">
-          No timesheets yet. Create one to get started.
-        </Typography>
+        <Paper
+          sx={{
+            p: 6,
+            textAlign: 'center',
+            borderStyle: 'dashed',
+          }}
+        >
+          <Typography
+            sx={{
+              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontSize: '1.2rem',
+              color: 'text.secondary',
+              mb: 1,
+            }}
+          >
+            No timesheets yet
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Create one to get started.
+          </Typography>
+        </Paper>
       )}
 
       {!error && timesheets.length > 0 && (
@@ -102,23 +127,37 @@ export default function TimesheetListPage() {
               <TableRow>
                 <TableCell>Week of</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Total Hours</TableCell>
-                <TableCell>Actions</TableCell>
+                <TableCell align="right">Total Hours</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {timesheets.map((ts) => (
-                <TableRow key={ts.id} hover>
-                  <TableCell>{formatWeekStart(ts.weekStart)}</TableCell>
+                <TableRow key={ts.id}>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={500}>
+                      {formatWeekStart(ts.weekStart)}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={ts.status} />
                   </TableCell>
-                  <TableCell>{ts.totalHours ?? '—'}</TableCell>
-                  <TableCell>
+                  <TableCell align="right">
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {ts.totalHours ?? '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
                     {ts.status === 'DRAFT' ? (
                       <Button
                         size="small"
                         variant="outlined"
+                        startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
                         onClick={() => navigate(`/consultant/timesheets/${ts.id}/edit`)}
                       >
                         Edit
@@ -127,6 +166,7 @@ export default function TimesheetListPage() {
                       <Button
                         size="small"
                         variant="outlined"
+                        startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
                         onClick={() => navigate(`/consultant/timesheets/${ts.id}`)}
                       >
                         View

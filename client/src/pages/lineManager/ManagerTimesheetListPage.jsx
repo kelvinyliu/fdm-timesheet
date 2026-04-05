@@ -15,8 +15,10 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
+import RateReviewIcon from '@mui/icons-material/RateReview'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 
@@ -43,10 +45,7 @@ export default function ManagerTimesheetListPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h1">
-          Team Timesheets
-        </Typography>
+      <PageHeader title="Team Timesheets" subtitle="Review and manage your team's submissions">
         <FormControl size="small" sx={{ minWidth: 160 }}>
           <InputLabel id="status-filter-label">Status</InputLabel>
           <Select
@@ -61,18 +60,20 @@ export default function ManagerTimesheetListPage() {
             <MenuItem value="REJECTED">Rejected</MenuItem>
           </Select>
         </FormControl>
-      </Box>
+      </PageHeader>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
       {!error && filtered.length === 0 && (
-        <Typography color="text.secondary">
-          No timesheets found{statusFilter !== 'ALL' ? ` with status "${statusFilter}"` : ''}.
-        </Typography>
+        <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
+          <Typography variant="body2" color="text.secondary">
+            No timesheets found{statusFilter !== 'ALL' ? ` with status "${statusFilter}"` : ''}.
+          </Typography>
+        </Paper>
       )}
 
       {!error && filtered.length > 0 && (
@@ -83,23 +84,44 @@ export default function ManagerTimesheetListPage() {
                 <TableCell>Consultant ID</TableCell>
                 <TableCell>Week of</TableCell>
                 <TableCell>Status</TableCell>
-                <TableCell>Total Hours</TableCell>
-                <TableCell>Actions</TableCell>
+                <TableCell align="right">Total Hours</TableCell>
+                <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filtered.map((ts) => (
-                <TableRow key={ts.id} hover>
-                  <TableCell>{ts.consultantId}</TableCell>
-                  <TableCell>{formatWeekStart(ts.weekStart)}</TableCell>
+                <TableRow key={ts.id}>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: '"JetBrains Mono", monospace' }}
+                    >
+                      {ts.consultantId}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={500}>
+                      {formatWeekStart(ts.weekStart)}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <StatusBadge status={ts.status} />
                   </TableCell>
-                  <TableCell>{ts.totalHours ?? '—'}</TableCell>
-                  <TableCell>
+                  <TableCell align="right">
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {ts.totalHours ?? '-'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right">
                     <Button
                       size="small"
                       variant="outlined"
+                      startIcon={<RateReviewIcon sx={{ fontSize: '0.9rem' }} />}
                       onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
                     >
                       Review

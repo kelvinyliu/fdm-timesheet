@@ -23,6 +23,7 @@ import SaveIcon from '@mui/icons-material/Save'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { getUsers, createUser, updateUserRole, deleteUser } from '../../api/users'
 
 const ROLES = ['CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN']
@@ -34,10 +35,8 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
-  // Per-row pending role changes: { [userId]: role }
   const [pendingRoles, setPendingRoles] = useState({})
 
-  // Create dialog
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
@@ -125,18 +124,15 @@ export default function UserManagementPage() {
   if (loading) return <LoadingSpinner />
 
   return (
-    <Box p={3}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h5" fontWeight={700}>
-          User Management
-        </Typography>
+    <Box>
+      <PageHeader title="User Management" subtitle="Create, manage, and assign roles to users">
         <Button variant="contained" startIcon={<AddIcon />} onClick={openDialog}>
           Create User
         </Button>
-      </Box>
+      </PageHeader>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
           {error}
         </Alert>
       )}
@@ -156,20 +152,34 @@ export default function UserManagementPage() {
               const currentRole = pendingRoles[u.id] ?? u.role
               const isDirty = pendingRoles[u.id] !== undefined && pendingRoles[u.id] !== u.role
               return (
-                <TableRow key={u.id} hover>
-                  <TableCell>{u.name}</TableCell>
-                  <TableCell>{u.email}</TableCell>
+                <TableRow key={u.id}>
+                  <TableCell>
+                    <Typography variant="body2" fontWeight={500}>
+                      {u.name}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      {u.email}
+                    </Typography>
+                  </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
                       <Select
                         size="small"
                         value={currentRole}
                         onChange={(e) => handleRoleSelectChange(u.id, e.target.value)}
-                        sx={{ minWidth: 160 }}
+                        sx={{ minWidth: 160, fontSize: '0.8rem' }}
                       >
                         {ROLES.map((r) => (
                           <MenuItem key={r} value={r}>
-                            {r}
+                            {r.replace(/_/g, ' ')}
                           </MenuItem>
                         ))}
                       </Select>
@@ -256,7 +266,7 @@ export default function UserManagementPage() {
           >
             {ROLES.map((r) => (
               <MenuItem key={r} value={r}>
-                {r}
+                {r.replace(/_/g, ' ')}
               </MenuItem>
             ))}
           </Select>
@@ -270,7 +280,7 @@ export default function UserManagementPage() {
             onClick={handleCreateUser}
             disabled={formLoading}
           >
-            {formLoading ? 'Creating…' : 'Create'}
+            {formLoading ? 'Creating...' : 'Create'}
           </Button>
         </DialogActions>
       </Dialog>

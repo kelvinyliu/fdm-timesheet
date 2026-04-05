@@ -228,7 +228,7 @@ Requires `CONSULTANT`, `LINE_MANAGER`, or `FINANCE_MANAGER`. Returns a timesheet
 **Errors:** `403` not authorised · `404` not found
 
 #### `PUT /api/timesheets/:id/entries`
-Requires `CONSULTANT`. Saves daily hours for a timesheet. Only allowed while status is `DRAFT`. Upserts — existing entries for the same date are overwritten.
+Requires `CONSULTANT`. Saves daily hours for a timesheet. Allowed while status is `DRAFT` or `REJECTED`. Upserts — existing entries for the same date are overwritten. Entry dates must use `YYYY-MM-DD` and stay within the timesheet week (`weekStart` through `weekStart + 6`).
 
 **Request body**
 | Field | Type | Required |
@@ -239,14 +239,14 @@ Requires `CONSULTANT`. Saves daily hours for a timesheet. Only allowed while sta
 
 **Response `200`** — array of all entries for the timesheet
 
-**Errors:** `400` invalid entries · `403` not owner or timesheet not in DRAFT · `404` not found
+**Errors:** `400` invalid entries or date validation failures · `403` not owner · `409` timesheet is not editable · `404` not found
 
 #### `POST /api/timesheets/:id/submit`
-Requires `CONSULTANT`. Transitions a `DRAFT` timesheet to `PENDING` and records a `SUBMISSION` audit event. Timesheet becomes read-only after this point.
+Requires `CONSULTANT`. Transitions a `DRAFT` or `REJECTED` timesheet to `PENDING` and records a `SUBMISSION` audit event. Timesheet becomes read-only after this point.
 
 **Response `200`** — updated timesheet object
 
-**Errors:** `400` timesheet not in DRAFT · `403` not owner · `404` not found
+**Errors:** `403` not owner · `409` timesheet is not editable · `404` not found
 
 #### `GET /api/timesheets/:id/autofill`
 Requires `CONSULTANT`. Returns the daily entries from the previous week's timesheet (7 days before `weekStart`), to be used as a template.

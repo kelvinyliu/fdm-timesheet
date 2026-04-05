@@ -25,6 +25,7 @@ import Grid from '@mui/material/Grid'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import {
   getAssignments,
   createAssignment,
@@ -36,7 +37,7 @@ import {
 import { getUsers } from '../../api/users'
 
 function formatDate(dateStr) {
-  if (!dateStr) return '—'
+  if (!dateStr) return '-'
   const d = new Date(dateStr)
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
 }
@@ -45,26 +46,21 @@ const EMPTY_CLIENT_FORM = { consultantId: '', clientName: '', startDate: '', end
 const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
 
 export default function AssignmentsPage() {
-  // Users for dropdowns
   const [users, setUsers] = useState([])
 
-  // Client assignments state
   const [clientAssignments, setClientAssignments] = useState([])
   const [clientLoading, setClientLoading] = useState(true)
   const [clientError, setClientError] = useState('')
 
-  // Manager assignments state
   const [managerAssignments, setManagerAssignments] = useState([])
   const [managerLoading, setManagerLoading] = useState(true)
   const [managerError, setManagerError] = useState('')
 
-  // Client assignment dialog
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
   const [clientForm, setClientForm] = useState(EMPTY_CLIENT_FORM)
   const [clientFormError, setClientFormError] = useState('')
   const [clientFormLoading, setClientFormLoading] = useState(false)
 
-  // Manager assignment dialog
   const [managerDialogOpen, setManagerDialogOpen] = useState(false)
   const [managerForm, setManagerForm] = useState(EMPTY_MANAGER_FORM)
   const [managerFormError, setManagerFormError] = useState('')
@@ -105,7 +101,6 @@ export default function AssignmentsPage() {
     getUsers().then(setUsers).catch(() => {})
   }, [])
 
-  // Client assignment handlers
   async function handleDeleteClientAssignment(id) {
     if (!window.confirm('Remove this client assignment?')) return
     try {
@@ -141,7 +136,6 @@ export default function AssignmentsPage() {
     }
   }
 
-  // Manager assignment handlers
   async function handleDeleteManagerAssignment(id) {
     if (!window.confirm('Remove this manager assignment?')) return
     try {
@@ -178,16 +172,17 @@ export default function AssignmentsPage() {
   }
 
   return (
-    <Box p={3}>
-      <Typography variant="h5" fontWeight={700} mb={3}>
-        Assignments
-      </Typography>
+    <Box>
+      <PageHeader
+        title="Assignments"
+        subtitle="Manage client and manager-consultant assignments"
+      />
 
       <Grid container spacing={4}>
-        {/* Section 1: Client Assignments */}
+        {/* Client Assignments */}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="h6" fontWeight={600}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">
               Client Assignments
             </Typography>
             <Button
@@ -196,7 +191,7 @@ export default function AssignmentsPage() {
               startIcon={<AddIcon />}
               onClick={openClientDialog}
             >
-              Add Assignment
+              Add
             </Button>
           </Box>
 
@@ -221,12 +216,21 @@ export default function AssignmentsPage() {
                 </TableHead>
                 <TableBody>
                   {clientAssignments.map((a) => (
-                    <TableRow key={a.id} hover>
+                    <TableRow key={a.id}>
                       <TableCell>
-                        {users.find((u) => u.id === a.consultantId)?.name ?? a.consultantId}
+                        <Typography variant="body2" fontWeight={500}>
+                          {users.find((u) => u.id === a.consultantId)?.name ?? a.consultantId}
+                        </Typography>
                       </TableCell>
                       <TableCell>{a.clientName}</TableCell>
-                      <TableCell>{formatDate(a.createdAt)}</TableCell>
+                      <TableCell>
+                        <Typography
+                          variant="body2"
+                          sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
+                        >
+                          {formatDate(a.createdAt)}
+                        </Typography>
+                      </TableCell>
                       <TableCell align="right">
                         <Tooltip title="Remove assignment">
                           <IconButton
@@ -257,10 +261,10 @@ export default function AssignmentsPage() {
           )}
         </Grid>
 
-        {/* Section 2: Manager Assignments */}
+        {/* Manager Assignments */}
         <Grid size={{ xs: 12, lg: 6 }}>
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-            <Typography variant="h6" fontWeight={600}>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Typography variant="h6">
               Manager Assignments
             </Typography>
             <Button
@@ -269,7 +273,7 @@ export default function AssignmentsPage() {
               startIcon={<AddIcon />}
               onClick={openManagerDialog}
             >
-              Add Assignment
+              Add
             </Button>
           </Box>
 
@@ -293,9 +297,17 @@ export default function AssignmentsPage() {
                 </TableHead>
                 <TableBody>
                   {managerAssignments.map((a) => (
-                    <TableRow key={a.id} hover>
-                      <TableCell>{a.managerName}</TableCell>
-                      <TableCell>{a.consultantName}</TableCell>
+                    <TableRow key={a.id}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {a.managerName}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {a.consultantName}
+                        </Typography>
+                      </TableCell>
                       <TableCell align="right">
                         <Tooltip title="Remove assignment">
                           <IconButton
@@ -389,7 +401,7 @@ export default function AssignmentsPage() {
             onClick={handleCreateClientAssignment}
             disabled={clientFormLoading}
           >
-            {clientFormLoading ? 'Adding…' : 'Add'}
+            {clientFormLoading ? 'Adding...' : 'Add'}
           </Button>
         </DialogActions>
       </Dialog>
@@ -442,7 +454,7 @@ export default function AssignmentsPage() {
             onClick={handleCreateManagerAssignment}
             disabled={managerFormLoading}
           >
-            {managerFormLoading ? 'Adding…' : 'Add'}
+            {managerFormLoading ? 'Adding...' : 'Add'}
           </Button>
         </DialogActions>
       </Dialog>

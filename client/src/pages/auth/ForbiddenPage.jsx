@@ -16,15 +16,34 @@ export default function ForbiddenPage() {
       gap={2}
       textAlign="center"
       px={2}
+      sx={{ backgroundColor: '#FAFAF7' }}
     >
-      <Typography variant="h3" fontWeight={700} color="error">
-        403 — Forbidden
+      <Typography
+        sx={{
+          fontFamily: '"Instrument Serif", Georgia, serif',
+          fontSize: '6rem',
+          fontWeight: 400,
+          color: '#C4453C',
+          lineHeight: 1,
+        }}
+      >
+        403
       </Typography>
-      <Typography variant="body1" color="text.secondary" maxWidth={480}>
+      <Typography
+        variant="h5"
+        sx={{
+          fontFamily: '"Instrument Serif", Georgia, serif',
+          color: '#1A1A2E',
+          mb: 1,
+        }}
+      >
+        Access Forbidden
+      </Typography>
+      <Typography variant="body2" color="text.secondary" maxWidth={420}>
         You do not have permission to access this page. Please contact your
         administrator if you believe this is an error.
       </Typography>
-      <Button variant="contained" onClick={() => navigate(-1)}>
+      <Button variant="contained" onClick={() => navigate(-1)} sx={{ mt: 1 }}>
         Go back
       </Button>
     </Box>

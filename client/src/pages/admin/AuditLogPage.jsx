@@ -17,12 +17,20 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { getAuditLog } from '../../api/audit'
 
 const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING']
 
+const ACTION_COLORS = {
+  SUBMISSION: '#3D5A80',
+  APPROVAL: '#4A7C59',
+  REJECTION: '#C4453C',
+  PROCESSING: '#D4A843',
+}
+
 function formatTimestamp(isoString) {
-  if (!isoString) return '—'
+  if (!isoString) return '-'
   const d = new Date(isoString)
   return d.toLocaleString('en-GB', {
     day: '2-digit',
@@ -35,7 +43,7 @@ function formatTimestamp(isoString) {
 }
 
 function formatDetail(action, detail) {
-  if (detail === null || detail === undefined) return '—'
+  if (detail === null || detail === undefined) return '-'
   switch (action) {
     case 'SUBMISSION':
       return 'Submitted from draft'
@@ -44,10 +52,10 @@ function formatDetail(action, detail) {
     case 'REJECTION':
       return detail.comment ? `Rejected: ${detail.comment}` : 'Rejected'
     case 'PROCESSING': {
-      const rate = detail.dailyRate != null ? `£${Number(detail.dailyRate).toFixed(2)}/day` : ''
+      const rate = detail.dailyRate != null ? `\u00A3${Number(detail.dailyRate).toFixed(2)}/day` : ''
       const hours = detail.totalHours != null ? `${detail.totalHours}h` : ''
-      const amount = detail.amount != null ? `£${Number(detail.amount).toFixed(2)}` : ''
-      return [rate, hours, amount].filter(Boolean).join(' x ').replace(' x £', ' = £')
+      const amount = detail.amount != null ? `\u00A3${Number(detail.amount).toFixed(2)}` : ''
+      return [rate, hours, amount].filter(Boolean).join(' x ').replace(' x \u00A3', ' = \u00A3')
     }
     default:
       return typeof detail === 'object' ? JSON.stringify(detail) : String(detail)
@@ -96,49 +104,49 @@ export default function AuditLogPage() {
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <Box p={3}>
-        <Typography variant="h5" fontWeight={700} mb={2}>
-          Audit Log
-        </Typography>
+      <Box>
+        <PageHeader title="Audit Log" subtitle="Track all timesheet actions and events" />
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>
+          <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
             {error}
           </Alert>
         )}
 
-        <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-          <Autocomplete
-            options={ACTION_OPTIONS}
-            value={actionFilter}
-            onChange={(_e, value) => setActionFilter(value)}
-            size="small"
-            sx={{ width: 200 }}
-            renderInput={(params) => <TextField {...params} label="Action" />}
-          />
-          <Autocomplete
-            options={authorOptions}
-            value={authorFilter}
-            onChange={(_e, value) => setAuthorFilter(value)}
-            size="small"
-            sx={{ width: 220 }}
-            renderInput={(params) => <TextField {...params} label="Performed By" />}
-          />
-          <DatePicker
-            label="From"
-            value={dateFrom}
-            onChange={setDateFrom}
-            slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
-            sx={{ width: 170 }}
-          />
-          <DatePicker
-            label="To"
-            value={dateTo}
-            onChange={setDateTo}
-            slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
-            sx={{ width: 170 }}
-          />
-        </Stack>
+        <Paper sx={{ p: 2, mb: 3 }}>
+          <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+            <Autocomplete
+              options={ACTION_OPTIONS}
+              value={actionFilter}
+              onChange={(_e, value) => setActionFilter(value)}
+              size="small"
+              sx={{ width: 200 }}
+              renderInput={(params) => <TextField {...params} label="Action" />}
+            />
+            <Autocomplete
+              options={authorOptions}
+              value={authorFilter}
+              onChange={(_e, value) => setAuthorFilter(value)}
+              size="small"
+              sx={{ width: 220 }}
+              renderInput={(params) => <TextField {...params} label="Performed By" />}
+            />
+            <DatePicker
+              label="From"
+              value={dateFrom}
+              onChange={setDateFrom}
+              slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
+              sx={{ width: 170 }}
+            />
+            <DatePicker
+              label="To"
+              value={dateTo}
+              onChange={setDateTo}
+              slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
+              sx={{ width: 170 }}
+            />
+          </Stack>
+        </Paper>
 
         {loading ? (
           <LoadingSpinner />
@@ -156,29 +164,77 @@ export default function AuditLogPage() {
               </TableHead>
               <TableBody>
                 {filtered.map((e) => (
-                  <TableRow key={e.id} hover>
+                  <TableRow key={e.id}>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      {formatTimestamp(e.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {e.action}
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {formatTimestamp(e.createdAt)}
                       </Typography>
                     </TableCell>
-                    <TableCell>{e.performedByName ?? e.performedBy ?? '—'}</TableCell>
-                    <TableCell>{e.timesheetId ?? '—'}</TableCell>
+                    <TableCell>
+                      <Box
+                        component="span"
+                        sx={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 0.6,
+                          px: 1,
+                          py: 0.3,
+                          borderRadius: '5px',
+                          backgroundColor: `${ACTION_COLORS[e.action] ?? '#6B7280'}12`,
+                          border: `1px solid ${ACTION_COLORS[e.action] ?? '#6B7280'}25`,
+                        }}
+                      >
+                        <Typography
+                          component="span"
+                          sx={{
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                            color: ACTION_COLORS[e.action] ?? '#6B7280',
+                            letterSpacing: '0.03em',
+                          }}
+                        >
+                          {e.action}
+                        </Typography>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2" fontWeight={500}>
+                        {e.performedByName ?? e.performedBy ?? '-'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.78rem',
+                        }}
+                      >
+                        {e.timesheetId ?? '-'}
+                      </Typography>
+                    </TableCell>
                     <TableCell
                       sx={{
                         maxWidth: 320,
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
-                        fontFamily: 'monospace',
-                        fontSize: '0.75rem',
                       }}
                       title={formatDetail(e.action, e.detail)}
                     >
-                      {formatDetail(e.action, e.detail)}
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.72rem',
+                          color: '#6B7280',
+                        }}
+                      >
+                        {formatDetail(e.action, e.detail)}
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -195,7 +251,14 @@ export default function AuditLogPage() {
         )}
 
         {!loading && filtered.length > 0 && (
-          <Typography variant="caption" color="text.secondary" mt={1} display="block">
+          <Typography
+            sx={{
+              mt: 1.5,
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.7rem',
+              color: '#9CA3AF',
+            }}
+          >
             Showing {filtered.length} of {entries.length} entries
           </Typography>
         )}

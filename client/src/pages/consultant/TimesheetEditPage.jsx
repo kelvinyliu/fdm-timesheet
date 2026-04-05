@@ -14,7 +14,11 @@ import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Divider from '@mui/material/Divider'
+import SaveIcon from '@mui/icons-material/Save'
+import SendIcon from '@mui/icons-material/Send'
+import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 
@@ -142,7 +146,7 @@ export default function TimesheetEditPage() {
   if (fetchError) {
     return (
       <Box>
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {fetchError}
         </Alert>
         <Button variant="outlined" onClick={() => navigate('/consultant/timesheets')}>
@@ -157,25 +161,20 @@ export default function TimesheetEditPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h1">
-          Edit Timesheet
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
-          Week of {formatWeekStart(timesheet.weekStart)}
-        </Typography>
-      </Box>
-
-      <Box display="flex" justifyContent="flex-end" mb={2}>
+      <PageHeader
+        title="Edit Timesheet"
+        subtitle={`Week of ${formatWeekStart(timesheet.weekStart)}`}
+      >
         <Button
           variant="outlined"
           size="small"
+          startIcon={<AutoFixHighIcon />}
           onClick={handleAutofill}
           disabled={isBusy}
         >
-          {autofilling ? 'Loading…' : 'Autofill from last week'}
+          {autofilling ? 'Loading...' : 'Autofill from last week'}
         </Button>
-      </Box>
+      </PageHeader>
 
       <TableContainer component={Paper} sx={{ mb: 3 }}>
         <Table size="small">
@@ -187,24 +186,52 @@ export default function TimesheetEditPage() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {weekDates.map((date, i) => (
-              <TableRow key={date}>
-                <TableCell>{DAY_LABELS[i]}</TableCell>
-                <TableCell>{formatWeekStart(date)}</TableCell>
-                <TableCell align="right" sx={{ py: 0.5 }}>
-                  <TextField
-                    type="number"
-                    value={hours[i]}
-                    onChange={(e) => handleHoursChange(i, e.target.value)}
-                    size="small"
-                    slotProps={{
-                      htmlInput: { min: 0, max: 24, step: 0.5, style: { textAlign: 'right', width: 80 } },
-                    }}
-                    disabled={isBusy}
-                  />
-                </TableCell>
-              </TableRow>
-            ))}
+            {weekDates.map((date, i) => {
+              const isWeekend = i >= 5
+              return (
+                <TableRow
+                  key={date}
+                  sx={isWeekend ? { backgroundColor: 'rgba(0,0,0,0.015)' } : {}}
+                >
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      fontWeight={isWeekend ? 400 : 500}
+                      sx={isWeekend ? { color: 'text.secondary' } : {}}
+                    >
+                      {DAY_LABELS[i]}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2">
+                      {formatWeekStart(date)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="right" sx={{ py: 0.5 }}>
+                    <TextField
+                      type="number"
+                      value={hours[i]}
+                      onChange={(e) => handleHoursChange(i, e.target.value)}
+                      size="small"
+                      slotProps={{
+                        htmlInput: {
+                          min: 0,
+                          max: 24,
+                          step: 0.5,
+                          style: {
+                            textAlign: 'right',
+                            width: 80,
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.85rem',
+                          },
+                        },
+                      }}
+                      disabled={isBusy}
+                    />
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
       </TableContainer>
@@ -212,27 +239,41 @@ export default function TimesheetEditPage() {
       <Divider sx={{ mb: 2 }} />
 
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="subtitle1">
-          <strong>Total Hours:</strong> {totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}
-        </Typography>
+        <Box>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.25 }}>
+            Total Hours
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '1.5rem',
+              fontWeight: 600,
+              color: '#1A1A2E',
+            }}
+          >
+            {totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}
+          </Typography>
+        </Box>
       </Box>
 
       <Box display="flex" gap={2}>
         <Button
           variant="contained"
           color="primary"
+          startIcon={<SaveIcon />}
           onClick={handleSaveDraft}
           disabled={isBusy}
         >
-          {saving ? 'Saving…' : 'Save Draft'}
+          {saving ? 'Saving...' : 'Save Draft'}
         </Button>
         <Button
           variant="contained"
           color="success"
+          startIcon={<SendIcon />}
           onClick={handleSubmit}
           disabled={isBusy}
         >
-          {submitting ? 'Submitting…' : 'Submit Timesheet'}
+          {submitting ? 'Submitting...' : 'Submit Timesheet'}
         </Button>
         <Button
           variant="outlined"

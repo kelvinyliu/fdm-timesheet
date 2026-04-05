@@ -12,12 +12,13 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
+import EditIcon from '@mui/icons-material/Edit'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
-
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 function formatEntryDate(dateStr) {
   const date = new Date(dateStr + 'T00:00:00')
@@ -48,10 +49,14 @@ export default function TimesheetDetailPage() {
   if (error) {
     return (
       <Box>
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button variant="outlined" onClick={() => navigate('/consultant/timesheets')}>
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/consultant/timesheets')}
+        >
           Back to Timesheets
         </Button>
       </Box>
@@ -62,24 +67,24 @@ export default function TimesheetDetailPage() {
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Typography variant="h5" component="h1">
-          Timesheet Detail
-        </Typography>
-        <Box display="flex" gap={1}>
-          {timesheet.status === 'DRAFT' && (
-            <Button
-              variant="contained"
-              onClick={() => navigate(`/consultant/timesheets/${id}/edit`)}
-            >
-              Edit
-            </Button>
-          )}
-          <Button variant="outlined" onClick={() => navigate('/consultant/timesheets')}>
-            Back
+      <PageHeader title="Timesheet Detail">
+        {timesheet.status === 'DRAFT' && (
+          <Button
+            variant="contained"
+            startIcon={<EditIcon />}
+            onClick={() => navigate(`/consultant/timesheets/${id}/edit`)}
+          >
+            Edit
           </Button>
-        </Box>
-      </Box>
+        )}
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/consultant/timesheets')}
+        >
+          Back
+        </Button>
+      </PageHeader>
 
       {timesheet.status === 'REJECTED' && timesheet.rejectionComment && (
         <Alert severity="error" sx={{ mb: 3 }}>
@@ -88,22 +93,45 @@ export default function TimesheetDetailPage() {
       )}
 
       <Paper sx={{ p: 3, mb: 3 }}>
-        <Box display="grid" gridTemplateColumns="auto 1fr" columnGap={2} rowGap={1.5}>
-          <Typography color="text.secondary">Week of</Typography>
-          <Typography>{formatWeekStart(timesheet.weekStart)}</Typography>
+        <Box display="grid" gridTemplateColumns="140px 1fr" columnGap={2} rowGap={2}>
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            Week of
+          </Typography>
+          <Typography variant="body2" fontWeight={500}>
+            {formatWeekStart(timesheet.weekStart)}
+          </Typography>
 
-          <Typography color="text.secondary">Status</Typography>
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            Status
+          </Typography>
           <Box>
             <StatusBadge status={timesheet.status} />
           </Box>
 
-          <Typography color="text.secondary">Total Hours</Typography>
-          <Typography>{timesheet.totalHours ?? '—'}</Typography>
+          <Typography variant="body2" color="text.secondary" fontWeight={500}>
+            Total Hours
+          </Typography>
+          <Typography
+            variant="body2"
+            sx={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontWeight: 500,
+            }}
+          >
+            {timesheet.totalHours ?? '-'}
+          </Typography>
 
           {timesheet.assignmentId && (
             <>
-              <Typography color="text.secondary">Assignment ID</Typography>
-              <Typography>{timesheet.assignmentId}</Typography>
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Assignment ID
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: '"JetBrains Mono", monospace' }}
+              >
+                {timesheet.assignmentId}
+              </Typography>
             </>
           )}
         </Box>
@@ -116,7 +144,11 @@ export default function TimesheetDetailPage() {
       </Typography>
 
       {entries.length === 0 ? (
-        <Typography color="text.secondary">No entries recorded for this timesheet.</Typography>
+        <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+          <Typography variant="body2" color="text.secondary">
+            No entries recorded for this timesheet.
+          </Typography>
+        </Paper>
       ) : (
         <TableContainer component={Paper}>
           <Table size="small">
@@ -130,7 +162,16 @@ export default function TimesheetDetailPage() {
               {entries.map((entry) => (
                 <TableRow key={entry.id ?? entry.date}>
                   <TableCell>{formatEntryDate(entry.date)}</TableCell>
-                  <TableCell align="right">{entry.hoursWorked}</TableCell>
+                  <TableCell align="right">
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.85rem',
+                      }}
+                    >
+                      {entry.hoursWorked}
+                    </Typography>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>

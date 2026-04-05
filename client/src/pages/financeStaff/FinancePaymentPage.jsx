@@ -13,8 +13,11 @@ import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Stack from '@mui/material/Stack'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import PaymentIcon from '@mui/icons-material/Payment'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 
@@ -86,65 +89,82 @@ export default function FinancePaymentPage() {
 
   return (
     <Box>
-      <Box display="flex" alignItems="center" gap={2} mb={3}>
-        <Button variant="outlined" onClick={() => navigate('/finance/timesheets')}>
+      <PageHeader title="Process Payment">
+        <Button
+          variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/finance/timesheets')}
+        >
           Back
         </Button>
-        <Typography variant="h5" component="h1">
-          Process Payment
-        </Typography>
-      </Box>
+      </PageHeader>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
       )}
 
       {feedback && (
-        <Alert severity={feedback.severity} sx={{ mb: 2 }} onClose={() => setFeedback(null)}>
+        <Alert severity={feedback.severity} sx={{ mb: 3 }} onClose={() => setFeedback(null)}>
           {feedback.message}
         </Alert>
       )}
 
       {timesheet && (
         <>
+          {/* Summary */}
           <Paper sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Summary
             </Typography>
-            <Stack spacing={1}>
-              <Box display="flex" gap={1}>
-                <Typography fontWeight="bold" sx={{ minWidth: 140 }}>Consultant ID:</Typography>
-                <Typography>{timesheet.consultantId}</Typography>
-              </Box>
-              <Box display="flex" gap={1}>
-                <Typography fontWeight="bold" sx={{ minWidth: 140 }}>Week of:</Typography>
-                <Typography>{formatWeekStart(timesheet.weekStart)}</Typography>
-              </Box>
-              <Box display="flex" gap={1} alignItems="center">
-                <Typography fontWeight="bold" sx={{ minWidth: 140 }}>Status:</Typography>
+            <Box display="grid" gridTemplateColumns="140px 1fr" columnGap={2} rowGap={1.5}>
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Consultant ID
+              </Typography>
+              <Typography variant="body2" sx={{ fontFamily: '"JetBrains Mono", monospace' }}>
+                {timesheet.consultantId}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Week of
+              </Typography>
+              <Typography variant="body2" fontWeight={500}>
+                {formatWeekStart(timesheet.weekStart)}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Status
+              </Typography>
+              <Box>
                 <StatusBadge status={timesheet.status} />
               </Box>
-              <Box display="flex" gap={1}>
-                <Typography fontWeight="bold" sx={{ minWidth: 140 }}>Total Hours:</Typography>
-                <Typography>{timesheet.totalHours ?? '—'}</Typography>
-              </Box>
-            </Stack>
+
+              <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                Total Hours
+              </Typography>
+              <Typography
+                variant="body2"
+                sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}
+              >
+                {timesheet.totalHours ?? '-'}
+              </Typography>
+            </Box>
           </Paper>
 
+          {/* Entries */}
           {timesheet.entries && timesheet.entries.length > 0 && (
             <Paper sx={{ mb: 3 }}>
-              <Typography variant="h6" sx={{ p: 2, pb: 1 }}>
-                Daily Entries
-              </Typography>
+              <Box sx={{ p: 2, pb: 1 }}>
+                <Typography variant="h6">Daily Entries</Typography>
+              </Box>
               <TableContainer>
                 <Table size="small">
                   <TableHead>
                     <TableRow>
                       <TableCell>Day</TableCell>
                       <TableCell>Date</TableCell>
-                      <TableCell>Hours</TableCell>
+                      <TableCell align="right">Hours</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -152,7 +172,16 @@ export default function FinancePaymentPage() {
                       <TableRow key={entry.id}>
                         <TableCell>{getDayName(entry.date)}</TableCell>
                         <TableCell>{formatEntryDate(entry.date)}</TableCell>
-                        <TableCell>{entry.hoursWorked}</TableCell>
+                        <TableCell align="right">
+                          <Typography
+                            sx={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.85rem',
+                            }}
+                          >
+                            {entry.hoursWorked}
+                          </Typography>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -161,6 +190,7 @@ export default function FinancePaymentPage() {
             </Paper>
           )}
 
+          {/* Payment form */}
           {timesheet.status === 'APPROVED' && (
             <Paper sx={{ p: 3 }}>
               <Typography variant="h6" gutterBottom>
@@ -168,7 +198,7 @@ export default function FinancePaymentPage() {
               </Typography>
               <Stack spacing={3}>
                 <TextField
-                  label="Daily Rate (£)"
+                  label="Daily Rate (&pound;)"
                   type="number"
                   required
                   value={dailyRate}
@@ -177,15 +207,36 @@ export default function FinancePaymentPage() {
                   sx={{ maxWidth: 240 }}
                 />
 
-                <Box>
-                  <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                <Box
+                  sx={{
+                    p: 2.5,
+                    borderRadius: 2,
+                    border: '1px solid #E5E2DD',
+                    backgroundColor: '#FAFAF7',
+                  }}
+                >
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                     Estimated Total Payment
                   </Typography>
-                  <Typography variant="h5">
-                    {totalPayment !== null ? `£${totalPayment}` : '—'}
+                  <Typography
+                    sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '1.75rem',
+                      fontWeight: 600,
+                      color: '#1A1A2E',
+                    }}
+                  >
+                    {totalPayment !== null ? `\u00A3${totalPayment}` : '-'}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Calculated as: daily rate × total hours ÷ 8
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '0.65rem',
+                      color: '#9CA3AF',
+                    }}
+                  >
+                    daily rate x total hours / 8
                   </Typography>
                 </Box>
 
@@ -203,6 +254,7 @@ export default function FinancePaymentPage() {
                   <Button
                     variant="contained"
                     color="primary"
+                    startIcon={<PaymentIcon />}
                     onClick={handleProcessPayment}
                     disabled={
                       submitting ||
@@ -218,10 +270,11 @@ export default function FinancePaymentPage() {
             </Paper>
           )}
 
+          {/* Completed state */}
           {timesheet.status === 'COMPLETED' && (
             <>
               <Alert severity="success" sx={{ mt: 2 }}>
-                <Typography fontWeight="bold" gutterBottom>
+                <Typography fontWeight={600} gutterBottom sx={{ fontSize: '0.85rem' }}>
                   Payment Completed
                 </Typography>
                 This timesheet has been fully processed and payment has been recorded.
@@ -234,10 +287,26 @@ export default function FinancePaymentPage() {
                   </Typography>
                   <Stack spacing={2}>
                     {fetchedNotes.map((n) => (
-                      <Box key={n.id}>
+                      <Box
+                        key={n.id}
+                        sx={{
+                          p: 2,
+                          borderRadius: 1.5,
+                          backgroundColor: '#FAFAF7',
+                          border: '1px solid #E5E2DD',
+                        }}
+                      >
                         <Typography variant="body2">{n.note}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {n.authoredByName ?? 'Finance'} &mdash;{' '}
+                        <Typography
+                          variant="caption"
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.65rem',
+                            mt: 0.5,
+                            display: 'block',
+                          }}
+                        >
+                          {n.authoredByName ?? 'Finance'} -{' '}
                           {new Date(n.createdAt).toLocaleString('en-GB', {
                             day: '2-digit', month: 'short', year: 'numeric',
                             hour: '2-digit', minute: '2-digit',

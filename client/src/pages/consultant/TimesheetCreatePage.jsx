@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
@@ -12,6 +11,7 @@ import Checkbox from '@mui/material/Checkbox'
 import Alert from '@mui/material/Alert'
 import Paper from '@mui/material/Paper'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import PageHeader from '../../components/shared/PageHeader'
 import { createTimesheet, autofillTimesheet, updateEntries, getTimesheets } from '../../api/timesheets'
 import { getAssignments } from '../../api/assignments'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
@@ -76,7 +76,7 @@ export default function TimesheetCreatePage() {
             await updateEntries(newId, entries)
           }
         } catch {
-          // Autofill failing is non-fatal — continue to edit page
+          // Autofill failing is non-fatal
         }
       }
 
@@ -91,19 +91,20 @@ export default function TimesheetCreatePage() {
 
   return (
     <Box>
-      <Typography variant="h5" component="h1" mb={3}>
-        New Timesheet — Week of {formatWeekStart(weekStart)}
-      </Typography>
+      <PageHeader
+        title="New Timesheet"
+        subtitle={`Week of ${formatWeekStart(weekStart)}`}
+      />
 
-      <Paper sx={{ p: 3, maxWidth: 480 }}>
+      <Paper sx={{ p: 4, maxWidth: 480 }}>
         <Box component="form" onSubmit={handleSubmit} noValidate>
           {submitError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 3 }}>
               {submitError}
             </Alert>
           )}
 
-          <FormControl fullWidth sx={{ mb: 2 }}>
+          <FormControl fullWidth sx={{ mb: 2.5 }}>
             <InputLabel id="assignment-label">Client Assignment (optional)</InputLabel>
             <Select
               labelId="assignment-label"
@@ -127,15 +128,19 @@ export default function TimesheetCreatePage() {
               <Checkbox
                 checked={autofill}
                 onChange={(e) => setAutofill(e.target.checked)}
+                sx={{
+                  color: '#3D5A80',
+                  '&.Mui-checked': { color: '#3D5A80' },
+                }}
               />
             }
             label="Copy hours from previous week"
-            sx={{ mb: 2, display: 'block' }}
+            sx={{ mb: 3, display: 'block' }}
           />
 
           <Box display="flex" gap={2}>
             <Button type="submit" variant="contained" disabled={submitting}>
-              {submitting ? 'Creating…' : 'Create Timesheet'}
+              {submitting ? 'Creating...' : 'Create Timesheet'}
             </Button>
             <Button
               variant="outlined"

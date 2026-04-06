@@ -26,6 +26,7 @@ import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
+
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -153,7 +154,12 @@ export default function ManagerTimesheetListPage() {
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
-                <TableRow>
+                <TableRow     sx={{
+      '& .MuiTableCell-root': {
+        fontSize: '1.8 em',
+        fontWeight: 800,
+      },
+    }}>
                   <TableCell>Consultant</TableCell>
                   <TableCell>Week of</TableCell>
                   <TableCell>Status</TableCell>

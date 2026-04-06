@@ -17,6 +17,20 @@ React 19 frontend for the FDM Timesheet application. Built with Vite and Materia
 
 ---
 
+## Current logins
+
+Email / Username   | Role             | Password
+-------------------|------------------|----------
+admin@fdm.com      | SYSTEM_ADMIN     | temp
+finance@fdm.com    | FINANCE_MANAGER  | temp
+alice@fdm.com      | LINE_MANAGER     | temp
+bob@fdm.com        | LINE_MANAGER     | temp
+charlie@fdm.com    | CONSULTANT       | temp
+diana@fdm.com      | CONSULTANT       | temp
+eve@fdm.com        | CONSULTANT       | temp
+frank@fdm.com      | CONSULTANT       | temp
+
+
 ## Backend Communication
 
 All API calls go through `src/api/apiClient.js`, a thin wrapper around an axios instance.

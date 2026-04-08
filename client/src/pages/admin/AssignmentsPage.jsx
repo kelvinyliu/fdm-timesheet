@@ -39,12 +39,7 @@ import {
 } from '../../api/assignments'
 import { getUsers } from '../../api/users'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
-
-function formatDate(dateStr) {
-  if (!dateStr) return '-'
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-}
+import { formatDate } from '../../utils/dateFormatters'
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-GB', {

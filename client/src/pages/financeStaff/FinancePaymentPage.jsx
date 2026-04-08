@@ -24,7 +24,7 @@ import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
 import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
-import { formatDayName, formatLongDate, formatWeekStart } from '../../utils/dateFormatters'
+import { formatDayName, formatLongDate, formatWeekStart, formatTimestamp } from '../../utils/dateFormatters'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
 export default function FinancePaymentPage() {
@@ -329,11 +329,7 @@ export default function FinancePaymentPage() {
                             display: 'block',
                           }}
                         >
-                          {n.authoredByName ?? 'Finance'} -{' '}
-                          {new Date(n.createdAt).toLocaleString('en-GB', {
-                            day: '2-digit', month: 'short', year: 'numeric',
-                            hour: '2-digit', minute: '2-digit',
-                          })}
+                          {n.authoredByName ?? 'Finance'} - {formatTimestamp(n.createdAt)}
                         </Typography>
                       </Box>
                     ))}

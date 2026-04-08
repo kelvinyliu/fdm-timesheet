@@ -230,7 +230,7 @@ export default function FinancePaymentPage() {
                   required
                   value={dailyRate}
                   onChange={(e) => setDailyRate(e.target.value)}
-                  inputProps={{ min: 0.01, step: '0.01' }}
+                  slotProps={{ htmlInput: { min: 0.01, step: '0.01' } }}
                   sx={{ width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 240 } }}
                 />
 

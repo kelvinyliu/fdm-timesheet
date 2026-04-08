@@ -248,12 +248,14 @@ export default function AssignmentsPage() {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           sx={{ minWidth: 250, flexGrow: { xs: 1, sm: 0 } }}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            },
           }}
         />
         <Box sx={{ flexGrow: 1 }} />
@@ -621,7 +623,7 @@ export default function AssignmentsPage() {
             fullWidth
             required
             sx={{ mb: 2 }}
-            inputProps={{ min: '0.01', step: '0.01' }}
+            slotProps={{ htmlInput: { min: '0.01', step: '0.01' } }}
           />
         </DialogContent>
         <DialogActions>

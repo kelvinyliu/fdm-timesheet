@@ -450,13 +450,15 @@ export default function AppLayout() {
             open={mobileNavOpen}
             onClose={() => setMobileNavOpen(false)}
             ModalProps={{ keepMounted: true }}
-            PaperProps={{
-              sx: {
-                width: `min(100vw, ${MOBILE_DRAWER_WIDTH}px)`,
-                display: 'flex',
-                flexDirection: 'column',
-                backgroundImage: 'none',
-                ...navShellStyles,
+            slotProps={{
+              paper: {
+                sx: {
+                  width: `min(100vw, ${MOBILE_DRAWER_WIDTH}px)`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  backgroundImage: 'none',
+                  ...navShellStyles,
+                },
               },
             }}
           >

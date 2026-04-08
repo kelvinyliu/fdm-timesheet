@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -15,18 +15,18 @@ import DialogTitle from '@mui/material/DialogTitle'
 import DialogContent from '@mui/material/DialogContent'
 import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import InputLabel from '@mui/material/InputLabel'
-import FormControl from '@mui/material/FormControl'
+import InputAdornment from '@mui/material/InputAdornment'
+import Autocomplete from '@mui/material/Autocomplete'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
 import Alert from '@mui/material/Alert'
 import Tooltip from '@mui/material/Tooltip'
-import Grid from '@mui/material/Grid'
 import Stack from '@mui/material/Stack'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import SearchIcon from '@mui/icons-material/Search'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import {
@@ -62,6 +62,12 @@ export default function AssignmentsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [users, setUsers] = useState([])
+
+  const [activeTab, setActiveTab] = useState(0)
+  const [searchQuery, setSearchQuery] = useState('')
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState({ id: null, type: null })
 
   const [clientAssignments, setClientAssignments] = useState([])
   const [clientLoading, setClientLoading] = useState(true)
@@ -116,13 +122,55 @@ export default function AssignmentsPage() {
     getUsers().then(setUsers).catch(() => {})
   }, [])
 
-  async function handleDeleteClientAssignment(id) {
-    if (!window.confirm('Remove this client assignment?')) return
+  const filteredClientAssignments = useMemo(() => {
+    return clientAssignments.filter((a) => {
+      const q = searchQuery.toLowerCase()
+      const consultantName = getConsultantDisplayLabel(
+        users.find((u) => u.id === a.consultantId)?.name ?? null
+      ).toLowerCase()
+      return a.clientName.toLowerCase().includes(q) || consultantName.includes(q)
+    })
+  }, [clientAssignments, searchQuery, users])
+
+  const filteredManagerAssignments = useMemo(() => {
+    return managerAssignments.filter((a) => {
+      const q = searchQuery.toLowerCase()
+      return (
+        a.managerName.toLowerCase().includes(q) ||
+        a.consultantName.toLowerCase().includes(q)
+      )
+    })
+  }, [managerAssignments, searchQuery])
+
+  function handleDeleteClientAssignment(id) {
+    setDeleteTarget({ id, type: 'client' })
+    setDeleteDialogOpen(true)
+  }
+
+  function handleDeleteManagerAssignment(id) {
+    setDeleteTarget({ id, type: 'manager' })
+    setDeleteDialogOpen(true)
+  }
+
+  async function confirmDeletion() {
+    if (!deleteTarget.id || !deleteTarget.type) return
+
     try {
-      await deleteAssignment(id)
-      await fetchClientAssignments()
+      if (deleteTarget.type === 'client') {
+        await deleteAssignment(deleteTarget.id)
+        await fetchClientAssignments()
+      } else {
+        await deleteManagerAssignment(deleteTarget.id)
+        await fetchManagerAssignments()
+      }
+      setDeleteDialogOpen(false)
     } catch (err) {
-      setClientError(err.message || 'Failed to delete assignment.')
+      if (deleteTarget.type === 'client') {
+        setClientError(err.message || 'Failed to delete assignment.')
+      } else {
+        setManagerError(err.message || 'Failed to delete assignment.')
+      }
+      setDeleteDialogOpen(false)
     }
   }
 
@@ -159,16 +207,6 @@ export default function AssignmentsPage() {
     }
   }
 
-  async function handleDeleteManagerAssignment(id) {
-    if (!window.confirm('Remove this manager assignment?')) return
-    try {
-      await deleteManagerAssignment(id)
-      await fetchManagerAssignments()
-    } catch (err) {
-      setManagerError(err.message || 'Failed to delete assignment.')
-    }
-  }
-
   function openManagerDialog() {
     setManagerForm(EMPTY_MANAGER_FORM)
     setManagerFormError('')
@@ -201,32 +239,51 @@ export default function AssignmentsPage() {
         subtitle="Manage client and manager-consultant assignments"
       />
 
-      <Grid container spacing={4}>
-        {/* Client Assignments */}
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: { xs: 'stretch', sm: 'center' },
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 1.5,
-              mb: 2,
-            }}
-          >
-            <Typography variant="h6">
-              Client Assignments
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={openClientDialog}
-            >
-              Add
-            </Button>
-          </Box>
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+          <Tab label="Client Assignments" />
+          <Tab label="Manager Assignments" />
+        </Tabs>
+      </Box>
 
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+        <TextField
+          placeholder="Search assignments..."
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ minWidth: 250, flexGrow: { xs: 1, sm: 0 } }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Box sx={{ flexGrow: 1 }} />
+        {activeTab === 0 ? (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openClientDialog}
+          >
+            Add Client Assignment
+          </Button>
+        ) : (
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={openManagerDialog}
+          >
+            Add Manager Assignment
+          </Button>
+        )}
+      </Box>
+
+      {/* Client Assignments Tab */}
+      {activeTab === 0 && (
+        <Box>
           {clientError && (
             <Alert severity="error" sx={{ mb: 2 }} onClose={() => setClientError('')}>
               {clientError}
@@ -236,7 +293,7 @@ export default function AssignmentsPage() {
           {clientLoading ? (
             <LoadingSpinner />
           ) : isMobile ? (
-            clientAssignments.length === 0 ? (
+            filteredClientAssignments.length === 0 ? (
               <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
                 <Typography variant="body2" color="text.secondary">
                   No client assignments found.
@@ -244,7 +301,7 @@ export default function AssignmentsPage() {
               </Paper>
             ) : (
               <Stack spacing={1.5}>
-                {clientAssignments.map((a) => (
+                {filteredClientAssignments.map((a) => (
                   <Paper key={a.id} sx={{ p: 2.5 }}>
                     <Stack spacing={2}>
                       <Box>
@@ -333,7 +390,7 @@ export default function AssignmentsPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {clientAssignments.map((a) => (
+                  {filteredClientAssignments.map((a) => (
                     <TableRow key={a.id}>
                       <TableCell>
                         <Box>
@@ -385,7 +442,7 @@ export default function AssignmentsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {clientAssignments.length === 0 && (
+                  {filteredClientAssignments.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={5}
@@ -400,33 +457,12 @@ export default function AssignmentsPage() {
               </Table>
             </TableContainer>
           )}
-        </Grid>
+        </Box>
+      )}
 
-        {/* Manager Assignments */}
-        <Grid size={{ xs: 12, lg: 6 }}>
-          <Box
-            sx={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: { xs: 'stretch', sm: 'center' },
-              flexDirection: { xs: 'column', sm: 'row' },
-              gap: 1.5,
-              mb: 2,
-            }}
-          >
-            <Typography variant="h6">
-              Manager Assignments
-            </Typography>
-            <Button
-              variant="contained"
-              size="small"
-              startIcon={<AddIcon />}
-              onClick={openManagerDialog}
-            >
-              Add
-            </Button>
-          </Box>
-
+      {/* Manager Assignments Tab */}
+      {activeTab === 1 && (
+        <Box>
           {managerError && (
             <Alert severity="error" sx={{ mb: 2 }} onClose={() => setManagerError('')}>
               {managerError}
@@ -436,7 +472,7 @@ export default function AssignmentsPage() {
           {managerLoading ? (
             <LoadingSpinner />
           ) : isMobile ? (
-            managerAssignments.length === 0 ? (
+            filteredManagerAssignments.length === 0 ? (
               <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
                 <Typography variant="body2" color="text.secondary">
                   No manager assignments found.
@@ -444,7 +480,7 @@ export default function AssignmentsPage() {
               </Paper>
             ) : (
               <Stack spacing={1.5}>
-                {managerAssignments.map((a) => (
+                {filteredManagerAssignments.map((a) => (
                   <Paper key={a.id} sx={{ p: 2.5 }}>
                     <Stack spacing={2}>
                       <Box>
@@ -487,7 +523,7 @@ export default function AssignmentsPage() {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {managerAssignments.map((a) => (
+                  {filteredManagerAssignments.map((a) => (
                     <TableRow key={a.id}>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
@@ -512,7 +548,7 @@ export default function AssignmentsPage() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {managerAssignments.length === 0 && (
+                  {filteredManagerAssignments.length === 0 && (
                     <TableRow>
                       <TableCell
                         colSpan={3}
@@ -527,8 +563,24 @@ export default function AssignmentsPage() {
               </Table>
             </TableContainer>
           )}
-        </Grid>
-      </Grid>
+        </Box>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to remove this assignment? This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={confirmDeletion}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Add Client Assignment Dialog */}
       <Dialog
@@ -541,22 +593,23 @@ export default function AssignmentsPage() {
         <DialogTitle>Add Client Assignment</DialogTitle>
         <DialogContent>
           {clientFormError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
               {clientFormError}
             </Alert>
           )}
-          <FormControl fullWidth required sx={{ mt: 1, mb: 2 }}>
-            <InputLabel>Consultant</InputLabel>
-            <Select
-              value={clientForm.consultantId}
-              label="Consultant"
-              onChange={(e) => setClientForm((p) => ({ ...p, consultantId: e.target.value }))}
-            >
-              {consultants.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ mt: 1, mb: 2 }}>
+            <Autocomplete
+              options={consultants}
+              getOptionLabel={(option) => option.name || ''}
+              value={consultants.find((u) => u.id === clientForm.consultantId) || null}
+              onChange={(e, newValue) => {
+                setClientForm((p) => ({ ...p, consultantId: newValue ? newValue.id : '' }))
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Consultant" required />
+              )}
+            />
+          </Box>
           <TextField
             label="Client Name"
             value={clientForm.clientName}
@@ -601,34 +654,36 @@ export default function AssignmentsPage() {
         <DialogTitle>Add Manager Assignment</DialogTitle>
         <DialogContent>
           {managerFormError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
               {managerFormError}
             </Alert>
           )}
-          <FormControl fullWidth required sx={{ mt: 1, mb: 2 }}>
-            <InputLabel>Manager</InputLabel>
-            <Select
-              value={managerForm.managerId}
-              label="Manager"
-              onChange={(e) => setManagerForm((p) => ({ ...p, managerId: e.target.value }))}
-            >
-              {managers.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <FormControl fullWidth required>
-            <InputLabel>Consultant</InputLabel>
-            <Select
-              value={managerForm.consultantId}
-              label="Consultant"
-              onChange={(e) => setManagerForm((p) => ({ ...p, consultantId: e.target.value }))}
-            >
-              {consultants.map((u) => (
-                <MenuItem key={u.id} value={u.id}>{u.name}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <Box sx={{ mt: 1, mb: 2 }}>
+            <Autocomplete
+              options={managers}
+              getOptionLabel={(option) => option.name || ''}
+              value={managers.find((u) => u.id === managerForm.managerId) || null}
+              onChange={(e, newValue) => {
+                setManagerForm((p) => ({ ...p, managerId: newValue ? newValue.id : '' }))
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Manager" required />
+              )}
+            />
+          </Box>
+          <Box sx={{ mb: 2 }}>
+            <Autocomplete
+              options={consultants}
+              getOptionLabel={(option) => option.name || ''}
+              value={consultants.find((u) => u.id === managerForm.consultantId) || null}
+              onChange={(e, newValue) => {
+                setManagerForm((p) => ({ ...p, consultantId: newValue ? newValue.id : '' }))
+              }}
+              renderInput={(params) => (
+                <TextField {...params} label="Consultant" required />
+              )}
+            />
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setManagerDialogOpen(false)} disabled={managerFormLoading}>

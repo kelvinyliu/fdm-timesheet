@@ -16,9 +16,12 @@ import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
+import InputAdornment from '@mui/material/InputAdornment'
+import TextField from '@mui/material/TextField'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import RateReviewIcon from '@mui/icons-material/RateReview'
+import SearchIcon from '@mui/icons-material/Search'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
@@ -35,6 +38,7 @@ export default function ManagerTimesheetListPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [statusFilter, setStatusFilter] = useState('ALL')
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     getTimesheets()
@@ -45,14 +49,44 @@ export default function ManagerTimesheetListPage() {
 
   if (loading) return <LoadingSpinner />
 
-  const filtered =
-    statusFilter === 'ALL'
-      ? timesheets
-      : timesheets.filter((ts) => ts.status === statusFilter)
+  const normalizedSearchQuery = searchQuery.trim().toLowerCase()
+  const filtered = timesheets.filter((ts) => {
+    const matchesStatus = statusFilter === 'ALL' || ts.status === statusFilter
+    const matchesConsultant =
+      normalizedSearchQuery.length === 0 ||
+      getConsultantDisplayLabel(ts.consultantName).toLowerCase().includes(normalizedSearchQuery)
+
+    return matchesStatus && matchesConsultant
+  })
+
+  let emptyMessage = 'No timesheets found.'
+  if (statusFilter !== 'ALL' && normalizedSearchQuery) {
+    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}" with status "${statusFilter}".`
+  } else if (statusFilter !== 'ALL') {
+    emptyMessage = `No timesheets found with status "${statusFilter}".`
+  } else if (normalizedSearchQuery) {
+    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}".`
+  }
 
   return (
     <Box>
       <PageHeader title="Team Timesheets" subtitle="Review and manage your team's submissions">
+        <TextField
+          placeholder="Search consultants..."
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ minWidth: { sm: 240 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
         <FormControl size="small" sx={{ minWidth: 160, width: { xs: '100%', sm: 'auto' } }}>
           <InputLabel id="status-filter-label">Status</InputLabel>
           <Select
@@ -78,7 +112,7 @@ export default function ManagerTimesheetListPage() {
       {!error && filtered.length === 0 && (
         <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
           <Typography variant="body2" color="text.secondary">
-            No timesheets found{statusFilter !== 'ALL' ? ` with status "${statusFilter}"` : ''}.
+            {emptyMessage}
           </Typography>
         </Paper>
       )}

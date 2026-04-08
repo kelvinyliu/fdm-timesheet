@@ -649,7 +649,6 @@ export default function AppLayout() {
             value={pwForm.current}
             onChange={(e) => setPwForm((p) => ({ ...p, current: e.target.value }))}
             fullWidth
-            size="small"
             sx={{ mt: 1, mb: 2 }}
           />
           <TextField
@@ -658,7 +657,6 @@ export default function AppLayout() {
             value={pwForm.next}
             onChange={(e) => setPwForm((p) => ({ ...p, next: e.target.value }))}
             fullWidth
-            size="small"
             sx={{ mb: 2 }}
           />
           <TextField
@@ -667,7 +665,6 @@ export default function AppLayout() {
             value={pwForm.confirm}
             onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))}
             fullWidth
-            size="small"
           />
         </DialogContent>
         <DialogActions>

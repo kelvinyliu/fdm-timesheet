@@ -24,6 +24,7 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
+import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
 import {
   getTimesheetForWeek,
   isConsultantEditableStatus,
@@ -163,6 +164,15 @@ export default function TimesheetListPage() {
 
                     <Box>
                       <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                        Work Categories
+                      </Typography>
+                      <Typography variant="body2" fontWeight={500}>
+                        {getWorkSummaryDisplayLabel(ts.workSummary, 2)}
+                      </Typography>
+                    </Box>
+
+                    <Box>
+                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
                         Total Hours
                       </Typography>
                       <Typography
@@ -194,6 +204,7 @@ export default function TimesheetListPage() {
               <TableHead>
                 <TableRow>
                   <TableCell>Week of</TableCell>
+                  <TableCell>Work Categories</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Total Hours</TableCell>
                   <TableCell align="right">Actions</TableCell>
@@ -207,6 +218,7 @@ export default function TimesheetListPage() {
                         {formatWeekStart(ts.weekStart)}
                       </Typography>
                     </TableCell>
+                    <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
                     <TableCell>
                       <StatusBadge status={ts.status} />
                     </TableCell>

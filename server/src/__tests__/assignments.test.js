@@ -56,7 +56,6 @@ describe('GET /api/assignments', () => {
       id: assignmentRow.assignment_id,
       consultantId: assignmentRow.consultant_id,
       clientName: assignmentRow.client_name,
-      hourlyRate: 750,
       createdAt: assignmentRow.created_at,
     }])
     expect(clientAssignmentModel.getAssignmentsByConsultant).toHaveBeenCalledWith('consultant-1')

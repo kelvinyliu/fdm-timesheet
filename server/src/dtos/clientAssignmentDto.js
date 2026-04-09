@@ -7,3 +7,12 @@ export function clientAssignmentDto(row) {
     createdAt: row.created_at,
   }
 }
+
+export function consultantClientAssignmentDto(row) {
+  return {
+    id: row.assignment_id,
+    consultantId: row.consultant_id,
+    clientName: row.client_name,
+    createdAt: row.created_at,
+  }
+}

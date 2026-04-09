@@ -30,7 +30,11 @@ import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
 import { getTimesheet, reviewTimesheet } from '../../api/timesheets'
 import { formatLongDate, formatWeekStart, formatDayName } from '../../utils/dateFormatters'
-import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+import {
+  getConsultantDisplayLabel,
+  getWorkBucketDisplayLabel,
+  getWorkSummaryDisplayLabel,
+} from '../../utils/displayLabels'
 
 export default function TimesheetReviewPage() {
   const theme = useTheme()
@@ -123,6 +127,11 @@ export default function TimesheetReviewPage() {
             </Typography>
           ),
         },
+        {
+          key: 'buckets',
+          label: 'Work Categories',
+          value: getWorkSummaryDisplayLabel(timesheet.workSummary, 3),
+        },
       ]
     : []
 
@@ -168,6 +177,30 @@ export default function TimesheetReviewPage() {
             <DetailList items={summaryItems} />
           </Paper>
 
+          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Work Summary
+            </Typography>
+            <Stack spacing={1.25}>
+              {(timesheet.workSummary ?? []).map((item) => (
+                <Box
+                  key={`${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`}
+                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
+                >
+                  <Typography variant="body2">
+                    {getWorkBucketDisplayLabel(item.bucketLabel)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 }}
+                  >
+                    {item.totalHours}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
+
           {/* Entries */}
           {timesheet.entries && timesheet.entries.length > 0 && (
             <Paper sx={{ mb: 3 }}>
@@ -177,7 +210,7 @@ export default function TimesheetReviewPage() {
               {isMobile ? (
                 <Stack divider={<Divider flexItem />}>
                   {timesheet.entries.map((entry) => (
-                    <Box key={entry.id ?? entry.date} sx={{ px: 2, py: 1.75 }}>
+                    <Box key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`} sx={{ px: 2, py: 1.75 }}>
                       <Box
                         sx={{
                           display: 'flex',
@@ -189,6 +222,9 @@ export default function TimesheetReviewPage() {
                       >
                         <Typography variant="body2" fontWeight={600}>
                           {formatDayName(entry.date)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {getWorkBucketDisplayLabel(entry.bucketLabel)}
                         </Typography>
                         <Typography
                           sx={{
@@ -213,14 +249,16 @@ export default function TimesheetReviewPage() {
                       <TableRow>
                         <TableCell>Day</TableCell>
                         <TableCell>Date</TableCell>
+                        <TableCell>Work Category</TableCell>
                         <TableCell align="right">Hours</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {timesheet.entries.map((entry) => (
-                        <TableRow key={entry.id ?? entry.date}>
+                        <TableRow key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`}>
                           <TableCell>{formatDayName(entry.date)}</TableCell>
                           <TableCell>{formatLongDate(entry.date)}</TableCell>
+                          <TableCell>{getWorkBucketDisplayLabel(entry.bucketLabel)}</TableCell>
                           <TableCell align="right">
                             <Typography
                               sx={{
@@ -360,28 +398,6 @@ export default function TimesheetReviewPage() {
             </DialogActions>
           </Dialog>
 
-          {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED') && (
-            <Alert
-              severity={timesheet.status === 'APPROVED' ? 'success' : 'info'}
-              sx={{ mt: 2 }}
-            >
-              {timesheet.status === 'APPROVED'
-                ? (
-                    <>
-                      This timesheet has been <strong>approved</strong>.
-                    </>
-                  )
-                : (
-                    <>
-                      This timesheet has been <strong>rejected</strong> and returned to the
-                      consultant for changes.
-                    </>
-                  )}
-              {timesheet.status === 'REJECTED' && timesheet.rejectionComment && (
-                <> Reason: {timesheet.rejectionComment}</>
-              )}
-            </Alert>
-          )}
         </>
       )}
     </Box>

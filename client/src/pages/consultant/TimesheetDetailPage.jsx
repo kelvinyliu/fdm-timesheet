@@ -23,7 +23,10 @@ import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
 import { getTimesheet } from '../../api/timesheets'
 import { formatDayName, formatLongDate, formatWeekStart } from '../../utils/dateFormatters'
-import { getClientAssignmentDisplayLabel } from '../../utils/displayLabels'
+import {
+  getWorkBucketDisplayLabel,
+  getWorkSummaryDisplayLabel,
+} from '../../utils/displayLabels'
 import { isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetDetailPage() {
@@ -62,6 +65,7 @@ export default function TimesheetDetailPage() {
   }
 
   const entries = timesheet.entries ?? []
+  const workSummary = timesheet.workSummary ?? []
   const hasManagerFeedback = Boolean(timesheet.rejectionComment)
   const feedbackSeverity = timesheet.status === 'REJECTED' ? 'error' : 'warning'
   const feedbackTitle = timesheet.status === 'REJECTED'
@@ -93,15 +97,12 @@ export default function TimesheetDetailPage() {
         </Typography>
       ),
     },
+    {
+      key: 'buckets',
+      label: 'Work Categories',
+      value: getWorkSummaryDisplayLabel(workSummary, 3),
+    },
   ]
-
-  if (timesheet.assignmentId) {
-    detailItems.push({
-      key: 'assignment',
-      label: 'Client Assignment',
-      value: getClientAssignmentDisplayLabel(timesheet.assignmentClientName),
-    })
-  }
 
   return (
     <Box>
@@ -134,6 +135,36 @@ export default function TimesheetDetailPage() {
         <DetailList items={detailItems} rowGap={2} />
       </Paper>
 
+      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+          Weekly Work Summary
+        </Typography>
+        {workSummary.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            No client or Internal categories recorded for this week.
+          </Typography>
+        ) : (
+          <Stack spacing={1.25}>
+            {workSummary.map((item) => (
+              <Box
+                key={`${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`}
+                sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
+              >
+                <Typography variant="body2">
+                  {getWorkBucketDisplayLabel(item.bucketLabel)}
+                </Typography>
+                <Typography
+                  variant="body2"
+                  sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 }}
+                >
+                  {item.totalHours}
+                </Typography>
+              </Box>
+            ))}
+          </Stack>
+        )}
+      </Paper>
+
       <Divider sx={{ mb: 3 }} />
 
       <Typography variant="h6" component="h2" mb={2}>
@@ -151,7 +182,7 @@ export default function TimesheetDetailPage() {
           <Paper sx={{ overflow: 'hidden' }}>
             <Stack divider={<Divider flexItem />}>
               {entries.map((entry) => (
-                <Box key={entry.id ?? entry.date} sx={{ px: 2, py: 1.75 }}>
+                <Box key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`} sx={{ px: 2, py: 1.75 }}>
                   <Box
                     sx={{
                       display: 'flex',
@@ -161,9 +192,14 @@ export default function TimesheetDetailPage() {
                       mb: 0.5,
                     }}
                   >
-                    <Typography variant="body2" fontWeight={600}>
-                      {formatDayName(entry.date)}
-                    </Typography>
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {formatDayName(entry.date)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {getWorkBucketDisplayLabel(entry.bucketLabel)}
+                      </Typography>
+                    </Box>
                     <Typography
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
@@ -186,14 +222,18 @@ export default function TimesheetDetailPage() {
             <Table size="small">
               <TableHead>
                 <TableRow>
+                  <TableCell>Day</TableCell>
                   <TableCell>Date</TableCell>
+                  <TableCell>Work Category</TableCell>
                   <TableCell align="right">Hours</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {entries.map((entry) => (
-                  <TableRow key={entry.id ?? entry.date}>
-                    <TableCell>{formatWeekStart(entry.date)}</TableCell>
+                  <TableRow key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`}>
+                    <TableCell>{formatDayName(entry.date)}</TableCell>
+                    <TableCell>{formatLongDate(entry.date)}</TableCell>
+                    <TableCell>{getWorkBucketDisplayLabel(entry.bucketLabel)}</TableCell>
                     <TableCell align="right">
                       <Typography
                         sx={{

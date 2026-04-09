@@ -25,7 +25,15 @@ import DetailList from '../../components/shared/DetailList.jsx'
 import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
 import { formatDayName, formatLongDate, formatWeekStart, formatTimestamp } from '../../utils/dateFormatters'
-import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+import {
+  getConsultantDisplayLabel,
+  getWorkBucketDisplayLabel,
+  getWorkSummaryDisplayLabel,
+} from '../../utils/displayLabels'
+
+function bucketKey(item) {
+  return `${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`
+}
 
 export default function FinancePaymentPage() {
   const theme = useTheme()
@@ -36,7 +44,7 @@ export default function FinancePaymentPage() {
   const [timesheet, setTimesheet] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [hourlyRate, setHourlyRate] = useState('')
+  const [bucketRates, setBucketRates] = useState({})
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -49,6 +57,14 @@ export default function FinancePaymentPage() {
     getTimesheet(id)
       .then((ts) => {
         setTimesheet(ts)
+        setBucketRates(
+          Object.fromEntries(
+            (ts.workSummary ?? []).map((item) => [
+              bucketKey(item),
+              item.suggestedHourlyRate != null ? String(item.suggestedHourlyRate) : '',
+            ])
+          )
+        )
         if (ts.status === 'COMPLETED') {
           getTimesheetNotes(id).then(setFetchedNotes).catch(() => {})
         }
@@ -57,17 +73,30 @@ export default function FinancePaymentPage() {
       .finally(() => setLoading(false))
   }, [id, refreshKey])
 
-  const totalHours = timesheet?.totalHours ? Number(timesheet.totalHours) : 0
-  const hourlyRateNum = parseFloat(hourlyRate)
-  const isHourlyRateValid = Number.isFinite(hourlyRateNum) && hourlyRateNum > 0
-  const totalPayment = isHourlyRateValid ? (hourlyRateNum * totalHours).toFixed(2) : null
+  const workSummary = timesheet?.workSummary ?? []
+  const isPaymentReady = workSummary.length > 0 && workSummary.every((item) => {
+    const rate = Number(bucketRates[bucketKey(item)])
+    return Number.isFinite(rate) && rate > 0
+  })
+  const estimatedTotal = workSummary.reduce((sum, item) => {
+    const rate = Number(bucketRates[bucketKey(item)])
+    if (!Number.isFinite(rate) || rate <= 0) return sum
+    return sum + rate * Number(item.totalHours ?? 0)
+  }, 0)
 
   async function handleProcessPayment() {
-    if (!isHourlyRateValid) return
+    if (!isPaymentReady) return
     setSubmitting(true)
     setFeedback(null)
     try {
-      await processPayment(id, { hourlyRate: hourlyRateNum, notes: notes.trim() })
+      await processPayment(id, {
+        breakdowns: workSummary.map((item) => ({
+          entryKind: item.entryKind,
+          assignmentId: item.assignmentId ?? null,
+          hourlyRate: Number(bucketRates[bucketKey(item)]),
+        })),
+        notes: notes.trim(),
+      })
       setFeedback({ severity: 'success', message: 'Payment processed successfully.' })
       setRefreshKey((k) => k + 1)
     } catch (err) {
@@ -108,6 +137,11 @@ export default function FinancePaymentPage() {
             </Typography>
           ),
         },
+        {
+          key: 'buckets',
+          label: 'Work Categories',
+          value: getWorkSummaryDisplayLabel(workSummary, 3),
+        },
       ]
     : []
 
@@ -137,7 +171,6 @@ export default function FinancePaymentPage() {
 
       {timesheet && (
         <>
-          {/* Summary */}
           <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Summary
@@ -145,7 +178,30 @@ export default function FinancePaymentPage() {
             <DetailList items={summaryItems} />
           </Paper>
 
-          {/* Entries */}
+          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Work Summary
+            </Typography>
+            <Stack spacing={1.25}>
+              {workSummary.map((item) => (
+                <Box
+                  key={bucketKey(item)}
+                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
+                >
+                  <Typography variant="body2">
+                    {getWorkBucketDisplayLabel(item.bucketLabel)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 }}
+                  >
+                    {item.totalHours}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
+
           {timesheet.entries && timesheet.entries.length > 0 && (
             <Paper sx={{ mb: 3 }}>
               <Box sx={{ p: 2, pb: 1 }}>
@@ -154,7 +210,7 @@ export default function FinancePaymentPage() {
               {isMobile ? (
                 <Stack divider={<Divider flexItem />}>
                   {timesheet.entries.map((entry) => (
-                    <Box key={entry.id ?? entry.date} sx={{ px: 2, py: 1.75 }}>
+                    <Box key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`} sx={{ px: 2, py: 1.75 }}>
                       <Box
                         sx={{
                           display: 'flex',
@@ -164,9 +220,14 @@ export default function FinancePaymentPage() {
                           mb: 0.5,
                         }}
                       >
-                        <Typography variant="body2" fontWeight={600}>
-                          {formatDayName(entry.date)}
-                        </Typography>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {formatDayName(entry.date)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {getWorkBucketDisplayLabel(entry.bucketLabel)}
+                          </Typography>
+                        </Box>
                         <Typography
                           sx={{
                             fontFamily: '"JetBrains Mono", monospace',
@@ -190,14 +251,16 @@ export default function FinancePaymentPage() {
                       <TableRow>
                         <TableCell>Day</TableCell>
                         <TableCell>Date</TableCell>
+                        <TableCell>Work Category</TableCell>
                         <TableCell align="right">Hours</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {timesheet.entries.map((entry) => (
-                        <TableRow key={entry.id ?? entry.date}>
+                        <TableRow key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`}>
                           <TableCell>{formatDayName(entry.date)}</TableCell>
                           <TableCell>{formatLongDate(entry.date)}</TableCell>
+                          <TableCell>{getWorkBucketDisplayLabel(entry.bucketLabel)}</TableCell>
                           <TableCell align="right">
                             <Typography
                               sx={{
@@ -217,22 +280,46 @@ export default function FinancePaymentPage() {
             </Paper>
           )}
 
-          {/* Payment form */}
           {timesheet.status === 'APPROVED' && (
             <Paper sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Typography variant="h6" gutterBottom>
                 Payment Details
               </Typography>
               <Stack spacing={3}>
-                <TextField
-                  label="Hourly Rate (&pound;)"
-                  type="number"
-                  required
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  slotProps={{ htmlInput: { min: 0.01, step: '0.01' } }}
-                  sx={{ width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 240 } }}
-                />
+                {workSummary.map((item) => (
+                  <Box
+                    key={bucketKey(item)}
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: { xs: '1fr', sm: 'minmax(220px, 1fr) 140px' },
+                      gap: 1.5,
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="body2" fontWeight={600}>
+                        {getWorkBucketDisplayLabel(item.bucketLabel)}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {item.totalHours}h
+                      </Typography>
+                    </Box>
+                    <TextField
+                      label="Rate (&pound;/hr)"
+                      type="number"
+                      required
+                      value={bucketRates[bucketKey(item)] ?? ''}
+                      onChange={(event) => setBucketRates((prev) => ({
+                        ...prev,
+                        [bucketKey(item)]: event.target.value,
+                      }))}
+                      helperText={item.entryKind === 'CLIENT'
+                        ? 'Prefilled from the current client assignment rate.'
+                        : 'Enter the Internal rate manually.'}
+                      slotProps={{ htmlInput: { min: 0.01, step: '0.01' } }}
+                    />
+                  </Box>
+                ))}
 
                 <Box
                   sx={{
@@ -253,7 +340,7 @@ export default function FinancePaymentPage() {
                       color: palette.textPrimary,
                     }}
                   >
-                    {totalPayment !== null ? `\u00A3${totalPayment}` : '-'}
+                    {isPaymentReady ? `\u00A3${estimatedTotal.toFixed(2)}` : '-'}
                   </Typography>
                   <Typography
                     variant="caption"
@@ -261,10 +348,37 @@ export default function FinancePaymentPage() {
                       fontFamily: '"JetBrains Mono", monospace',
                       fontSize: '0.65rem',
                       color: palette.textMuted,
+                      display: 'block',
+                      mb: workSummary.length > 0 ? 1.5 : 0,
                     }}
                   >
-                    hourly rate x total hours
+                    summed across all client and Internal categories
                   </Typography>
+                  <Stack spacing={0.5}>
+                    {workSummary.map((item) => {
+                      const rate = Number(bucketRates[bucketKey(item)])
+                      const hours = Number(item.totalHours ?? 0)
+                      const amount = Number.isFinite(rate) && rate > 0
+                        ? (rate * hours).toFixed(2)
+                        : null
+
+                      return (
+                        <Typography
+                          key={`working-${bucketKey(item)}`}
+                          variant="caption"
+                          sx={{
+                            display: 'block',
+                            fontFamily: '"JetBrains Mono", monospace',
+                            color: palette.textMuted,
+                          }}
+                        >
+                          {`${getWorkBucketDisplayLabel(item.bucketLabel)}: ${hours}h x ${
+                            Number.isFinite(rate) && rate > 0 ? `\u00A3${rate.toFixed(2)}` : '-'
+                          }${amount ? ` = \u00A3${amount}` : ''}`}
+                        </Typography>
+                      )
+                    })}
+                  </Stack>
                 </Box>
 
                 <TextField
@@ -273,7 +387,7 @@ export default function FinancePaymentPage() {
                   minRows={3}
                   fullWidth
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
+                  onChange={(event) => setNotes(event.target.value)}
                   placeholder="Optional notes for this payment"
                 />
 
@@ -283,7 +397,7 @@ export default function FinancePaymentPage() {
                     color="primary"
                     startIcon={<PaymentIcon />}
                     onClick={handleProcessPayment}
-                    disabled={submitting || !isHourlyRateValid}
+                    disabled={submitting || !isPaymentReady}
                     fullWidth={isMobile}
                   >
                     Process Payment
@@ -293,50 +407,38 @@ export default function FinancePaymentPage() {
             </Paper>
           )}
 
-          {/* Completed state */}
-          {timesheet.status === 'COMPLETED' && (
-            <>
-              <Alert severity="success" sx={{ mt: 2 }}>
-                <Typography fontWeight={600} gutterBottom sx={{ fontSize: '0.85rem' }}>
-                  Payment Recorded
-                </Typography>
-                This timesheet is marked as paid and the payment has been recorded.
-              </Alert>
-
-              {fetchedNotes.length > 0 && (
-                <Paper sx={{ p: 3, mt: 2 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Finance Notes
-                  </Typography>
-                  <Stack spacing={2}>
-                    {fetchedNotes.map((n) => (
-                      <Box
-                        key={n.id}
-                        sx={{
-                          p: 2,
-                          borderRadius: 1.5,
-                          backgroundColor: palette.surfaceMuted,
-                          border: `1px solid ${palette.border}`,
-                        }}
-                      >
-                        <Typography variant="body2">{n.note}</Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.65rem',
-                            mt: 0.5,
-                            display: 'block',
-                          }}
-                        >
-                          {n.authoredByName ?? 'Finance'} - {formatTimestamp(n.createdAt)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Paper>
-              )}
-            </>
+          {timesheet.status === 'COMPLETED' && fetchedNotes.length > 0 && (
+            <Paper sx={{ p: 3, mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Finance Notes
+              </Typography>
+              <Stack spacing={2}>
+                {fetchedNotes.map((n) => (
+                  <Box
+                    key={n.id}
+                    sx={{
+                      p: 2,
+                      borderRadius: 1.5,
+                      backgroundColor: palette.surfaceMuted,
+                      border: `1px solid ${palette.border}`,
+                    }}
+                  >
+                    <Typography variant="body2">{n.note}</Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.65rem',
+                        mt: 0.5,
+                        display: 'block',
+                      }}
+                    >
+                      {n.authoredByName ?? 'Finance'} - {formatTimestamp(n.createdAt)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Paper>
           )}
         </>
       )}

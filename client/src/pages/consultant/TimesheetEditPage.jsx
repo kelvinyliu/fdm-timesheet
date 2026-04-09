@@ -4,66 +4,86 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import TextField from '@mui/material/TextField'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
-import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
+import MenuItem from '@mui/material/MenuItem'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
-import useMediaQuery from '@mui/material/useMediaQuery'
-import { useTheme } from '@mui/material/styles'
+import IconButton from '@mui/material/IconButton'
+import Chip from '@mui/material/Chip'
 import SaveIcon from '@mui/icons-material/Save'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
+import AddIcon from '@mui/icons-material/Add'
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
-import { palette } from '../../theme.js'
-import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
+import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet, getTimesheets } from '../../api/timesheets'
+import { getAssignments } from '../../api/assignments'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import {
-  buildAutofillHours,
+  buildAutofillEntries,
+  getMostRecentClientAssignmentId,
   isConsultantEditableStatus,
 } from '../../utils/timesheetWorkflow.js'
 
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+function getBucketValue(entry) {
+  return entry.entryKind === 'CLIENT' ? entry.assignmentId ?? '' : 'INTERNAL'
+}
 
-function buildInitialHours(weekStart, existingEntries) {
-  const dates = buildWeekDates(weekStart)
-  return dates.map((date) => {
-    const match = existingEntries.find((e) => e.date === date || e.date?.slice(0, 10) === date)
-    return match ? String(parseFloat(match.hoursWorked) || 0) : '0'
-  })
+function createLocalEntries(entries, nextLocalId) {
+  return (entries ?? []).map((entry) => ({
+    id: `row-${nextLocalId()}`,
+    date: entry.date,
+    entryKind: entry.entryKind,
+    assignmentId: entry.assignmentId ?? null,
+    hoursWorked: String(entry.hoursWorked ?? '0'),
+  }))
+}
+
+function buildDefaultEntry(date, assignments, preferredAssignmentId, nextLocalId) {
+  const preferredAssignment = assignments.find((assignment) => assignment.id === preferredAssignmentId) ?? null
+  const onlyAssignment = assignments.length === 1 ? assignments[0] : null
+  const selectedAssignment = onlyAssignment ?? preferredAssignment
+
+  return {
+    id: `row-${nextLocalId()}`,
+    date,
+    entryKind: selectedAssignment ? 'CLIENT' : 'INTERNAL',
+    assignmentId: selectedAssignment?.id ?? null,
+    hoursWorked: '0',
+  }
 }
 
 export default function TimesheetEditPage() {
-  const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
+  const localIdRef = useRef(0)
   const autofillWarningShown = useRef(false)
 
   const [timesheet, setTimesheet] = useState(null)
-  const [hours, setHours] = useState(Array(7).fill('0'))
+  const [entries, setEntries] = useState([])
+  const [assignments, setAssignments] = useState([])
+  const [preferredAssignmentId, setPreferredAssignmentId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(null)
-
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [autofilling, setAutofilling] = useState(false)
-  const [confirmAction, setConfirmAction] = useState(null)
-
+  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
+
+  function nextLocalId() {
+    localIdRef.current += 1
+    return localIdRef.current
+  }
 
   useEffect(() => {
     const autofillFeedback =
@@ -84,37 +104,65 @@ export default function TimesheetEditPage() {
   }, [location.pathname, location.state, navigate])
 
   useEffect(() => {
-    getTimesheet(id)
-      .then((ts) => {
+    Promise.all([getTimesheet(id), getAssignments(), getTimesheets()])
+      .then(([ts, fetchedAssignments, allTimesheets]) => {
         if (!isConsultantEditableStatus(ts.status)) {
           navigate(`/consultant/timesheets/${id}`, { replace: true })
           return
         }
+
         setTimesheet(ts)
-        setHours(buildInitialHours(ts.weekStart, ts.entries ?? []))
+        setAssignments(fetchedAssignments)
+        setPreferredAssignmentId(getMostRecentClientAssignmentId(allTimesheets, id))
+        setEntries(createLocalEntries(ts.entries, nextLocalId))
       })
       .catch((err) => setFetchError(err.message ?? 'Failed to load timesheet'))
       .finally(() => setLoading(false))
   }, [id, navigate])
 
-  function handleHoursChange(index, value) {
-    setHours((prev) => {
-      const next = [...prev]
-      next[index] = value
-      return next
-    })
-  }
-
-  function getEntriesPayload() {
-    const dates = buildWeekDates(timesheet.weekStart)
-    return dates.map((date, i) => ({
-      date,
-      hoursWorked: parseFloat(hours[i]) || 0,
-    }))
-  }
+  const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
+  const isBusy = saving || submitting || autofilling
+  const canChangeBuckets = timesheet?.status === 'DRAFT'
+  const totalHours = entries.reduce((sum, entry) => sum + (parseFloat(entry.hoursWorked) || 0), 0)
 
   function showSnackbar(message, severity = 'success') {
     setSnackbar({ open: true, message, severity })
+  }
+
+  function handleRowChange(rowId, patch) {
+    setEntries((prev) => prev.map((entry) => (entry.id === rowId ? { ...entry, ...patch } : entry)))
+  }
+
+  function handleBucketChange(rowId, value) {
+    if (!canChangeBuckets) return
+
+    handleRowChange(rowId, value === 'INTERNAL'
+      ? { entryKind: 'INTERNAL', assignmentId: null }
+      : { entryKind: 'CLIENT', assignmentId: value })
+  }
+
+  function handleAddRow(date) {
+    if (!canChangeBuckets) return
+
+    setEntries((prev) => [
+      ...prev,
+      buildDefaultEntry(date, assignments, preferredAssignmentId, nextLocalId),
+    ])
+  }
+
+  function handleRemoveRow(rowId) {
+    if (!canChangeBuckets) return
+
+    setEntries((prev) => prev.filter((entry) => entry.id !== rowId))
+  }
+
+  function getEntriesPayload() {
+    return entries.map((entry) => ({
+      date: entry.date,
+      entryKind: entry.entryKind,
+      assignmentId: entry.entryKind === 'CLIENT' ? entry.assignmentId : null,
+      hoursWorked: parseFloat(entry.hoursWorked) || 0,
+    }))
   }
 
   async function saveDraft() {
@@ -122,73 +170,43 @@ export default function TimesheetEditPage() {
     try {
       await updateEntries(id, getEntriesPayload())
       showSnackbar('Draft saved successfully.')
-      return true
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to save draft.', 'error')
-      return false
     } finally {
       setSaving(false)
     }
   }
 
-  async function submitTimesheetWithConfirmation() {
+  async function handleSubmit() {
     setSubmitting(true)
     try {
       await updateEntries(id, getEntriesPayload())
       await submitTimesheet(id)
+      setSubmitConfirmOpen(false)
       navigate(`/consultant/timesheets/${id}`)
-      return true
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to submit timesheet.', 'error')
       setSubmitting(false)
-      return false
     }
   }
 
-  async function autofillEntries() {
+  async function handleAutofill() {
     setAutofilling(true)
     try {
-      const prevEntries = await autofillTimesheet(id)
-      if (!prevEntries || prevEntries.length === 0) {
+      const previousEntries = await autofillTimesheet(id)
+      if (!previousEntries || previousEntries.length === 0) {
         showSnackbar('No previous week entries found.', 'info')
-        return true
+        return
       }
-      setHours(buildAutofillHours(timesheet.weekStart, prevEntries))
-      showSnackbar('Hours filled from previous week.')
-      return true
+
+      setEntries(createLocalEntries(buildAutofillEntries(timesheet.weekStart, previousEntries), nextLocalId))
+      showSnackbar('Hours copied from the previous week.')
     } catch (err) {
       showSnackbar(err.message ?? 'Autofill failed.', 'error')
-      return false
     } finally {
       setAutofilling(false)
     }
   }
-
-  function openConfirmation(action) {
-    setConfirmAction(action)
-  }
-
-  function closeConfirmation() {
-    if (isBusy) return
-    setConfirmAction(null)
-  }
-
-  async function handleConfirmedAction() {
-    let succeeded = false
-    if (confirmAction === 'save') {
-      succeeded = await saveDraft()
-    } else if (confirmAction === 'submit') {
-      succeeded = await submitTimesheetWithConfirmation()
-    } else if (confirmAction === 'autofill') {
-      succeeded = await autofillEntries()
-    }
-
-    if (succeeded) {
-      setConfirmAction(null)
-    }
-  }
-
-  const totalHours = hours.reduce((sum, h) => sum + (parseFloat(h) || 0), 0)
 
   if (loading) return <LoadingSpinner />
 
@@ -205,9 +223,6 @@ export default function TimesheetEditPage() {
     )
   }
 
-  const weekDates = buildWeekDates(timesheet.weekStart)
-  const isBusy = saving || submitting || autofilling
-
   return (
     <Box>
       <PageHeader
@@ -216,9 +231,16 @@ export default function TimesheetEditPage() {
       >
         <Button
           variant="outlined"
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/consultant/timesheets')}
+        >
+          Back
+        </Button>
+        <Button
+          variant="outlined"
           startIcon={<AutoFixHighIcon />}
-          onClick={() => openConfirmation('autofill')}
-          disabled={isBusy}
+          onClick={handleAutofill}
+          disabled={isBusy || !canChangeBuckets}
         >
           {autofilling ? 'Loading...' : 'Autofill from last week'}
         </Button>
@@ -230,227 +252,191 @@ export default function TimesheetEditPage() {
         </Alert>
       )}
 
-      {isMobile ? (
-        <Paper sx={{ mb: 3, overflow: 'hidden' }}>
-          {weekDates.map((date, i) => {
-            const isWeekend = i >= 5
-            return (
-              <Box
-                key={date}
-                sx={{
-                  px: 2,
-                  py: 2,
-                  backgroundColor: isWeekend ? palette.overlayTextSoft : 'transparent',
-                  borderTop: i === 0 ? 'none' : `1px solid ${palette.border}`,
-                }}
-              >
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, mb: 1.5 }}>
-                  <Box>
-                    <Typography
-                      variant="body2"
-                      fontWeight={isWeekend ? 400 : 600}
-                      sx={isWeekend ? { color: 'text.secondary' } : undefined}
-                    >
-                      {DAY_LABELS[i]}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatWeekStart(date)}
-                    </Typography>
-                  </Box>
-                </Box>
-
-                <TextField
-                  label="Hours worked"
-                  type="number"
-                  fullWidth
-                  value={hours[i]}
-                  onChange={(e) => handleHoursChange(i, e.target.value)}
-                  size="small"
-                  slotProps={{
-                    htmlInput: {
-                      min: 0,
-                      max: 24,
-                      step: 0.5,
-                      style: {
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '0.9rem',
-                      },
-                    },
-                  }}
-                  disabled={isBusy}
-                />
-              </Box>
-            )
-          })}
-        </Paper>
-      ) : (
-        <TableContainer component={Paper} sx={{ mb: 3, overflowX: 'auto' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Day</TableCell>
-                <TableCell>Date</TableCell>
-                <TableCell align="right">Hours Worked</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {weekDates.map((date, i) => {
-                const isWeekend = i >= 5
-                return (
-                  <TableRow
-                    key={date}
-                    sx={isWeekend ? { backgroundColor: palette.overlayTextSoft } : {}}
-                  >
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        fontWeight={isWeekend ? 400 : 500}
-                        sx={isWeekend ? { color: 'text.secondary' } : {}}
-                      >
-                        {DAY_LABELS[i]}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {formatWeekStart(date)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right" sx={{ py: 0.5 }}>
-                      <TextField
-                        type="number"
-                        value={hours[i]}
-                        onChange={(e) => handleHoursChange(i, e.target.value)}
-                        size="small"
-                        slotProps={{
-                          htmlInput: {
-                            min: 0,
-                            max: 24,
-                            step: 0.5,
-                            style: {
-                              textAlign: 'right',
-                              width: 80,
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '0.85rem',
-                            },
-                          },
-                        }}
-                        disabled={isBusy}
-                      />
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+      {!canChangeBuckets && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Client and Internal categories are locked after first submission. You can update hours on the existing rows only.
+        </Alert>
       )}
 
-      <Divider sx={{ mb: 2 }} />
+      {assignments.length === 0 && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          No client assignments are currently available. You can still record Internal work.
+        </Alert>
+      )}
 
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: { xs: 'flex-start', sm: 'center' },
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: 1,
-          mb: 3,
-        }}
-      >
-        <Box>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.25 }}>
-            Total Hours
-          </Typography>
-          <Typography
-            sx={{
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '1.5rem',
-              fontWeight: 600,
-              color: palette.textPrimary,
-            }}
-          >
-            {totalHours % 1 === 0 ? totalHours : totalHours.toFixed(1)}
-          </Typography>
-        </Box>
-      </Box>
+      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+          <Box sx={{ flexGrow: 1 }}>
+            <Typography variant="h6">Work Categories</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Split each day across client assignments or Internal work.
+            </Typography>
+          </Box>
+          <Chip label={`${totalHours.toFixed(2)}h total`} variant="outlined" />
+        </Stack>
+      </Paper>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<SaveIcon />}
-          onClick={() => openConfirmation('save')}
-          disabled={isBusy}
-        >
-          {saving ? 'Saving...' : 'Save Draft'}
-        </Button>
-        <Button
-          variant="contained"
-          color="success"
-          startIcon={<SendIcon />}
-          onClick={() => openConfirmation('submit')}
-          disabled={isBusy}
-        >
-          {submitting ? 'Submitting...' : 'Submit Timesheet'}
-        </Button>
-        <Button
-          variant="outlined"
-          onClick={() => navigate('/consultant/timesheets')}
-          disabled={isBusy}
-        >
-          Cancel
-        </Button>
+      <Stack spacing={2.5}>
+        {weekDates.map((date) => {
+          const rows = entries.filter((entry) => entry.date === date)
+          const dayTotal = rows.reduce((sum, entry) => sum + (parseFloat(entry.hoursWorked) || 0), 0)
+
+          return (
+            <Paper key={date} sx={{ p: { xs: 2, sm: 2.5 } }}>
+              <Stack
+                direction={{ xs: 'column', sm: 'row' }}
+                spacing={1.5}
+                alignItems={{ sm: 'center' }}
+                justifyContent="space-between"
+                sx={{ mb: 2 }}
+              >
+                <Box>
+                  <Typography variant="subtitle1" fontWeight={600}>
+                    {formatWeekStart(date)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {dayTotal.toFixed(2)}h scheduled
+                  </Typography>
+                </Box>
+                {canChangeBuckets && (
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={() => handleAddRow(date)}
+                    disabled={isBusy}
+                  >
+                    Add Row
+                  </Button>
+                )}
+              </Stack>
+
+              {rows.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  No work categories added for this day.
+                </Typography>
+              ) : (
+                <Stack spacing={1.5}>
+                  {rows.map((entry) => (
+                    <Box
+                      key={entry.id}
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: 'minmax(240px, 1fr) 120px auto' },
+                        gap: 1.5,
+                        alignItems: 'center',
+                      }}
+                    >
+                      <TextField
+                        select
+                        label="Work Category"
+                        value={getBucketValue(entry)}
+                        onChange={(event) => handleBucketChange(entry.id, event.target.value)}
+                        disabled={isBusy || !canChangeBuckets}
+                        fullWidth
+                      >
+                        {assignments.map((assignment) => (
+                          <MenuItem key={assignment.id} value={assignment.id}>
+                            {assignment.clientName}
+                          </MenuItem>
+                        ))}
+                        <MenuItem value="INTERNAL">Internal</MenuItem>
+                      </TextField>
+
+                      <TextField
+                        label="Hours"
+                        type="number"
+                        value={entry.hoursWorked}
+                        onChange={(event) => handleRowChange(entry.id, { hoursWorked: event.target.value })}
+                        disabled={isBusy}
+                        slotProps={{ htmlInput: { min: 0, max: 24, step: '0.25' } }}
+                      />
+
+                      <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
+                        {canChangeBuckets ? (
+                          <IconButton
+                            aria-label="Remove work row"
+                            onClick={() => handleRemoveRow(entry.id)}
+                            disabled={isBusy}
+                          >
+                            <DeleteOutlineIcon />
+                          </IconButton>
+                        ) : (
+                          <Box sx={{ width: 40 }} />
+                        )}
+                      </Box>
+                    </Box>
+                  ))}
+                </Stack>
+              )}
+            </Paper>
+          )
+        })}
       </Stack>
+
+      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mt: 3 }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Button
+            variant="outlined"
+            startIcon={<SaveIcon />}
+            onClick={saveDraft}
+            disabled={isBusy}
+          >
+            {saving ? 'Saving...' : 'Save Draft'}
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<SendIcon />}
+            onClick={() => setSubmitConfirmOpen(true)}
+            disabled={isBusy}
+          >
+            {submitting ? 'Submitting...' : 'Submit for Review'}
+          </Button>
+        </Stack>
+      </Paper>
+
+      <Dialog
+        open={submitConfirmOpen}
+        onClose={submitting ? undefined : () => setSubmitConfirmOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Submit Timesheet</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Submit this timesheet for manager review? You will not be able to change the client or Internal categories after submission.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setSubmitConfirmOpen(false)}
+            disabled={submitting}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleSubmit}
+            disabled={submitting}
+          >
+            {submitting ? 'Submitting...' : 'Submit'}
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
-        onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
       >
         <Alert
           severity={snackbar.severity}
-          onClose={() => setSnackbar((s) => ({ ...s, open: false }))}
+          onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
           sx={{ width: '100%' }}
         >
           {snackbar.message}
         </Alert>
       </Snackbar>
-
-      <Dialog
-        open={Boolean(confirmAction)}
-        onClose={closeConfirmation}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>
-          {confirmAction === 'save' && 'Save draft?'}
-          {confirmAction === 'submit' && 'Submit timesheet?'}
-          {confirmAction === 'autofill' && 'Autofill timesheet?'}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {confirmAction === 'save' && 'This will save your current hours as a draft.'}
-            {confirmAction === 'submit' && 'This will save your current hours and submit the timesheet for manager review.'}
-            {confirmAction === 'autofill' && 'This will replace the current hours on this form with values copied from the previous week when available.'}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeConfirmation} disabled={isBusy}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleConfirmedAction}
-            variant="contained"
-            color={confirmAction === 'submit' ? 'success' : 'primary'}
-            disabled={isBusy}
-          >
-            {confirmAction === 'save' && (saving ? 'Saving...' : 'Confirm save')}
-            {confirmAction === 'submit' && (submitting ? 'Submitting...' : 'Confirm submit')}
-            {confirmAction === 'autofill' && (autofilling ? 'Loading...' : 'Confirm autofill')}
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   )
 }

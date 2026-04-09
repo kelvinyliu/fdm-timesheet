@@ -39,6 +39,10 @@ function formatDetail(action, detail) {
     case 'REJECTION':
       return detail.comment ? `Rejected: ${detail.comment}` : 'Rejected'
     case 'PROCESSING': {
+      if (Array.isArray(detail.breakdowns) && detail.breakdowns.length > 0) {
+        const amount = detail.amount != null ? ` = \u00A3${Number(detail.amount).toFixed(2)}` : ''
+        return `${detail.breakdowns.length} categories x ${detail.totalHours ?? 0}h${amount}`
+      }
       const rateValue = detail.hourlyRate ?? detail.dailyRate
       const rate = rateValue != null ? `\u00A3${Number(rateValue).toFixed(2)}/hr` : ''
       const hours = detail.totalHours != null ? `${detail.totalHours}h` : ''

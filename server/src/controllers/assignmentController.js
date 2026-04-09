@@ -6,13 +6,13 @@ import {
 } from '../models/clientAssignmentModel.js'
 import { findUserById } from '../models/userModel.js'
 import { Role } from '../constants/roles.js'
-import { clientAssignmentDto } from '../dtos/clientAssignmentDto.js'
+import { clientAssignmentDto, consultantClientAssignmentDto } from '../dtos/clientAssignmentDto.js'
 import { isUuid } from '../utils/validation.js'
 
 export async function listAssignments(req, res, next) {
   try {
     const assignments = await getAssignmentsByConsultant(req.user.userId)
-    res.json(assignments.map(clientAssignmentDto))
+    res.json(assignments.map(consultantClientAssignmentDto))
   } catch (err) {
     next(err)
   }

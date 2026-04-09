@@ -122,13 +122,22 @@ export async function reviewTimesheet(id, reviewerId, decision, comment) {
 
 export async function getPreviousWeekEntries(consultantId, weekStart) {
   const { rows } = await pool.query(
-    `SELECT te.entry_date, te.hours_worked
+    `SELECT te.entry_id,
+            te.entry_date,
+            te.entry_kind,
+            te.assignment_id,
+            te.hours_worked,
+            CASE
+              WHEN te.entry_kind = 'INTERNAL' THEN 'Internal'
+              ELSE COALESCE(ca.client_name, 'Unknown client assignment')
+            END AS bucket_label
      FROM timesheet_entries te
      JOIN timesheets t ON t.timesheet_id = te.timesheet_id
+     LEFT JOIN client_assignments ca ON ca.assignment_id = te.assignment_id
      WHERE t.consultant_id = $1
        AND t.week_start = $2::date - INTERVAL '7 days'
        AND te.entry_date BETWEEN t.week_start AND t.week_start + 6
-     ORDER BY te.entry_date`,
+     ORDER BY te.entry_date, bucket_label`,
     [consultantId, weekStart]
   )
   return rows

@@ -12,6 +12,22 @@ export function getClientAssignmentDisplayLabel(clientName) {
   return hasText(clientName) ? clientName : 'Unknown client assignment'
 }
 
+export function getWorkBucketDisplayLabel(bucketLabel) {
+  return hasText(bucketLabel) ? bucketLabel : 'Internal'
+}
+
+export function getWorkSummaryDisplayLabel(workSummary = [], maxItems = 2) {
+  if (!Array.isArray(workSummary) || workSummary.length === 0) return 'No work categories'
+
+  const labels = workSummary
+    .map((item) => getWorkBucketDisplayLabel(item.bucketLabel))
+    .filter(Boolean)
+
+  if (labels.length <= maxItems) return labels.join(', ')
+
+  return `${labels.slice(0, maxItems).join(', ')} +${labels.length - maxItems} more`
+}
+
 export function getAuditActorDisplayLabel(performedByName) {
   return hasText(performedByName) ? performedByName : 'Deleted user'
 }

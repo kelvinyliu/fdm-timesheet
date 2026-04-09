@@ -27,7 +27,10 @@ import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
-import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+import {
+  getConsultantDisplayLabel,
+  getTimesheetStatusDisplayLabel,
+} from '../../utils/displayLabels'
 
 
 export default function ManagerTimesheetListPage() {
@@ -61,16 +64,16 @@ export default function ManagerTimesheetListPage() {
 
   let emptyMessage = 'No timesheets found.'
   if (statusFilter !== 'ALL' && normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}" with status "${statusFilter}".`
+    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}" with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
   } else if (statusFilter !== 'ALL') {
-    emptyMessage = `No timesheets found with status "${statusFilter}".`
+    emptyMessage = `No timesheets found with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
   } else if (normalizedSearchQuery) {
     emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}".`
   }
 
   return (
     <Box>
-      <PageHeader title="Team Timesheets" subtitle="Review and manage your team's submissions">
+      <PageHeader title="Team Timesheets" subtitle="View and manage your team's submissions">
         <TextField
           placeholder="Search consultants..."
           size="small"
@@ -178,7 +181,7 @@ export default function ManagerTimesheetListPage() {
                     startIcon={<RateReviewIcon sx={{ fontSize: '0.95rem' }} />}
                     onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
                   >
-                    Review Timesheet
+                    Open Timesheet
                   </Button>
                 </Stack>
               </Paper>
@@ -234,7 +237,7 @@ export default function ManagerTimesheetListPage() {
                         startIcon={<RateReviewIcon sx={{ fontSize: '0.9rem' }} />}
                         onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
                       >
-                        Review
+                        Open Timesheet
                       </Button>
                     </TableCell>
                   </TableRow>

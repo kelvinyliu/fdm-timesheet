@@ -70,7 +70,10 @@ export default function TimesheetReviewPage() {
     setFeedback(null)
     try {
       await reviewTimesheet(id, { action: 'REJECT', comment: rejectionComment.trim() })
-      setFeedback({ severity: 'success', message: 'Timesheet rejected.' })
+      setFeedback({
+        severity: 'info',
+        message: 'Timesheet rejected and returned to the consultant for changes.',
+      })
       setRejectionComment('')
       setRefreshKey((k) => k + 1)
     } catch (err) {
@@ -124,7 +127,7 @@ export default function TimesheetReviewPage() {
 
   return (
     <Box>
-      <PageHeader title="Review Timesheet">
+      <PageHeader title="Open Timesheet">
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
@@ -285,11 +288,21 @@ export default function TimesheetReviewPage() {
 
           {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED') && (
             <Alert
-              severity={timesheet.status === 'APPROVED' ? 'success' : 'error'}
+              severity={timesheet.status === 'APPROVED' ? 'success' : 'info'}
               sx={{ mt: 2 }}
             >
-              This timesheet has been{' '}
-              <strong>{timesheet.status.toLowerCase()}</strong>.
+              {timesheet.status === 'APPROVED'
+                ? (
+                    <>
+                      This timesheet has been <strong>approved</strong>.
+                    </>
+                  )
+                : (
+                    <>
+                      This timesheet has been <strong>rejected</strong> and returned to the
+                      consultant for changes.
+                    </>
+                  )}
               {timesheet.status === 'REJECTED' && timesheet.rejectionComment && (
                 <> Reason: {timesheet.rejectionComment}</>
               )}

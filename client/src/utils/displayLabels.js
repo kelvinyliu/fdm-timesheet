@@ -27,3 +27,20 @@ export function getAuditTimesheetDisplayLabel({ consultantName, weekStart }) {
 
   return 'Deleted timesheet'
 }
+
+export function getTimesheetStatusDisplayLabel(status) {
+  switch (status) {
+    case 'COMPLETED':
+      return 'Paid'
+    case 'DRAFT':
+      return 'Draft'
+    case 'PENDING':
+      return 'Pending'
+    case 'APPROVED':
+      return 'Approved'
+    case 'REJECTED':
+      return 'Rejected'
+    default:
+      return status ?? 'Unknown'
+  }
+}

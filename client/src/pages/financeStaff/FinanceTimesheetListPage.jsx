@@ -15,12 +15,34 @@ import Alert from '@mui/material/Alert'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import PaymentIcon from '@mui/icons-material/Payment'
+import VisibilityIcon from '@mui/icons-material/Visibility'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+
+function getActionButtonLabel(status) {
+  switch (status) {
+    case 'APPROVED':
+      return 'Process'
+    case 'COMPLETED':
+      return 'View'
+    default:
+      return 'Open'
+  }
+}
+
+function getActionButtonIcon(status) {
+  switch (status) {
+    case 'COMPLETED':
+      return VisibilityIcon
+    case 'APPROVED':
+    default:
+      return PaymentIcon
+  }
+}
 
 export default function FinanceTimesheetListPage() {
   const theme = useTheme()
@@ -47,8 +69,8 @@ export default function FinanceTimesheetListPage() {
   return (
     <Box>
       <PageHeader
-        title="Approved Timesheets"
-        subtitle="Process payments for approved timesheets"
+        title="Timesheets for Payment"
+        subtitle="Process approved timesheets and review paid ones"
       />
 
       {error && (
@@ -60,7 +82,7 @@ export default function FinanceTimesheetListPage() {
       {!error && timesheets.length === 0 && (
         <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
           <Typography variant="body2" color="text.secondary">
-            No approved or completed timesheets found.
+            No approved or paid timesheets found.
           </Typography>
         </Paper>
       )}
@@ -68,69 +90,73 @@ export default function FinanceTimesheetListPage() {
       {!error && timesheets.length > 0 && (
         isMobile ? (
           <Stack spacing={1.5}>
-            {timesheets.map((ts) => (
-              <Paper key={ts.id} sx={{ p: 2.5 }}>
-                <Stack spacing={2}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: 1.5,
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Consultant
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        {getConsultantDisplayLabel(ts.consultantName)}
-                      </Typography>
-                    </Box>
-                    <StatusBadge status={ts.status} />
-                  </Box>
+            {timesheets.map((ts) => {
+              const ActionIcon = getActionButtonIcon(ts.status)
 
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                      gap: 1.5,
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Week of
-                      </Typography>
-                      <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
-                      </Typography>
+              return (
+                <Paper key={ts.id} sx={{ p: 2.5 }}>
+                  <Stack spacing={2}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: 1.5,
+                      }}
+                    >
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Consultant
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          {getConsultantDisplayLabel(ts.consultantName)}
+                        </Typography>
+                      </Box>
+                      <StatusBadge status={ts.status} />
                     </Box>
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Total Hours
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.95rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {ts.totalHours ?? '-'}
-                      </Typography>
-                    </Box>
-                  </Box>
 
-                  <Button
-                    variant="outlined"
-                    startIcon={<PaymentIcon sx={{ fontSize: '0.95rem' }} />}
-                    onClick={() => navigate(`/finance/timesheets/${ts.id}`)}
-                  >
-                    Open Payment
-                  </Button>
-                </Stack>
-              </Paper>
-            ))}
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        gap: 1.5,
+                      }}
+                    >
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Week of
+                        </Typography>
+                        <Typography variant="body2" fontWeight={500}>
+                          {formatWeekStart(ts.weekStart)}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                          Total Hours
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.95rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {ts.totalHours ?? '-'}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Button
+                      variant="outlined"
+                      startIcon={<ActionIcon sx={{ fontSize: '0.95rem' }} />}
+                      onClick={() => navigate(`/finance/timesheets/${ts.id}`)}
+                    >
+                      {getActionButtonLabel(ts.status)}
+                    </Button>
+                  </Stack>
+                </Paper>
+              )
+            })}
           </Stack>
         ) : (
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
@@ -145,43 +171,47 @@ export default function FinanceTimesheetListPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {timesheets.map((ts) => (
-                  <TableRow key={ts.id}>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {getConsultantDisplayLabel(ts.consultantName)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={ts.status} />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.85rem',
-                        }}
-                      >
-                        {ts.totalHours ?? '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<PaymentIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={() => navigate(`/finance/timesheets/${ts.id}`)}
-                      >
-                        Process
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {timesheets.map((ts) => {
+                  const ActionIcon = getActionButtonIcon(ts.status)
+
+                  return (
+                    <TableRow key={ts.id}>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {getConsultantDisplayLabel(ts.consultantName)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {formatWeekStart(ts.weekStart)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <StatusBadge status={ts.status} />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.85rem',
+                          }}
+                        >
+                          {ts.totalHours ?? '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          startIcon={<ActionIcon sx={{ fontSize: '0.9rem' }} />}
+                          onClick={() => navigate(`/finance/timesheets/${ts.id}`)}
+                        >
+                          {getActionButtonLabel(ts.status)}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </TableContainer>

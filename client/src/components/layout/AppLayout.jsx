@@ -42,7 +42,9 @@ function getBreadcrumbs(pathname) {
   if (/\/timesheets\/[^/]+\/payment/.test(pathname)) return ['Timesheets', 'Payment']
   if (/\/timesheets\/new/.test(pathname)) return ['Timesheets', 'New']
   if (/\/timesheets\/[^/]+/.test(pathname))
-    return pathname.startsWith('/manager') ? ['Timesheets', 'Review'] : ['Timesheets', 'Detail']
+    return pathname.startsWith('/manager')
+      ? ['Timesheets', 'Open Timesheet']
+      : ['Timesheets', 'Detail']
   if (pathname.includes('/timesheets')) return ['Timesheets']
   return []
 }

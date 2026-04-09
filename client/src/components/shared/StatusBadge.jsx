@@ -1,5 +1,6 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import { getTimesheetStatusDisplayLabel } from '../../utils/displayLabels'
 
 const STATUS_STYLES = {
   DRAFT: {
@@ -62,11 +63,10 @@ export default function StatusBadge({ status }) {
           letterSpacing: '0.04em',
           color: style.color,
           lineHeight: 1,
-          textTransform: 'uppercase',
           fontFamily: '"Outfit", sans-serif',
         }}
       >
-        {status}
+        {getTimesheetStatusDisplayLabel(status)}
       </Typography>
     </Box>
   )

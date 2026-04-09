@@ -39,7 +39,8 @@ function formatDetail(action, detail) {
     case 'REJECTION':
       return detail.comment ? `Rejected: ${detail.comment}` : 'Rejected'
     case 'PROCESSING': {
-      const rate = detail.dailyRate != null ? `\u00A3${Number(detail.dailyRate).toFixed(2)}/day` : ''
+      const rateValue = detail.hourlyRate ?? detail.dailyRate
+      const rate = rateValue != null ? `\u00A3${Number(rateValue).toFixed(2)}/hr` : ''
       const hours = detail.totalHours != null ? `${detail.totalHours}h` : ''
       const amount = detail.amount != null ? `\u00A3${Number(detail.amount).toFixed(2)}` : ''
       return [rate, hours, amount].filter(Boolean).join(' x ').replace(' x \u00A3', ' = \u00A3')
@@ -171,47 +172,17 @@ export default function AuditLogPage() {
                       <ActionBadge action={e.action} />
                     </TableCell>
                     <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight={500}>
-                          {getAuditActorDisplayLabel(e.performedByName)}
-                        </Typography>
-                        {e.performedBy && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              display: 'block',
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '0.68rem',
-                              color: palette.textMuted,
-                            }}
-                          >
-                            {e.performedBy}
-                          </Typography>
-                        )}
-                      </Box>
+                      <Typography variant="body2" fontWeight={500}>
+                        {getAuditActorDisplayLabel(e.performedByName)}
+                      </Typography>
                     </TableCell>
                     <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight={500}>
-                          {getAuditTimesheetDisplayLabel({
-                            consultantName: e.timesheetConsultantName,
-                            weekStart: e.timesheetWeekStart,
-                          })}
-                        </Typography>
-                        {e.timesheetId && (
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              display: 'block',
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '0.68rem',
-                              color: palette.textMuted,
-                            }}
-                          >
-                            {e.timesheetId}
-                          </Typography>
-                        )}
-                      </Box>
+                      <Typography variant="body2" fontWeight={500}>
+                        {getAuditTimesheetDisplayLabel({
+                          consultantName: e.timesheetConsultantName,
+                          weekStart: e.timesheetWeekStart,
+                        })}
+                      </Typography>
                     </TableCell>
                     <TableCell
                       sx={{

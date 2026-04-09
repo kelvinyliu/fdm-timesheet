@@ -32,6 +32,13 @@ export async function createManagerAssignment(body) {
   })
 }
 
+export async function updateManagerAssignment(id, body) {
+  return apiClient(`/api/manager-assignments/${id}`, {
+    method: 'PATCH',
+    body,
+  })
+}
+
 export async function deleteManagerAssignment(id) {
   return apiClient(`/api/manager-assignments/${id}`, {
     method: 'DELETE',

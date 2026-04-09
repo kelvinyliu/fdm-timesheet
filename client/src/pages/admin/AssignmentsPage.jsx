@@ -25,6 +25,7 @@ import Stack from '@mui/material/Stack'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import DeleteIcon from '@mui/icons-material/Delete'
+import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
@@ -35,6 +36,7 @@ import {
   deleteAssignment,
   getManagerAssignments,
   createManagerAssignment,
+  updateManagerAssignment,
   deleteManagerAssignment,
 } from '../../api/assignments'
 import { getUsers } from '../../api/users'
@@ -78,6 +80,8 @@ export default function AssignmentsPage() {
   const [clientFormLoading, setClientFormLoading] = useState(false)
 
   const [managerDialogOpen, setManagerDialogOpen] = useState(false)
+  const [managerDialogMode, setManagerDialogMode] = useState('create')
+  const [managerEditingId, setManagerEditingId] = useState(null)
   const [managerForm, setManagerForm] = useState(EMPTY_MANAGER_FORM)
   const [managerFormError, setManagerFormError] = useState('')
   const [managerFormLoading, setManagerFormLoading] = useState(false)
@@ -203,12 +207,30 @@ export default function AssignmentsPage() {
   }
 
   function openManagerDialog() {
+    setManagerDialogMode('create')
+    setManagerEditingId(null)
     setManagerForm(EMPTY_MANAGER_FORM)
     setManagerFormError('')
     setManagerDialogOpen(true)
   }
 
-  async function handleCreateManagerAssignment() {
+  function openEditManagerDialog(assignment) {
+    setManagerDialogMode('edit')
+    setManagerEditingId(assignment.id)
+    setManagerForm({
+      managerId: assignment.managerId ?? '',
+      consultantId: assignment.consultantId ?? '',
+    })
+    setManagerFormError('')
+    setManagerDialogOpen(true)
+  }
+
+  function closeManagerDialog() {
+    setManagerDialogOpen(false)
+    setManagerFormError('')
+  }
+
+  async function handleSubmitManagerAssignment() {
     setManagerFormError('')
     const { managerId, consultantId } = managerForm
     if (!managerId || !consultantId) {
@@ -217,11 +239,17 @@ export default function AssignmentsPage() {
     }
     setManagerFormLoading(true)
     try {
-      await createManagerAssignment({ managerId, consultantId })
-      setManagerDialogOpen(false)
+      if (managerDialogMode === 'edit' && managerEditingId) {
+        await updateManagerAssignment(managerEditingId, { managerId, consultantId })
+      } else {
+        await createManagerAssignment({ managerId, consultantId })
+      }
+      closeManagerDialog()
       await fetchManagerAssignments()
     } catch (err) {
-      setManagerFormError(err.message || 'Failed to create assignment.')
+      setManagerFormError(
+        err.message || `Failed to ${managerDialogMode === 'edit' ? 'update' : 'create'} assignment.`
+      )
     } finally {
       setManagerFormLoading(false)
     }
@@ -310,17 +338,6 @@ export default function AssignmentsPage() {
                             users.find((u) => u.id === a.consultantId)?.name ?? null
                           )}
                         </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.72rem',
-                            color: 'text.secondary',
-                            mt: 0.5,
-                          }}
-                        >
-                          {a.consultantId}
-                        </Typography>
                       </Box>
 
                       <Box
@@ -395,17 +412,6 @@ export default function AssignmentsPage() {
                             {getConsultantDisplayLabel(
                               users.find((u) => u.id === a.consultantId)?.name ?? null
                             )}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            sx={{
-                              display: 'block',
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '0.68rem',
-                              color: 'text.secondary',
-                            }}
-                          >
-                            {a.consultantId}
                           </Typography>
                         </Box>
                       </TableCell>
@@ -496,14 +502,25 @@ export default function AssignmentsPage() {
                         <Typography variant="body2">{a.consultantName}</Typography>
                       </Box>
 
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => handleDeleteManagerAssignment(a.id)}
-                      >
-                        Remove Assignment
-                      </Button>
+                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                        <Button
+                          variant="outlined"
+                          startIcon={<EditIcon />}
+                          onClick={() => openEditManagerDialog(a)}
+                          fullWidth
+                        >
+                          Edit Assignment
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => handleDeleteManagerAssignment(a.id)}
+                          fullWidth
+                        >
+                          Remove Assignment
+                        </Button>
+                      </Stack>
                     </Stack>
                   </Paper>
                 ))}
@@ -533,15 +550,22 @@ export default function AssignmentsPage() {
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
-                        <Tooltip title="Remove assignment">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteManagerAssignment(a.id)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
+                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
+                          <Tooltip title="Edit assignment">
+                            <IconButton size="small" onClick={() => openEditManagerDialog(a)}>
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Remove assignment">
+                            <IconButton
+                              size="small"
+                              color="error"
+                              onClick={() => handleDeleteManagerAssignment(a.id)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Stack>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -643,12 +667,14 @@ export default function AssignmentsPage() {
       {/* Add Manager Assignment Dialog */}
       <Dialog
         open={managerDialogOpen}
-        onClose={() => setManagerDialogOpen(false)}
+        onClose={closeManagerDialog}
         maxWidth="xs"
         fullWidth
         fullScreen={isMobile}
       >
-        <DialogTitle>Add Manager Assignment</DialogTitle>
+        <DialogTitle>
+          {managerDialogMode === 'edit' ? 'Edit Manager Assignment' : 'Add Manager Assignment'}
+        </DialogTitle>
         <DialogContent>
           {managerFormError && (
             <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
@@ -683,15 +709,21 @@ export default function AssignmentsPage() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setManagerDialogOpen(false)} disabled={managerFormLoading}>
+          <Button onClick={closeManagerDialog} disabled={managerFormLoading}>
             Cancel
           </Button>
           <Button
             variant="contained"
-            onClick={handleCreateManagerAssignment}
+            onClick={handleSubmitManagerAssignment}
             disabled={managerFormLoading}
           >
-            {managerFormLoading ? 'Adding...' : 'Add'}
+            {managerFormLoading
+              ? managerDialogMode === 'edit'
+                ? 'Saving...'
+                : 'Adding...'
+              : managerDialogMode === 'edit'
+                ? 'Save'
+                : 'Add'}
           </Button>
         </DialogActions>
       </Dialog>

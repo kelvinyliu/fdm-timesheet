@@ -188,6 +188,12 @@ export default function TimesheetEditPage() {
         </Button>
       </PageHeader>
 
+      {timesheet.rejectionComment && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <strong>Manager feedback:</strong> {timesheet.rejectionComment}
+        </Alert>
+      )}
+
       {isMobile ? (
         <Paper sx={{ mb: 3, overflow: 'hidden' }}>
           {weekDates.map((date, i) => {

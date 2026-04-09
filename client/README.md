@@ -147,8 +147,8 @@ The root path (`/`) renders `RootRedirect`, which sends authenticated users to t
 |---|---|---|
 | Timesheet list | `/consultant/timesheets` | Lists all of the consultant's timesheets with status badges. Links to edit (DRAFT) or view (all other statuses). Prevents creating a new timesheet if a DRAFT or PENDING one already exists, or if a timesheet for the current week already exists. |
 | Create timesheet | `/consultant/timesheets/new` | Creates a timesheet for the current week (Monday as `week_start`). Loads the consultant's client assignments for the autofill feature. Validates that no conflicting timesheet exists before submitting. |
-| Edit timesheet | `/consultant/timesheets/:id/edit` | Editable view of a DRAFT timesheet. Displays one hours field per day of the week. Supports saving without submitting, submitting for review, and autofilling hours from the previous week. Only accessible while the timesheet is in DRAFT status. |
-| View timesheet | `/consultant/timesheets/:id` | Read-only view of a submitted/reviewed timesheet. Shows hours per day, weekly total, status, and any review comments. |
+| Edit timesheet | `/consultant/timesheets/:id/edit` | Editable view of a DRAFT or REJECTED timesheet. Displays one hours field per day of the week, along with the latest manager feedback when present. Supports saving without submitting, submitting for review, and autofilling hours from the previous week. |
+| View timesheet | `/consultant/timesheets/:id` | Read-only view of a submitted/reviewed timesheet. Shows hours per day, weekly total, status, and the latest manager feedback when present. |
 
 ---
 

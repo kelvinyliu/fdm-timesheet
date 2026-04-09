@@ -74,6 +74,12 @@ const rejectedTimesheet = {
   rejection_comment: 'Please correct Monday hours',
 }
 
+const pendingTimesheetWithFeedback = {
+  ...fakeTimesheet,
+  status: 'PENDING',
+  rejection_comment: 'Please correct Monday hours',
+}
+
 const fakeEntry = {
   entry_id:     'entry-1',
   entry_date:   '2025-03-24',
@@ -199,6 +205,19 @@ describe('GET /api/timesheets/:id', () => {
     expect(res.body.assignmentClientName).toBe('Acme Corp')
     expect(res.body.entries).toHaveLength(1)
     expect(res.body.entries[0].hoursWorked).toBe(7.5)
+  })
+
+  it('returns manager feedback for a pending timesheet after resubmission', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(pendingTimesheetWithFeedback)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
+
+    const res = await request(app)
+      .get(`/api/timesheets/${TIMESHEET_ID}`)
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('PENDING')
+    expect(res.body.rejectionComment).toBe('Please correct Monday hours')
   })
 
   it('returns 404 when timesheet does not exist', async () => {
@@ -368,6 +387,7 @@ describe('POST /api/timesheets/:id/submit', () => {
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('PENDING')
     expect(res.body.consultantName).toBe('Alex Consultant')
+    expect(res.body.rejectionComment).toBe('Please correct Monday hours')
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'SUBMISSION', timesheetId: TIMESHEET_ID })
     )

@@ -236,7 +236,7 @@ Requires `CONSULTANT`. Creates a new timesheet. At most one per consultant per w
 **Errors:** `400` missing `weekStart` or not a Monday · `409` timesheet for this week already exists
 
 #### `GET /api/timesheets/:id`
-Requires `CONSULTANT`, `LINE_MANAGER`, or `FINANCE_MANAGER`. Returns a timesheet with its daily entries. Consultants can only access their own; line managers can only access their assigned consultants'; finance managers can access any timesheet.
+Requires `CONSULTANT`, `LINE_MANAGER`, or `FINANCE_MANAGER`. Returns a timesheet with its daily entries. Consultants can only access their own; line managers can only access their assigned consultants'; finance managers can access any timesheet. If the latest manager review was a rejection, the returned `rejectionComment` remains available until the next manager review replaces it.
 
 **Response `200`**
 ```json

@@ -62,6 +62,11 @@ export default function TimesheetDetailPage() {
   }
 
   const entries = timesheet.entries ?? []
+  const hasManagerFeedback = Boolean(timesheet.rejectionComment)
+  const feedbackSeverity = timesheet.status === 'REJECTED' ? 'error' : 'warning'
+  const feedbackTitle = timesheet.status === 'REJECTED'
+    ? 'Rejected'
+    : 'Manager feedback'
   const detailItems = [
     {
       key: 'week',
@@ -119,9 +124,9 @@ export default function TimesheetDetailPage() {
         </Button>
       </PageHeader>
 
-      {timesheet.status === 'REJECTED' && timesheet.rejectionComment && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          <strong>Rejected:</strong> {timesheet.rejectionComment}
+      {hasManagerFeedback && (
+        <Alert severity={feedbackSeverity} sx={{ mb: 3 }}>
+          <strong>{feedbackTitle}:</strong> {timesheet.rejectionComment}
         </Alert>
       )}
 

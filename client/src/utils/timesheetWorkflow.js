@@ -15,13 +15,24 @@ export function getTimesheetForWeek(timesheets, weekStart) {
   return timesheets.find((timesheet) => timesheet.weekStart === weekStart) ?? null
 }
 
-export function buildAutofillEntries(weekStart, previousEntries = []) {
+export function buildAutofillEntries(weekStart, previousEntries = [], allowedAssignmentIds = null) {
   const entriesByWeekday = new Map()
+  const skippedBucketLabels = new Set()
 
   for (const entry of previousEntries) {
     if (!entry?.date) continue
     const hoursWorked = Number(entry.hoursWorked)
     if (!Number.isFinite(hoursWorked)) continue
+
+    if (
+      entry.entryKind === 'CLIENT' &&
+      entry.assignmentId &&
+      allowedAssignmentIds instanceof Set &&
+      !allowedAssignmentIds.has(entry.assignmentId)
+    ) {
+      skippedBucketLabels.add(entry.bucketLabel ?? 'Unknown client assignment')
+      continue
+    }
 
     const weekday = getUtcWeekdayIndex(entry.date)
     const current = entriesByWeekday.get(weekday) ?? []
@@ -33,14 +44,17 @@ export function buildAutofillEntries(weekStart, previousEntries = []) {
     entriesByWeekday.set(weekday, current)
   }
 
-  return buildWeekDates(weekStart).flatMap((date) =>
-    (entriesByWeekday.get(getUtcWeekdayIndex(date)) ?? []).map((entry) => ({
-      date,
-      entryKind: entry.entryKind,
-      assignmentId: entry.assignmentId,
-      hoursWorked: entry.hoursWorked,
-    }))
-  )
+  return {
+    entries: buildWeekDates(weekStart).flatMap((date) =>
+      (entriesByWeekday.get(getUtcWeekdayIndex(date)) ?? []).map((entry) => ({
+        date,
+        entryKind: entry.entryKind,
+        assignmentId: entry.assignmentId,
+        hoursWorked: entry.hoursWorked,
+      }))
+    ),
+    skippedBucketLabels: [...skippedBucketLabels],
+  }
 }
 
 export function getMostRecentClientAssignmentId(timesheets = [], currentTimesheetId = null) {

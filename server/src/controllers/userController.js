@@ -1,5 +1,13 @@
 import bcrypt from 'bcrypt'
-import { getAllUsers, createUser, updateUserRole, deleteUser } from '../models/userModel.js'
+import {
+  getAllUsers,
+  createUser,
+  updateUserRole,
+  deleteUser,
+  getConsultantPayRates,
+  findUserById,
+  updateUserDefaultPayRate,
+} from '../models/userModel.js'
 import { Role } from '../constants/roles.js'
 import { userDto } from '../dtos/userDto.js'
 import { isUuid } from '../utils/validation.js'
@@ -10,6 +18,15 @@ const SALT_ROUNDS = 10
 export async function listUsers(req, res, next) {
   try {
     const users = await getAllUsers()
+    res.json(users.map(userDto))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function listConsultantPayRatesHandler(req, res, next) {
+  try {
+    const users = await getConsultantPayRates()
     res.json(users.map(userDto))
   } catch (err) {
     next(err)
@@ -67,6 +84,40 @@ export async function updateRoleHandler(req, res, next) {
       return res.status(404).json({ error: 'User not found' })
     }
 
+    res.json(userDto(user))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function updateDefaultPayRateHandler(req, res, next) {
+  try {
+    const { id } = req.params
+    const { defaultPayRate } = req.body
+
+    if (!isUuid(id)) {
+      return res.status(400).json({ error: 'id must be a valid UUID' })
+    }
+
+    if (defaultPayRate === undefined || defaultPayRate === null || defaultPayRate === '') {
+      return res.status(400).json({ error: 'defaultPayRate is required' })
+    }
+
+    const parsedDefaultPayRate = Number(defaultPayRate)
+    if (!Number.isFinite(parsedDefaultPayRate) || parsedDefaultPayRate <= 0) {
+      return res.status(400).json({ error: 'defaultPayRate must be greater than 0' })
+    }
+
+    const existingUser = await findUserById(id)
+    if (!existingUser) {
+      return res.status(404).json({ error: 'User not found' })
+    }
+
+    if (existingUser.role !== Role.CONSULTANT) {
+      return res.status(400).json({ error: 'defaultPayRate can only be set for CONSULTANT users' })
+    }
+
+    const user = await updateUserDefaultPayRate(id, parsedDefaultPayRate)
     res.json(userDto(user))
   } catch (err) {
     next(err)

@@ -11,15 +11,17 @@ CREATE TABLE users (
   email         VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role          user_role NOT NULL,
+  default_pay_rate NUMERIC(10,2) CHECK (default_pay_rate > 0),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Client assignments (consultant <-> client + hourly rate)
+-- Client assignments (consultant <-> client + client bill rate)
 CREATE TABLE client_assignments (
   assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   consultant_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   client_name   VARCHAR(255) NOT NULL,
-  hourly_rate   NUMERIC(10,2) NOT NULL CHECK (hourly_rate > 0),
+  client_bill_rate NUMERIC(10,2) NOT NULL CHECK (client_bill_rate > 0),
+  deleted_at    TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -44,7 +46,7 @@ CREATE TABLE timesheet_entries (
   assignment_id UUID REFERENCES client_assignments(assignment_id) ON DELETE SET NULL,
   hours_worked  NUMERIC(4,2) NOT NULL CHECK (hours_worked >= 0 AND hours_worked <= 24),
   CHECK (
-    (entry_kind = 'CLIENT' AND assignment_id IS NOT NULL) OR
+    (entry_kind = 'CLIENT') OR
     (entry_kind = 'INTERNAL' AND assignment_id IS NULL)
   )
 );
@@ -75,13 +77,14 @@ CREATE TABLE reviews (
 
 -- Payments (one per approved timesheet)
 CREATE TABLE payments (
-  payment_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timesheet_id  UUID NOT NULL UNIQUE REFERENCES timesheets(timesheet_id),
-  processed_by  UUID NOT NULL REFERENCES users(user_id),
-  daily_rate    NUMERIC(10,2) CHECK (daily_rate > 0),
-  amount        NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
-  status        payment_status NOT NULL DEFAULT 'PENDING',
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  payment_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  timesheet_id       UUID NOT NULL UNIQUE REFERENCES timesheets(timesheet_id),
+  processed_by       UUID NOT NULL REFERENCES users(user_id),
+  total_bill_amount  NUMERIC(10,2) NOT NULL CHECK (total_bill_amount >= 0),
+  total_pay_amount   NUMERIC(10,2) NOT NULL CHECK (total_pay_amount >= 0),
+  margin_amount      NUMERIC(10,2) NOT NULL,
+  status             payment_status NOT NULL DEFAULT 'PENDING',
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE payment_breakdowns (
@@ -91,8 +94,11 @@ CREATE TABLE payment_breakdowns (
   assignment_id UUID REFERENCES client_assignments(assignment_id) ON DELETE SET NULL,
   bucket_label  VARCHAR(255) NOT NULL,
   hours_worked  NUMERIC(6,2) NOT NULL CHECK (hours_worked >= 0),
-  hourly_rate   NUMERIC(10,2) NOT NULL CHECK (hourly_rate > 0),
-  amount        NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
+  bill_rate     NUMERIC(10,2) NOT NULL CHECK (bill_rate >= 0),
+  bill_amount   NUMERIC(10,2) NOT NULL CHECK (bill_amount >= 0),
+  pay_rate      NUMERIC(10,2) NOT NULL CHECK (pay_rate > 0),
+  pay_amount    NUMERIC(10,2) NOT NULL CHECK (pay_amount >= 0),
+  margin_amount NUMERIC(10,2) NOT NULL,
   UNIQUE (payment_id, entry_kind, assignment_id)
 );
 

@@ -35,7 +35,7 @@ const assignmentRow = {
   assignment_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   consultant_id: CONSULTANT_ID,
   client_name: 'Acme Corp',
-  hourly_rate: '750.00',
+  client_bill_rate: '750.00',
   created_at: '2025-03-24T00:00:00Z',
 }
 
@@ -84,7 +84,7 @@ describe('GET /api/assignments/all', () => {
       id: assignmentRow.assignment_id,
       consultantId: assignmentRow.consultant_id,
       clientName: assignmentRow.client_name,
-      hourlyRate: 750,
+      clientBillRate: 750,
       createdAt: assignmentRow.created_at,
     }])
     expect(clientAssignmentModel.getAllAssignments).toHaveBeenCalledTimes(1)
@@ -92,7 +92,7 @@ describe('GET /api/assignments/all', () => {
 })
 
 describe('POST /api/assignments', () => {
-  it('returns 400 when hourlyRate is missing', async () => {
+  it('returns 400 when clientBillRate is missing', async () => {
     const res = await request(app)
       .post('/api/assignments')
       .set('Authorization', adminToken)
@@ -102,17 +102,17 @@ describe('POST /api/assignments', () => {
       })
 
     expect(res.status).toBe(400)
-    expect(res.body.error).toMatch(/hourlyRate/)
+    expect(res.body.error).toMatch(/clientBillRate/)
   })
 
-  it('returns 400 when hourlyRate is invalid', async () => {
+  it('returns 400 when clientBillRate is invalid', async () => {
     const res = await request(app)
       .post('/api/assignments')
       .set('Authorization', adminToken)
       .send({
         consultantId: '11111111-1111-4111-8111-111111111111',
         clientName: 'Acme Corp',
-        hourlyRate: 0,
+        clientBillRate: 0,
       })
 
     expect(res.status).toBe(400)
@@ -132,15 +132,38 @@ describe('POST /api/assignments', () => {
       .send({
         consultantId: CONSULTANT_ID,
         clientName: 'Acme Corp',
-        hourlyRate: 750,
+        clientBillRate: 750,
       })
 
     expect(res.status).toBe(201)
     expect(clientAssignmentModel.createAssignment).toHaveBeenCalledWith({
       consultantId: CONSULTANT_ID,
       clientName: 'Acme Corp',
-      hourlyRate: 750,
+      clientBillRate: 750,
     })
     expect(res.body.id).toBe(assignmentRow.assignment_id)
+  })
+})
+
+describe('DELETE /api/assignments/:id', () => {
+  it('soft deletes an assignment', async () => {
+    clientAssignmentModel.deleteAssignment.mockResolvedValue(true)
+
+    const res = await request(app)
+      .delete(`/api/assignments/${assignmentRow.assignment_id}`)
+      .set('Authorization', adminToken)
+
+    expect(res.status).toBe(204)
+    expect(clientAssignmentModel.deleteAssignment).toHaveBeenCalledWith(assignmentRow.assignment_id)
+  })
+
+  it('returns 404 when the assignment does not exist', async () => {
+    clientAssignmentModel.deleteAssignment.mockResolvedValue(false)
+
+    const res = await request(app)
+      .delete(`/api/assignments/${assignmentRow.assignment_id}`)
+      .set('Authorization', adminToken)
+
+    expect(res.status).toBe(404)
   })
 })

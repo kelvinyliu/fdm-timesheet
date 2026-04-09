@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -35,6 +35,37 @@ function bucketKey(item) {
   return `${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`
 }
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+function buildCompletedSummaryItems(timesheet) {
+  if (timesheet?.status !== 'COMPLETED') return []
+
+  return [
+    {
+      key: 'received',
+      label: 'Money Received',
+      value: timesheet.totalBillAmount != null ? formatCurrency(timesheet.totalBillAmount) : '-',
+    },
+    {
+      key: 'paidOut',
+      label: 'Paid Out',
+      value: timesheet.totalPayAmount != null ? formatCurrency(timesheet.totalPayAmount) : '-',
+    },
+    {
+      key: 'net',
+      label: 'Net Margin',
+      value: timesheet.marginAmount != null ? formatCurrency(timesheet.marginAmount) : '-',
+    },
+  ]
+}
+
 export default function FinancePaymentPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -61,7 +92,10 @@ export default function FinancePaymentPage() {
           Object.fromEntries(
             (ts.workSummary ?? []).map((item) => [
               bucketKey(item),
-              item.suggestedHourlyRate != null ? String(item.suggestedHourlyRate) : '',
+              {
+                billRate: item.suggestedBillRate != null ? String(item.suggestedBillRate) : '',
+                payRate: item.suggestedPayRate != null ? String(item.suggestedPayRate) : '',
+              },
             ])
           )
         )
@@ -74,15 +108,40 @@ export default function FinancePaymentPage() {
   }, [id, refreshKey])
 
   const workSummary = timesheet?.workSummary ?? []
-  const isPaymentReady = workSummary.length > 0 && workSummary.every((item) => {
-    const rate = Number(bucketRates[bucketKey(item)])
-    return Number.isFinite(rate) && rate > 0
-  })
-  const estimatedTotal = workSummary.reduce((sum, item) => {
-    const rate = Number(bucketRates[bucketKey(item)])
-    if (!Number.isFinite(rate) || rate <= 0) return sum
-    return sum + rate * Number(item.totalHours ?? 0)
-  }, 0)
+  const computedBuckets = useMemo(() => (
+    workSummary.map((item) => {
+      const values = bucketRates[bucketKey(item)] ?? { billRate: '', payRate: '' }
+      const billRate = Number(values.billRate)
+      const payRate = Number(values.payRate)
+      const hours = Number(item.totalHours ?? 0)
+      const hasValidBillRate = item.entryKind === 'INTERNAL'
+        ? billRate === 0
+        : Number.isFinite(billRate) && billRate > 0
+      const hasValidPayRate = Number.isFinite(payRate) && payRate > 0
+
+      return {
+        ...item,
+        values,
+        hours,
+        billRate,
+        payRate,
+        hasValidBillRate,
+        hasValidPayRate,
+        billAmount: hasValidBillRate ? billRate * hours : null,
+        payAmount: hasValidPayRate ? payRate * hours : null,
+      }
+    })
+  ), [bucketRates, workSummary])
+
+  const isPaymentReady = computedBuckets.length > 0 && computedBuckets.every((item) => (
+    item.hasValidBillRate && item.hasValidPayRate
+  ))
+
+  const totals = computedBuckets.reduce((sum, item) => ({
+    incoming: sum.incoming + (item.billAmount ?? 0),
+    outgoing: sum.outgoing + (item.payAmount ?? 0),
+  }), { incoming: 0, outgoing: 0 })
+  const netMargin = totals.incoming - totals.outgoing
 
   async function handleProcessPayment() {
     if (!isPaymentReady) return
@@ -90,10 +149,11 @@ export default function FinancePaymentPage() {
     setFeedback(null)
     try {
       await processPayment(id, {
-        breakdowns: workSummary.map((item) => ({
+        breakdowns: computedBuckets.map((item) => ({
           entryKind: item.entryKind,
           assignmentId: item.assignmentId ?? null,
-          hourlyRate: Number(bucketRates[bucketKey(item)]),
+          billRate: item.entryKind === 'INTERNAL' ? 0 : Number(item.values.billRate),
+          payRate: Number(item.values.payRate),
         })),
         notes: notes.trim(),
       })
@@ -142,6 +202,7 @@ export default function FinancePaymentPage() {
           label: 'Work Categories',
           value: getWorkSummaryDisplayLabel(workSummary, 3),
         },
+        ...buildCompletedSummaryItems(timesheet),
       ]
     : []
 
@@ -286,12 +347,15 @@ export default function FinancePaymentPage() {
                 Payment Details
               </Typography>
               <Stack spacing={3}>
-                {workSummary.map((item) => (
+                {computedBuckets.map((item) => (
                   <Box
                     key={bucketKey(item)}
                     sx={{
                       display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', sm: 'minmax(220px, 1fr) 140px' },
+                      gridTemplateColumns: {
+                        xs: '1fr',
+                        md: 'minmax(220px, 1fr) minmax(160px, 180px) minmax(160px, 180px)',
+                      },
                       gap: 1.5,
                       alignItems: 'center',
                     }}
@@ -305,17 +369,38 @@ export default function FinancePaymentPage() {
                       </Typography>
                     </Box>
                     <TextField
-                      label="Rate (&pound;/hr)"
+                      label="Client Bill Rate (&pound;/hr)"
                       type="number"
-                      required
-                      value={bucketRates[bucketKey(item)] ?? ''}
+                      required={item.entryKind === 'CLIENT'}
+                      value={bucketRates[bucketKey(item)]?.billRate ?? ''}
                       onChange={(event) => setBucketRates((prev) => ({
                         ...prev,
-                        [bucketKey(item)]: event.target.value,
+                        [bucketKey(item)]: {
+                          ...(prev[bucketKey(item)] ?? {}),
+                          billRate: event.target.value,
+                        },
                       }))}
                       helperText={item.entryKind === 'CLIENT'
-                        ? 'Prefilled from the current client assignment rate.'
-                        : 'Enter the Internal rate manually.'}
+                        ? 'Prefilled from the client assignment and can be overridden for this payment.'
+                        : 'Internal work does not generate incoming client revenue.'}
+                      slotProps={{ htmlInput: { min: 0, step: '0.01', readOnly: item.entryKind === 'INTERNAL' } }}
+                      disabled={item.entryKind === 'INTERNAL'}
+                    />
+                    <TextField
+                      label="Consultant Pay Rate (&pound;/hr)"
+                      type="number"
+                      required
+                      value={bucketRates[bucketKey(item)]?.payRate ?? ''}
+                      onChange={(event) => setBucketRates((prev) => ({
+                        ...prev,
+                        [bucketKey(item)]: {
+                          ...(prev[bucketKey(item)] ?? {}),
+                          payRate: event.target.value,
+                        },
+                      }))}
+                      helperText={item.suggestedPayRate != null
+                        ? 'Prefilled from the consultant default pay rate.'
+                        : 'No consultant default pay rate is set yet.'}
                       slotProps={{ htmlInput: { min: 0.01, step: '0.01' } }}
                     />
                   </Box>
@@ -330,38 +415,61 @@ export default function FinancePaymentPage() {
                   }}
                 >
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Estimated Total Payment
+                    Finance Totals
                   </Typography>
-                  <Typography
-                    sx={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '1.75rem',
-                      fontWeight: 600,
-                      color: palette.textPrimary,
-                    }}
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={2}
+                    sx={{ mb: computedBuckets.length > 0 ? 1.5 : 0 }}
                   >
-                    {isPaymentReady ? `\u00A3${estimatedTotal.toFixed(2)}` : '-'}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '0.65rem',
-                      color: palette.textMuted,
-                      display: 'block',
-                      mb: workSummary.length > 0 ? 1.5 : 0,
-                    }}
-                  >
-                    summed across all client and Internal categories
-                  </Typography>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block' }}>
+                        Total Incoming
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '1.35rem',
+                          fontWeight: 600,
+                          color: palette.textPrimary,
+                        }}
+                      >
+                        {isPaymentReady ? formatCurrency(totals.incoming) : '-'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block' }}>
+                        Total Outgoing
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '1.35rem',
+                          fontWeight: 600,
+                          color: palette.textPrimary,
+                        }}
+                      >
+                        {isPaymentReady ? formatCurrency(totals.outgoing) : '-'}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flex: 1 }}>
+                      <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block' }}>
+                        Net Margin
+                      </Typography>
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '1.35rem',
+                          fontWeight: 600,
+                          color: palette.textPrimary,
+                        }}
+                      >
+                        {isPaymentReady ? formatCurrency(netMargin) : '-'}
+                      </Typography>
+                    </Box>
+                  </Stack>
                   <Stack spacing={0.5}>
-                    {workSummary.map((item) => {
-                      const rate = Number(bucketRates[bucketKey(item)])
-                      const hours = Number(item.totalHours ?? 0)
-                      const amount = Number.isFinite(rate) && rate > 0
-                        ? (rate * hours).toFixed(2)
-                        : null
-
+                    {computedBuckets.map((item) => {
                       return (
                         <Typography
                           key={`working-${bucketKey(item)}`}
@@ -372,9 +480,15 @@ export default function FinancePaymentPage() {
                             color: palette.textMuted,
                           }}
                         >
-                          {`${getWorkBucketDisplayLabel(item.bucketLabel)}: ${hours}h x ${
-                            Number.isFinite(rate) && rate > 0 ? `\u00A3${rate.toFixed(2)}` : '-'
-                          }${amount ? ` = \u00A3${amount}` : ''}`}
+                          {`${getWorkBucketDisplayLabel(item.bucketLabel)}: ${item.hours}h · In ${
+                            item.hasValidBillRate ? formatCurrency(item.billAmount ?? 0) : '-'
+                          } · Out ${
+                            item.hasValidPayRate ? formatCurrency(item.payAmount ?? 0) : '-'
+                          }${
+                            item.hasValidBillRate && item.hasValidPayRate
+                              ? ` · Net ${formatCurrency((item.billAmount ?? 0) - (item.payAmount ?? 0))}`
+                              : ''
+                          }`}
                         </Typography>
                       )
                     })}

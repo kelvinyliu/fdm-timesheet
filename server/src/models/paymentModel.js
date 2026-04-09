@@ -6,8 +6,11 @@ async function getPaymentBreakdownsWithDb(db, paymentId) {
             assignment_id,
             bucket_label,
             hours_worked,
-            hourly_rate,
-            amount
+            bill_rate,
+            bill_amount,
+            pay_rate,
+            pay_amount,
+            margin_amount
      FROM payment_breakdowns
      WHERE payment_id = $1
      ORDER BY bucket_label`,
@@ -19,8 +22,11 @@ async function getPaymentBreakdownsWithDb(db, paymentId) {
     assignmentId: row.assignment_id ?? null,
     bucketLabel: row.bucket_label,
     hoursWorked: row.hours_worked,
-    hourlyRate: row.hourly_rate,
-    amount: row.amount,
+    billRate: row.bill_rate,
+    billAmount: row.bill_amount,
+    payRate: row.pay_rate,
+    payAmount: row.pay_amount,
+    marginAmount: row.margin_amount,
   }))
 }
 
@@ -37,31 +43,57 @@ export async function getPaymentByTimesheet(timesheetId) {
   }
 }
 
-export async function createPayment({ timesheetId, processedBy, amount, breakdowns }) {
+export async function createPayment({
+  timesheetId,
+  processedBy,
+  totalBillAmount,
+  totalPayAmount,
+  marginAmount,
+  breakdowns,
+}) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const { rows } = await client.query(
-      `INSERT INTO payments (timesheet_id, processed_by, daily_rate, amount, status)
-       VALUES ($1, $2, $3, $4, 'COMPLETED')
+      `INSERT INTO payments (
+         timesheet_id,
+         processed_by,
+         total_bill_amount,
+         total_pay_amount,
+         margin_amount,
+         status
+       )
+       VALUES ($1, $2, $3, $4, $5, 'COMPLETED')
        RETURNING *`,
-      [timesheetId, processedBy, null, amount]
+      [timesheetId, processedBy, totalBillAmount, totalPayAmount, marginAmount]
     )
 
     for (const breakdown of breakdowns) {
       await client.query(
         `INSERT INTO payment_breakdowns (
-           payment_id, entry_kind, assignment_id, bucket_label, hours_worked, hourly_rate, amount
+           payment_id,
+           entry_kind,
+           assignment_id,
+           bucket_label,
+           hours_worked,
+           bill_rate,
+           bill_amount,
+           pay_rate,
+           pay_amount,
+           margin_amount
          )
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
         [
           rows[0].payment_id,
           breakdown.entryKind,
           breakdown.assignmentId ?? null,
           breakdown.bucketLabel,
           breakdown.hoursWorked,
-          breakdown.hourlyRate,
-          breakdown.amount,
+          breakdown.billRate,
+          breakdown.billAmount,
+          breakdown.payRate,
+          breakdown.payAmount,
+          breakdown.marginAmount,
         ]
       )
     }

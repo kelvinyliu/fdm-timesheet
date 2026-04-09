@@ -23,6 +23,15 @@ import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
 function getActionButtonLabel(status) {
   switch (status) {
     case 'APPROVED':
@@ -145,6 +154,45 @@ export default function FinanceTimesheetListPage() {
                         </Typography>
                       </Box>
                     </Box>
+
+                    {ts.status === 'COMPLETED' && (
+                      <Box
+                        sx={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                          gap: 1.5,
+                        }}
+                      >
+                        <Box>
+                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                            Money Received
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.9rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {ts.totalBillAmount != null ? formatCurrency(ts.totalBillAmount) : '-'}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
+                            Paid Out
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '0.9rem',
+                              fontWeight: 600,
+                            }}
+                          >
+                            {ts.totalPayAmount != null ? formatCurrency(ts.totalPayAmount) : '-'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
 
                     <Button
                       variant="outlined"

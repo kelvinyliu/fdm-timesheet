@@ -8,7 +8,8 @@ import {
   getPreviousWeekEntries,
   reviewTimesheet,
 } from '../models/timesheetModel.js'
-import { getAssignmentById } from '../models/clientAssignmentModel.js'
+import { getAssignmentById, getAssignmentByIdIncludingDeleted } from '../models/clientAssignmentModel.js'
+import { findUserById } from '../models/userModel.js'
 import { getEntriesByTimesheet, getWorkSummariesByTimesheetIds, upsertEntries } from '../models/timesheetEntryModel.js'
 import { logAction } from '../models/auditModel.js'
 import { getPaymentByTimesheet, createPayment, createFinancialNote, getFinancialNotes } from '../models/paymentModel.js'
@@ -36,14 +37,6 @@ function formatDateValue(value) {
 
 function entryKey({ date, entryKind, assignmentId }) {
   return `${date}|${entryKind}|${assignmentId ?? 'internal'}`
-}
-
-function rowEntryKey(row) {
-  return entryKey({
-    date: formatDateOnly(row.entry_date),
-    entryKind: row.entry_kind,
-    assignmentId: row.assignment_id ?? null,
-  })
 }
 
 function summariseEntries(entries) {
@@ -94,27 +87,33 @@ async function buildWorkSummaryMap(timesheetIds) {
   return map
 }
 
-async function withSuggestedRates(workSummary) {
+async function withSuggestedRates(workSummary, consultantId) {
   const assignmentCache = new Map()
+  const consultant = consultantId ? await findUserById(consultantId) : null
+  const suggestedPayRate = consultant?.default_pay_rate == null
+    ? null
+    : parseFloat(consultant.default_pay_rate)
   const enriched = []
 
   for (const item of workSummary) {
     if (item.assignmentId) {
       if (!assignmentCache.has(item.assignmentId)) {
-        assignmentCache.set(item.assignmentId, await getAssignmentById(item.assignmentId))
+        assignmentCache.set(item.assignmentId, await getAssignmentByIdIncludingDeleted(item.assignmentId))
       }
 
       const assignment = assignmentCache.get(item.assignmentId)
       enriched.push({
         ...item,
-        suggestedHourlyRate: assignment?.hourly_rate == null ? null : parseFloat(assignment.hourly_rate),
+        suggestedBillRate: assignment?.client_bill_rate == null ? null : parseFloat(assignment.client_bill_rate),
+        suggestedPayRate,
       })
       continue
     }
 
     enriched.push({
       ...item,
-      suggestedHourlyRate: null,
+      suggestedBillRate: 0,
+      suggestedPayRate,
     })
   }
 
@@ -216,7 +215,7 @@ export async function getTimesheet(req, res, next) {
     const entries = await getEntriesByTimesheet(req.params.id)
     let workSummary = summariseEntries(entries).map(workSummaryDto)
     if (req.user.role === Role.FINANCE_MANAGER) {
-      workSummary = await withSuggestedRates(workSummary)
+      workSummary = await withSuggestedRates(workSummary, timesheet.consultant_id)
     }
 
     res.json(timesheetWithEntriesDto(timesheet, entries, workSummary))
@@ -256,6 +255,12 @@ export async function updateEntries(req, res, next) {
     const hoursByDate = new Map()
     const sanitisedEntries = []
     const assignmentCache = new Map()
+    const existingEntries = await getEntriesByTimesheet(req.params.id)
+    const reusableArchivedAssignmentIds = new Set(
+      existingEntries
+        .filter((entry) => entry.entry_kind === 'CLIENT' && entry.assignment_id)
+        .map((entry) => entry.assignment_id)
+    )
 
     for (const entry of entries) {
       const entryKind = entry.entryKind
@@ -276,7 +281,13 @@ export async function updateEntries(req, res, next) {
         }
 
         if (!assignmentCache.has(entry.assignmentId)) {
-          assignmentCache.set(entry.assignmentId, await getAssignmentById(entry.assignmentId))
+          let assignment = await getAssignmentById(entry.assignmentId)
+
+          if (!assignment && reusableArchivedAssignmentIds.has(entry.assignmentId)) {
+            assignment = await getAssignmentByIdIncludingDeleted(entry.assignmentId)
+          }
+
+          assignmentCache.set(entry.assignmentId, assignment)
         }
 
         const assignment = assignmentCache.get(entry.assignmentId)
@@ -323,21 +334,6 @@ export async function updateEntries(req, res, next) {
       })
     }
 
-    if (timesheet.status === TimesheetStatus.REJECTED) {
-      const existingEntries = await getEntriesByTimesheet(req.params.id)
-      const existingKeys = new Set(existingEntries.map(rowEntryKey))
-
-      if (existingKeys.size !== sanitisedEntries.length) {
-        return res.status(409).json({ error: 'Rejected timesheets can only update hours on existing work categories' })
-      }
-
-      for (const entry of sanitisedEntries) {
-        if (!existingKeys.has(entryKey(entry))) {
-          return res.status(409).json({ error: 'Rejected timesheets can only update hours on existing work categories' })
-        }
-      }
-    }
-
     const updated = await upsertEntries(req.params.id, sanitisedEntries)
 
     res.json(updated.map(entryDto))
@@ -362,6 +358,11 @@ export async function submitTimesheet(req, res, next) {
 
     if (timesheet.status !== TimesheetStatus.DRAFT && timesheet.status !== TimesheetStatus.REJECTED) {
       return res.status(409).json({ error: 'Only draft or rejected timesheets can be submitted' })
+    }
+
+    const entries = await getEntriesByTimesheet(req.params.id)
+    if (entries.length === 0) {
+      return res.status(400).json({ error: 'Timesheet must include at least one entry before submission' })
     }
 
     const updated = await updateTimesheetStatus(req.params.id, TimesheetStatus.PENDING)
@@ -524,21 +525,39 @@ export async function processPaymentHandler(req, res, next) {
         return res.status(400).json({ error: 'breakdowns must match the timesheet work categories exactly' })
       }
 
-      const hourlyRate = Number(breakdown.hourlyRate)
-      if (!Number.isFinite(hourlyRate) || hourlyRate <= 0) {
-        return res.status(400).json({ error: 'Each breakdown must include an hourlyRate greater than 0' })
+      const billRate = Number(breakdown.billRate ?? 0)
+      if (!Number.isFinite(billRate) || billRate < 0) {
+        return res.status(400).json({ error: 'Each breakdown must include a billRate of 0 or greater' })
+      }
+
+      if (summary.entry_kind === 'CLIENT' && billRate <= 0) {
+        return res.status(400).json({ error: 'Client breakdowns must include a billRate greater than 0' })
+      }
+
+      if (summary.entry_kind === 'INTERNAL' && billRate !== 0) {
+        return res.status(400).json({ error: 'Internal breakdowns must use a billRate of 0' })
+      }
+
+      const payRate = Number(breakdown.payRate)
+      if (!Number.isFinite(payRate) || payRate <= 0) {
+        return res.status(400).json({ error: 'Each breakdown must include a payRate greater than 0' })
       }
 
       const hoursWorked = parseFloat(summary.total_hours)
-      const bucketAmount = parseFloat((hourlyRate * hoursWorked).toFixed(2))
+      const billAmount = parseFloat((billRate * hoursWorked).toFixed(2))
+      const payAmount = parseFloat((payRate * hoursWorked).toFixed(2))
+      const marginAmount = parseFloat((billAmount - payAmount).toFixed(2))
 
       normalisedBreakdowns.push({
         entryKind: summary.entry_kind,
         assignmentId: summary.assignment_id ?? null,
         bucketLabel: summary.bucket_label,
         hoursWorked,
-        hourlyRate,
-        amount: bucketAmount,
+        billRate,
+        billAmount,
+        payRate,
+        payAmount,
+        marginAmount,
       })
     }
 
@@ -547,13 +566,21 @@ export async function processPaymentHandler(req, res, next) {
     }
 
     const totalHours = normalisedBreakdowns.reduce((sum, breakdown) => sum + breakdown.hoursWorked, 0)
-    const amount = parseFloat(normalisedBreakdowns.reduce((sum, breakdown) => sum + breakdown.amount, 0).toFixed(2))
+    const totalBillAmount = parseFloat(
+      normalisedBreakdowns.reduce((sum, breakdown) => sum + breakdown.billAmount, 0).toFixed(2)
+    )
+    const totalPayAmount = parseFloat(
+      normalisedBreakdowns.reduce((sum, breakdown) => sum + breakdown.payAmount, 0).toFixed(2)
+    )
+    const marginAmount = parseFloat((totalBillAmount - totalPayAmount).toFixed(2))
     const trimmedNotes = notes?.trim()
 
     const payment = await createPayment({
       timesheetId: req.params.id,
       processedBy: req.user.userId,
-      amount,
+      totalBillAmount,
+      totalPayAmount,
+      marginAmount,
       breakdowns: normalisedBreakdowns,
     })
 
@@ -580,7 +607,9 @@ export async function processPaymentHandler(req, res, next) {
       performedBy: req.user.userId,
       timesheetId: req.params.id,
       detail: {
-        amount,
+        totalBillAmount,
+        totalPayAmount,
+        marginAmount,
         totalHours,
         breakdowns: normalisedBreakdowns,
       },

@@ -61,6 +61,38 @@ function buildDefaultEntry(date, assignments, preferredAssignmentId, nextLocalId
   }
 }
 
+function buildArchivedAssignments(timesheet, activeAssignments = []) {
+  const activeAssignmentIds = new Set(activeAssignments.map((assignment) => assignment.id))
+  const archivedAssignments = new Map()
+
+  for (const entry of timesheet?.entries ?? []) {
+    if (entry.entryKind !== 'CLIENT' || !entry.assignmentId || activeAssignmentIds.has(entry.assignmentId)) continue
+
+    archivedAssignments.set(entry.assignmentId, {
+      id: entry.assignmentId,
+      clientName: entry.bucketLabel ?? 'Unknown client assignment',
+      archived: true,
+    })
+  }
+
+  for (const item of timesheet?.workSummary ?? []) {
+    if (item.entryKind !== 'CLIENT' || !item.assignmentId || activeAssignmentIds.has(item.assignmentId)) continue
+
+    archivedAssignments.set(item.assignmentId, {
+      id: item.assignmentId,
+      clientName: item.bucketLabel ?? 'Unknown client assignment',
+      archived: true,
+    })
+  }
+
+  return [...archivedAssignments.values()]
+}
+
+function getAssignmentOptionLabel(assignment) {
+  if (!assignment) return 'Unknown client assignment'
+  return assignment.archived ? `${assignment.clientName} (Archived)` : assignment.clientName
+}
+
 export default function TimesheetEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -71,6 +103,7 @@ export default function TimesheetEditPage() {
   const [timesheet, setTimesheet] = useState(null)
   const [entries, setEntries] = useState([])
   const [assignments, setAssignments] = useState([])
+  const [archivedAssignments, setArchivedAssignments] = useState([])
   const [preferredAssignmentId, setPreferredAssignmentId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [fetchError, setFetchError] = useState(null)
@@ -113,6 +146,7 @@ export default function TimesheetEditPage() {
 
         setTimesheet(ts)
         setAssignments(fetchedAssignments)
+        setArchivedAssignments(buildArchivedAssignments(ts, fetchedAssignments))
         setPreferredAssignmentId(getMostRecentClientAssignmentId(allTimesheets, id))
         setEntries(createLocalEntries(ts.entries, nextLocalId))
       })
@@ -121,8 +155,10 @@ export default function TimesheetEditPage() {
   }, [id, navigate])
 
   const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
+  const availableAssignments = [...assignments, ...archivedAssignments]
+  const allowedAutofillAssignmentIds = new Set(availableAssignments.map((assignment) => assignment.id))
   const isBusy = saving || submitting || autofilling
-  const canChangeBuckets = timesheet?.status === 'DRAFT'
+  const canChangeBuckets = isConsultantEditableStatus(timesheet?.status)
   const totalHours = entries.reduce((sum, entry) => sum + (parseFloat(entry.hoursWorked) || 0), 0)
 
   function showSnackbar(message, severity = 'success') {
@@ -146,7 +182,7 @@ export default function TimesheetEditPage() {
 
     setEntries((prev) => [
       ...prev,
-      buildDefaultEntry(date, assignments, preferredAssignmentId, nextLocalId),
+      buildDefaultEntry(date, availableAssignments, preferredAssignmentId, nextLocalId),
     ])
   }
 
@@ -199,7 +235,23 @@ export default function TimesheetEditPage() {
         return
       }
 
-      setEntries(createLocalEntries(buildAutofillEntries(timesheet.weekStart, previousEntries), nextLocalId))
+      const {
+        entries: nextEntries,
+        skippedBucketLabels,
+      } = buildAutofillEntries(timesheet.weekStart, previousEntries, allowedAutofillAssignmentIds)
+
+      if (nextEntries.length === 0 && skippedBucketLabels.length > 0) {
+        showSnackbar('Autofill skipped archived client categories that are not available on this timesheet.', 'warning')
+        return
+      }
+
+      setEntries(createLocalEntries(nextEntries, nextLocalId))
+
+      if (skippedBucketLabels.length > 0) {
+        showSnackbar('Hours copied, but some archived client categories were skipped.', 'warning')
+        return
+      }
+
       showSnackbar('Hours copied from the previous week.')
     } catch (err) {
       showSnackbar(err.message ?? 'Autofill failed.', 'error')
@@ -240,7 +292,7 @@ export default function TimesheetEditPage() {
           variant="outlined"
           startIcon={<AutoFixHighIcon />}
           onClick={handleAutofill}
-          disabled={isBusy || !canChangeBuckets}
+          disabled={isBusy}
         >
           {autofilling ? 'Loading...' : 'Autofill from last week'}
         </Button>
@@ -252,15 +304,15 @@ export default function TimesheetEditPage() {
         </Alert>
       )}
 
-      {!canChangeBuckets && (
+      {assignments.length === 0 && archivedAssignments.length === 0 && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          Client and Internal categories are locked after first submission. You can update hours on the existing rows only.
+          No client assignments are currently available. You can still record Internal work.
         </Alert>
       )}
 
-      {assignments.length === 0 && (
+      {assignments.length === 0 && archivedAssignments.length > 0 && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          No client assignments are currently available. You can still record Internal work.
+          No active client assignments are currently available. Archived work categories already on this timesheet can still be edited.
         </Alert>
       )}
 
@@ -335,9 +387,9 @@ export default function TimesheetEditPage() {
                         disabled={isBusy || !canChangeBuckets}
                         fullWidth
                       >
-                        {assignments.map((assignment) => (
+                        {availableAssignments.map((assignment) => (
                           <MenuItem key={assignment.id} value={assignment.id}>
-                            {assignment.clientName}
+                            {getAssignmentOptionLabel(assignment)}
                           </MenuItem>
                         ))}
                         <MenuItem value="INTERNAL">Internal</MenuItem>
@@ -404,7 +456,7 @@ export default function TimesheetEditPage() {
         <DialogTitle>Submit Timesheet</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Submit this timesheet for manager review? You will not be able to change the client or Internal categories after submission.
+            Submit this timesheet for manager review?
           </DialogContentText>
         </DialogContent>
         <DialogActions>

@@ -9,16 +9,21 @@ export function workSummaryDto(row) {
     totalHours: parseFloat(row.total_hours),
   }
 
-  const suggestedHourlyRate = row.suggested_hourly_rate ?? row.suggestedHourlyRate
-  if (suggestedHourlyRate !== undefined) {
-    dto.suggestedHourlyRate = suggestedHourlyRate == null ? null : parseFloat(suggestedHourlyRate)
+  const suggestedBillRate = row.suggested_bill_rate ?? row.suggestedBillRate
+  if (suggestedBillRate !== undefined) {
+    dto.suggestedBillRate = suggestedBillRate == null ? null : parseFloat(suggestedBillRate)
+  }
+
+  const suggestedPayRate = row.suggested_pay_rate ?? row.suggestedPayRate
+  if (suggestedPayRate !== undefined) {
+    dto.suggestedPayRate = suggestedPayRate == null ? null : parseFloat(suggestedPayRate)
   }
 
   return dto
 }
 
 export function timesheetDto(row, workSummary = []) {
-  return {
+  const dto = {
     id: row.timesheet_id,
     consultantId: row.consultant_id,
     consultantName: row.consultant_name ?? null,
@@ -32,6 +37,18 @@ export function timesheetDto(row, workSummary = []) {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+
+  if (
+    row.total_bill_amount != null ||
+    row.total_pay_amount != null ||
+    row.margin_amount != null
+  ) {
+    dto.totalBillAmount = row.total_bill_amount == null ? null : parseFloat(row.total_bill_amount)
+    dto.totalPayAmount = row.total_pay_amount == null ? null : parseFloat(row.total_pay_amount)
+    dto.marginAmount = row.margin_amount == null ? null : parseFloat(row.margin_amount)
+  }
+
+  return dto
 }
 
 export function timesheetWithEntriesDto(row, entries, workSummary = []) {

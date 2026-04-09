@@ -24,6 +24,11 @@ vi.mock('../models/timesheetEntryModel.js', () => ({
 
 vi.mock('../models/clientAssignmentModel.js', () => ({
   getAssignmentById: vi.fn(),
+  getAssignmentByIdIncludingDeleted: vi.fn(),
+}))
+
+vi.mock('../models/userModel.js', () => ({
+  findUserById: vi.fn(),
 }))
 
 vi.mock('../models/auditModel.js', () => ({
@@ -41,6 +46,7 @@ import app from '../app.js'
 import * as timesheetModel from '../models/timesheetModel.js'
 import * as entryModel from '../models/timesheetEntryModel.js'
 import * as clientAssignmentModel from '../models/clientAssignmentModel.js'
+import * as userModel from '../models/userModel.js'
 import * as auditModel from '../models/auditModel.js'
 import * as paymentModel from '../models/paymentModel.js'
 
@@ -240,11 +246,16 @@ describe('GET /api/timesheets/:id', () => {
       ...internalEntry,
       entry_date: '2025-03-25',
     }])
-    clientAssignmentModel.getAssignmentById.mockResolvedValue({
+    userModel.findUserById.mockResolvedValue({
+      user_id: 'consultant-1',
+      role: 'CONSULTANT',
+      default_pay_rate: '35.00',
+    })
+    clientAssignmentModel.getAssignmentByIdIncludingDeleted.mockResolvedValue({
       assignment_id: '33333333-3333-4333-8333-333333333333',
       consultant_id: 'consultant-1',
       client_name: 'Acme Corp',
-      hourly_rate: '55.00',
+      client_bill_rate: '55.00',
       created_at: '2025-03-24T00:00:00Z',
     })
 
@@ -259,14 +270,16 @@ describe('GET /api/timesheets/:id', () => {
         assignmentId: '33333333-3333-4333-8333-333333333333',
         bucketLabel: 'Acme Corp',
         totalHours: 7.5,
-        suggestedHourlyRate: 55,
+        suggestedBillRate: 55,
+        suggestedPayRate: 35,
       },
       {
         entryKind: 'INTERNAL',
         assignmentId: null,
         bucketLabel: 'Internal',
         totalHours: 7.5,
-        suggestedHourlyRate: null,
+        suggestedBillRate: 0,
+        suggestedPayRate: 35,
       },
     ])
   })
@@ -328,6 +341,12 @@ describe('PUT /api/timesheets/:id/entries', () => {
     assignmentId: '33333333-3333-4333-8333-333333333333',
     hoursWorked: 7.5,
   }]
+  const archivedClientEntries = [{
+    date: '2025-03-24',
+    entryKind: 'CLIENT',
+    assignmentId: '44444444-4444-4444-8444-444444444444',
+    hoursWorked: 7.5,
+  }]
 
   it('saves entries for a DRAFT timesheet', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
@@ -345,15 +364,22 @@ describe('PUT /api/timesheets/:id/entries', () => {
   it('saves entries for a REJECTED timesheet', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue(rejectedTimesheet)
     entryModel.getEntriesByTimesheet.mockResolvedValue([internalEntry])
-    entryModel.upsertEntries.mockResolvedValue([internalEntry])
+    clientAssignmentModel.getAssignmentById.mockResolvedValue({
+      assignment_id: '33333333-3333-4333-8333-333333333333',
+      consultant_id: 'consultant-1',
+      client_name: 'Acme Corp',
+      client_bill_rate: '750.00',
+      created_at: '2025-03-24T00:00:00Z',
+    })
+    entryModel.upsertEntries.mockResolvedValue([fakeEntry])
 
     const res = await request(app)
       .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
-      .send({ entries: validEntries })
+      .send({ entries: validClientEntries })
 
     expect(res.status).toBe(200)
-    expect(res.body[0].hoursWorked).toBe(7.5)
+    expect(res.body[0].entryKind).toBe('CLIENT')
   })
 
   it('saves client entries owned by the consultant', async () => {
@@ -362,7 +388,7 @@ describe('PUT /api/timesheets/:id/entries', () => {
       assignment_id: '33333333-3333-4333-8333-333333333333',
       consultant_id: 'consultant-1',
       client_name: 'Acme Corp',
-      hourly_rate: '750.00',
+      client_bill_rate: '750.00',
       created_at: '2025-03-24T00:00:00Z',
     })
     entryModel.upsertEntries.mockResolvedValue([fakeEntry])
@@ -435,24 +461,49 @@ describe('PUT /api/timesheets/:id/entries', () => {
     expect(res.body.error).toMatch(/week/i)
   })
 
-  it('returns 409 when a rejected timesheet changes its work category structure', async () => {
+  it('allows a rejected timesheet to reuse an archived assignment already on the sheet', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue(rejectedTimesheet)
-    entryModel.getEntriesByTimesheet.mockResolvedValue([internalEntry])
+    entryModel.getEntriesByTimesheet.mockResolvedValue([{
+      ...fakeEntry,
+      assignment_id: '44444444-4444-4444-8444-444444444444',
+      bucket_label: 'Archived Client',
+    }])
+    clientAssignmentModel.getAssignmentById.mockResolvedValue(null)
+    clientAssignmentModel.getAssignmentByIdIncludingDeleted.mockResolvedValue({
+      assignment_id: '44444444-4444-4444-8444-444444444444',
+      consultant_id: 'consultant-1',
+      client_name: 'Archived Client',
+      client_bill_rate: '750.00',
+      created_at: '2025-03-24T00:00:00Z',
+      deleted_at: '2025-03-26T00:00:00Z',
+    })
+    entryModel.upsertEntries.mockResolvedValue([{
+      ...fakeEntry,
+      assignment_id: '44444444-4444-4444-8444-444444444444',
+      bucket_label: 'Archived Client',
+    }])
 
     const res = await request(app)
       .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
-      .send({
-        entries: [{
-          date: '2025-03-24',
-          entryKind: 'CLIENT',
-          assignmentId: '33333333-3333-4333-8333-333333333333',
-          hoursWorked: 7.5,
-        }],
-      })
+      .send({ entries: archivedClientEntries })
 
-    expect(res.status).toBe(409)
-    expect(res.body.error).toMatch(/existing work categories/i)
+    expect(res.status).toBe(200)
+    expect(clientAssignmentModel.getAssignmentByIdIncludingDeleted).toHaveBeenCalledWith('44444444-4444-4444-8444-444444444444')
+  })
+
+  it('returns 404 when a rejected timesheet introduces an unrelated archived assignment', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(rejectedTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([internalEntry])
+    clientAssignmentModel.getAssignmentById.mockResolvedValue(null)
+
+    const res = await request(app)
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
+      .set('Authorization', consultantToken)
+      .send({ entries: archivedClientEntries })
+
+    expect(res.status).toBe(404)
+    expect(clientAssignmentModel.getAssignmentByIdIncludingDeleted).not.toHaveBeenCalled()
   })
 
   it('returns 403 when consultant does not own the timesheet', async () => {
@@ -473,6 +524,7 @@ describe('PUT /api/timesheets/:id/entries', () => {
 describe('POST /api/timesheets/:id/submit', () => {
   it('submits a DRAFT timesheet and logs an audit event', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
     timesheetModel.updateTimesheetStatus.mockResolvedValue({ ...fakeTimesheet, status: 'PENDING' })
     auditModel.logAction.mockResolvedValue({})
 
@@ -490,6 +542,7 @@ describe('POST /api/timesheets/:id/submit', () => {
 
   it('submits a REJECTED timesheet and logs a submission event', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue(rejectedTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
     timesheetModel.updateTimesheetStatus.mockResolvedValue({ ...rejectedTimesheet, status: 'PENDING' })
     auditModel.logAction.mockResolvedValue({})
 
@@ -534,6 +587,20 @@ describe('POST /api/timesheets/:id/submit', () => {
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(404)
+  })
+
+  it('returns 400 when the timesheet has no entries', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([])
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/at least one entry/i)
+    expect(timesheetModel.updateTimesheetStatus).not.toHaveBeenCalled()
+    expect(auditModel.logAction).not.toHaveBeenCalled()
   })
 })
 
@@ -723,7 +790,7 @@ describe('PATCH /api/timesheets/:id/review', () => {
 // POST /api/timesheets/:id/payment
 // ---------------------------------------------------------------------------
 describe('POST /api/timesheets/:id/payment', () => {
-  it('processes payment using per-category rates and logs the calculated amount', async () => {
+  it('processes payment using bill and pay rates and logs the calculated totals', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'APPROVED' })
     entryModel.getEntriesByTimesheet.mockResolvedValue([
       {
@@ -748,8 +815,9 @@ describe('POST /api/timesheets/:id/payment', () => {
       payment_id: '44444444-4444-4444-8444-444444444444',
       timesheet_id: TIMESHEET_ID,
       processed_by: 'finance-1',
-      daily_rate: null,
-      amount: '240.00',
+      total_bill_amount: '160.00',
+      total_pay_amount: '180.00',
+      margin_amount: '-20.00',
       status: 'COMPLETED',
       breakdowns: [
         {
@@ -757,16 +825,22 @@ describe('POST /api/timesheets/:id/payment', () => {
           assignmentId: '33333333-3333-4333-8333-333333333333',
           bucketLabel: 'Acme Corp',
           hoursWorked: 4,
-          hourlyRate: 40,
-          amount: 160,
+          billRate: 40,
+          billAmount: 160,
+          payRate: 25,
+          payAmount: 100,
+          marginAmount: 60,
         },
         {
           entryKind: 'INTERNAL',
           assignmentId: null,
           bucketLabel: 'Internal',
           hoursWorked: 3.5,
-          hourlyRate: 22.8571428571,
-          amount: 80,
+          billRate: 0,
+          billAmount: 0,
+          payRate: 22.8571428571,
+          payAmount: 80,
+          marginAmount: -80,
         },
       ],
       created_at: '2025-03-28T10:30:00Z',
@@ -782,39 +856,50 @@ describe('POST /api/timesheets/:id/payment', () => {
           {
             entryKind: 'CLIENT',
             assignmentId: '33333333-3333-4333-8333-333333333333',
-            hourlyRate: 40,
+            billRate: 40,
+            payRate: 25,
           },
           {
             entryKind: 'INTERNAL',
-            hourlyRate: 22.8571428571,
+            billRate: 0,
+            payRate: 22.8571428571,
           },
         ],
         notes: '  processed  ',
       })
 
     expect(res.status).toBe(200)
-    expect(res.body.hourlyRate).toBeNull()
-    expect(res.body.amount).toBe(240)
+    expect(res.body.totalBillAmount).toBe(160)
+    expect(res.body.totalPayAmount).toBe(180)
+    expect(res.body.marginAmount).toBe(-20)
     expect(paymentModel.createPayment).toHaveBeenCalledWith({
       timesheetId: TIMESHEET_ID,
       processedBy: 'finance-1',
-      amount: 240,
+      totalBillAmount: 160,
+      totalPayAmount: 180,
+      marginAmount: -20,
       breakdowns: [
         {
           entryKind: 'CLIENT',
           assignmentId: '33333333-3333-4333-8333-333333333333',
           bucketLabel: 'Acme Corp',
           hoursWorked: 4,
-          hourlyRate: 40,
-          amount: 160,
+          billRate: 40,
+          billAmount: 160,
+          payRate: 25,
+          payAmount: 100,
+          marginAmount: 60,
         },
         {
           entryKind: 'INTERNAL',
           assignmentId: null,
           bucketLabel: 'Internal',
           hoursWorked: 3.5,
-          hourlyRate: 22.8571428571,
-          amount: 80,
+          billRate: 0,
+          billAmount: 0,
+          payRate: 22.8571428571,
+          payAmount: 80,
+          marginAmount: -80,
         },
       ],
     })
@@ -822,7 +907,12 @@ describe('POST /api/timesheets/:id/payment', () => {
       expect.objectContaining({
         action: 'PROCESSING',
         timesheetId: TIMESHEET_ID,
-        detail: expect.objectContaining({ amount: 240, totalHours: 7.5 }),
+        detail: expect.objectContaining({
+          totalBillAmount: 160,
+          totalPayAmount: 180,
+          marginAmount: -20,
+          totalHours: 7.5,
+        }),
       })
     )
   })

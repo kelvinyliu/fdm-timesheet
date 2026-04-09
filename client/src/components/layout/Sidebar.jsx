@@ -5,6 +5,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import PeopleIcon from '@mui/icons-material/People'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import HistoryIcon from '@mui/icons-material/History'
+import PaymentsIcon from '@mui/icons-material/Payments'
 import { useNavigate, useLocation } from 'react-router'
 import { useAuth } from '../../context/useAuth.js'
 import { palette } from '../../theme.js'
@@ -18,6 +19,7 @@ const NAV_LINKS = {
   ],
   FINANCE_MANAGER: [
     { label: 'Timesheets', path: '/finance/timesheets', icon: AccessTimeIcon },
+    { label: 'Pay Rates', path: '/finance/pay-rates', icon: PaymentsIcon },
   ],
   SYSTEM_ADMIN: [
     { label: 'Users', path: '/admin/users', icon: PeopleIcon },

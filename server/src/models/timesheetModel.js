@@ -5,6 +5,9 @@ const TIMESHEET_SELECT = `
          t.assignment_id, assignment.client_name AS assignment_client_name,
          t.week_start, t.status,
          t.created_at, t.updated_at,
+         p.total_bill_amount,
+         p.total_pay_amount,
+         p.margin_amount,
          lr.comment AS rejection_comment,
          (SELECT COALESCE(SUM(te.hours_worked), 0)
           FROM timesheet_entries te
@@ -13,6 +16,7 @@ const TIMESHEET_SELECT = `
   FROM timesheets t
   LEFT JOIN users consultant ON consultant.user_id = t.consultant_id
   LEFT JOIN client_assignments assignment ON assignment.assignment_id = t.assignment_id
+  LEFT JOIN payments p ON p.timesheet_id = t.timesheet_id
   LEFT JOIN LATERAL (
     SELECT r.comment
     FROM reviews r

@@ -46,6 +46,8 @@ export default function UserManagementPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState({ id: null, name: '' })
 
   async function fetchUsers() {
     setLoading(true)
@@ -84,10 +86,21 @@ export default function UserManagementPage() {
     }
   }
 
-  async function handleDelete(userId, userName) {
-    if (!window.confirm(`Delete user "${userName}"? This cannot be undone.`)) return
+  function openDeleteDialog(userId, userName) {
+    setDeleteTarget({ id: userId, name: userName })
+    setDeleteDialogOpen(true)
+  }
+
+  function closeDeleteDialog() {
+    setDeleteDialogOpen(false)
+    setDeleteTarget({ id: null, name: '' })
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget.id) return
     try {
-      await deleteUser(userId)
+      await deleteUser(deleteTarget.id)
+      closeDeleteDialog()
       await fetchUsers()
     } catch (err) {
       setError(err.message || 'Failed to delete user.')
@@ -206,7 +219,7 @@ export default function UserManagementPage() {
                         variant="outlined"
                         color="error"
                         startIcon={<DeleteIcon />}
-                        onClick={() => handleDelete(u.id, u.name)}
+                        onClick={() => openDeleteDialog(u.id, u.name)}
                       >
                         Delete
                       </Button>
@@ -283,7 +296,7 @@ export default function UserManagementPage() {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => handleDelete(u.id, u.name)}
+                          onClick={() => openDeleteDialog(u.id, u.name)}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -303,6 +316,22 @@ export default function UserManagementPage() {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog open={deleteDialogOpen} onClose={closeDeleteDialog}>
+        <DialogTitle>Confirm Deletion</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to delete {deleteTarget.name ? `"${deleteTarget.name}"` : 'this user'}?
+            This action cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog}>Cancel</Button>
+          <Button variant="contained" color="error" onClick={confirmDelete}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Create User Dialog */}
       <Dialog

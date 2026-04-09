@@ -85,7 +85,7 @@ function BrandLockup({ compact = false }) {
   )
 }
 
-function UserFooter({ user, onChangePassword, onLogout, mobile = false }) {
+function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned = false }) {
   if (mobile) {
     return (
       <Box
@@ -178,10 +178,19 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false }) {
       sx={{
         p: '16px 20px',
         borderTop: `1px solid ${palette.sidebarScrim}`,
-        position: 'relative',
+        position: pinned ? 'fixed' : 'relative',
+        left: pinned ? 0 : 'auto',
+        right: pinned ? 'auto' : 'auto',
+        bottom: pinned ? 0 : 'auto',
+        width: pinned ? SIDEBAR_WIDTH : 'auto',
+        zIndex: pinned ? 1201 : 'auto',
+        background: pinned
+          ? `linear-gradient(180deg, ${palette.sidebarBgAlt} 0%, ${palette.sidebarBg} 100%)`
+          : 'transparent',
         display: 'flex',
         alignItems: 'center',
         gap: 1,
+        flexShrink: 0,
       }}
     >
       <Box
@@ -337,22 +346,30 @@ export default function AppLayout() {
           sx={{
             width: SIDEBAR_WIDTH,
             flexShrink: 0,
-            display: 'flex',
-            flexDirection: 'column',
+            display: 'grid',
+            gridTemplateRows: 'auto minmax(0, 1fr) auto',
             position: 'fixed',
             top: 0,
             left: 0,
             bottom: 0,
+            overflow: 'hidden',
             zIndex: 1200,
             ...navShellStyles,
           }}
         >
           <BrandLockup />
-          <Box sx={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+          <Box
+            sx={{
+              minHeight: 0,
+              overflow: 'auto',
+              position: 'relative',
+            }}
+          >
             <Sidebar />
           </Box>
           <UserFooter
             user={user}
+            pinned
             onChangePassword={() => setPwOpen(true)}
             onLogout={logout}
           />
@@ -456,8 +473,10 @@ export default function AppLayout() {
               paper: {
                 sx: {
                   width: `min(100vw, ${MOBILE_DRAWER_WIDTH}px)`,
-                  display: 'flex',
-                  flexDirection: 'column',
+                  display: 'grid',
+                  gridTemplateRows: 'auto minmax(0, 1fr) auto',
+                  minHeight: 0,
+                  overflow: 'hidden',
                   backgroundImage: 'none',
                   ...navShellStyles,
                 },
@@ -465,7 +484,7 @@ export default function AppLayout() {
             }}
           >
             <BrandLockup compact />
-            <Box sx={{ flex: 1, overflow: 'auto', position: 'relative' }}>
+            <Box sx={{ minHeight: 0, overflow: 'auto', position: 'relative' }}>
               <Sidebar onNavigate={() => setMobileNavOpen(false)} />
             </Box>
             <UserFooter

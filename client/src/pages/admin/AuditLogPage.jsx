@@ -172,12 +172,20 @@ export default function AuditLogPage() {
                       <ActionBadge action={e.action} />
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                      >
                         {getAuditActorDisplayLabel(e.performedByName)}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                      >
                         {getAuditTimesheetDisplayLabel({
                           consultantName: e.timesheetConsultantName,
                           weekStart: e.timesheetWeekStart,
@@ -187,9 +195,9 @@ export default function AuditLogPage() {
                     <TableCell
                       sx={{
                         maxWidth: { xs: 220, md: 320 },
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        whiteSpace: 'normal',
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
                       }}
                       title={formatDetail(e.action, e.detail)}
                     >
@@ -198,6 +206,9 @@ export default function AuditLogPage() {
                           fontFamily: '"JetBrains Mono", monospace',
                           fontSize: '0.72rem',
                           color: palette.textSecondary,
+                          whiteSpace: 'normal',
+                          overflowWrap: 'anywhere',
+                          wordBreak: 'break-word',
                         }}
                       >
                         {formatDetail(e.action, e.detail)}

@@ -24,10 +24,18 @@ vi.mock('../models/auditModel.js', () => ({
   logAction: vi.fn(),
 }))
 
+vi.mock('../models/paymentModel.js', () => ({
+  getPaymentByTimesheet: vi.fn(),
+  createPayment: vi.fn(),
+  createFinancialNote: vi.fn(),
+  getFinancialNotes: vi.fn(),
+}))
+
 import app from '../app.js'
 import * as timesheetModel from '../models/timesheetModel.js'
 import * as entryModel from '../models/timesheetEntryModel.js'
 import * as auditModel from '../models/auditModel.js'
+import * as paymentModel from '../models/paymentModel.js'
 
 const SECRET = 'test-secret'
 const TIMESHEET_ID = '11111111-1111-4111-8111-111111111111'
@@ -39,6 +47,7 @@ function token(payload) {
 
 const consultantToken = token({ userId: 'consultant-1', role: 'CONSULTANT' })
 const managerToken   = token({ userId: 'manager-1',    role: 'LINE_MANAGER' })
+const financeToken   = token({ userId: 'finance-1',    role: 'FINANCE_MANAGER' })
 
 const fakeTimesheet = {
   timesheet_id:  TIMESHEET_ID,
@@ -563,5 +572,62 @@ describe('PATCH /api/timesheets/:id/review', () => {
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'REJECTION', timesheetId: TIMESHEET_ID })
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// POST /api/timesheets/:id/payment
+// ---------------------------------------------------------------------------
+describe('POST /api/timesheets/:id/payment', () => {
+  it('processes payment using an hourly rate and logs the calculated amount', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'APPROVED' })
+    entryModel.getEntriesByTimesheet.mockResolvedValue([
+      { hours_worked: '4.00' },
+      { hours_worked: '3.50' },
+    ])
+    paymentModel.getPaymentByTimesheet.mockResolvedValue(null)
+    paymentModel.createPayment.mockResolvedValue({
+      payment_id: '44444444-4444-4444-8444-444444444444',
+      timesheet_id: TIMESHEET_ID,
+      processed_by: 'finance-1',
+      daily_rate: '40.00',
+      amount: '300.00',
+      status: 'COMPLETED',
+      created_at: '2025-03-28T10:30:00Z',
+    })
+    paymentModel.createFinancialNote.mockResolvedValue({})
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/payment`)
+      .set('Authorization', financeToken)
+      .send({ hourlyRate: 40, notes: '  processed  ' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.hourlyRate).toBe(40)
+    expect(res.body.amount).toBe(300)
+    expect(paymentModel.createPayment).toHaveBeenCalledWith({
+      timesheetId: TIMESHEET_ID,
+      processedBy: 'finance-1',
+      hourlyRate: 40,
+      amount: 300,
+    })
+    expect(auditModel.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'PROCESSING',
+        timesheetId: TIMESHEET_ID,
+        detail: { hourlyRate: 40, amount: 300, totalHours: 7.5 },
+      })
+    )
+  })
+
+  it('returns 400 when hourlyRate is missing or invalid', async () => {
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/payment`)
+      .set('Authorization', financeToken)
+      .send({ hourlyRate: 0 })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/hourlyRate/)
   })
 })

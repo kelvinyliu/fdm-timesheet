@@ -8,7 +8,7 @@ export async function getPaymentByTimesheet(timesheetId) {
   return rows[0] ?? null
 }
 
-export async function createPayment({ timesheetId, processedBy, dailyRate, amount }) {
+export async function createPayment({ timesheetId, processedBy, hourlyRate, amount }) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
@@ -16,7 +16,7 @@ export async function createPayment({ timesheetId, processedBy, dailyRate, amoun
       `INSERT INTO payments (timesheet_id, processed_by, daily_rate, amount, status)
        VALUES ($1, $2, $3, $4, 'COMPLETED')
        RETURNING *`,
-      [timesheetId, processedBy, dailyRate, amount]
+      [timesheetId, processedBy, hourlyRate, amount]
     )
     await client.query(
       `UPDATE timesheets SET status = 'COMPLETED', updated_at = NOW()

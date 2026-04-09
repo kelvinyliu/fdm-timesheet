@@ -42,8 +42,8 @@ The client runs on `http://localhost:5173` and the server on `http://localhost:3
 | Role | Permissions |
 |---|---|
 | `CONSULTANT` | Create, edit, and submit own timesheets; view submission status |
-| `LINE_MANAGER` | Review, approve, or reject timesheets for assigned consultants |
-| `FINANCE_MANAGER` | Access approved timesheets, set daily rate, process payment, add notes |
+| `LINE_MANAGER` | Open, approve, or reject timesheets for assigned consultants |
+| `FINANCE_MANAGER` | Access approved timesheets, set hourly rate, process payment, add notes |
 | `SYSTEM_ADMIN` | Create and deactivate user accounts, assign roles, view audit log |
 
 User accounts are created by a System Administrator. There is no self-registration.
@@ -188,6 +188,19 @@ Assigns a consultant to a line manager.
 
 **Errors:** `400` missing fields · `409` consultant already assigned to a manager
 
+#### `PATCH /api/manager-assignments/:id`
+Updates an existing manager-consultant assignment.
+
+**Request body**
+| Field | Type | Required |
+|---|---|---|
+| `managerId` | UUID | yes |
+| `consultantId` | UUID | yes |
+
+**Response `200`** — updated assignment object
+
+**Errors:** `400` missing/invalid fields · `404` assignment or user not found · `409` consultant already assigned to a manager
+
 #### `DELETE /api/manager-assignments/:id`
 Removes a manager–consultant link.
 
@@ -274,21 +287,21 @@ Requires `LINE_MANAGER`. Approves or rejects a `PENDING` timesheet. Manager must
 **Errors:** `400` invalid action or missing rejection comment · `403` not authorised for this consultant · `404` not found · `409` timesheet not in `PENDING`
 
 #### `POST /api/timesheets/:id/payment`
-Requires `FINANCE_MANAGER`. Processes payment for an `APPROVED` timesheet. Calculates the amount as `dailyRate × totalHours / 8`, sets timesheet status to `COMPLETED`, and records a `PROCESSING` audit event. Can only be called once per timesheet.
+Requires `FINANCE_MANAGER`. Processes payment for an `APPROVED` timesheet. Calculates the amount as `hourlyRate × totalHours`, sets timesheet status to `COMPLETED`, and records a `PROCESSING` audit event. Can only be called once per timesheet.
 
 **Request body**
 | Field | Type | Required |
 |---|---|---|
-| `dailyRate` | number (> 0) | yes |
+| `hourlyRate` | number (> 0) | yes |
 | `notes` | string | no |
 
 **Response `200`**
 ```json
-{ "id": "uuid", "timesheetId": "uuid", "processedBy": "uuid", "dailyRate": 440.00,
+{ "id": "uuid", "timesheetId": "uuid", "processedBy": "uuid", "hourlyRate": 55.00,
   "amount": 2200.00, "status": "COMPLETED", "createdAt": "iso8601" }
 ```
 
-**Errors:** `400` missing or invalid `dailyRate` · `404` timesheet not found · `409` timesheet not in `APPROVED` or payment already processed
+**Errors:** `400` missing or invalid `hourlyRate` · `404` timesheet not found · `409` timesheet not in `APPROVED` or payment already processed
 
 ---
 
@@ -313,6 +326,6 @@ Requires `SYSTEM_ADMIN`. Returns the full audit log across all timesheets, order
 - Line managers can only act on timesheets belonging to their assigned consultants
 - Mandatory rejection comments so consultants know what to fix
 - Consultant can edit a rejected timesheet and resubmit
-- Finance team sets a daily rate per timesheet before processing
+- Finance team sets an hourly rate per timesheet before processing
 - Full audit trail of submission, approval, rejection, and payment events
 - Audit records retained for 7 years (HMRC compliance)

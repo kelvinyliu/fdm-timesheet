@@ -36,7 +36,7 @@ export default function FinancePaymentPage() {
   const [timesheet, setTimesheet] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [dailyRate, setDailyRate] = useState('')
+  const [hourlyRate, setHourlyRate] = useState('')
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -58,16 +58,16 @@ export default function FinancePaymentPage() {
   }, [id, refreshKey])
 
   const totalHours = timesheet?.totalHours ? Number(timesheet.totalHours) : 0
-  const dailyRateNum = parseFloat(dailyRate)
-  const isDailyRateValid = Number.isFinite(dailyRateNum) && dailyRateNum > 0
-  const totalPayment = isDailyRateValid ? ((dailyRateNum * totalHours) / 8).toFixed(2) : null
+  const hourlyRateNum = parseFloat(hourlyRate)
+  const isHourlyRateValid = Number.isFinite(hourlyRateNum) && hourlyRateNum > 0
+  const totalPayment = isHourlyRateValid ? (hourlyRateNum * totalHours).toFixed(2) : null
 
   async function handleProcessPayment() {
-    if (!isDailyRateValid) return
+    if (!isHourlyRateValid) return
     setSubmitting(true)
     setFeedback(null)
     try {
-      await processPayment(id, { dailyRate: dailyRateNum, notes: notes.trim() })
+      await processPayment(id, { hourlyRate: hourlyRateNum, notes: notes.trim() })
       setFeedback({ severity: 'success', message: 'Payment processed successfully.' })
       setRefreshKey((k) => k + 1)
     } catch (err) {
@@ -225,11 +225,11 @@ export default function FinancePaymentPage() {
               </Typography>
               <Stack spacing={3}>
                 <TextField
-                  label="Daily Rate (&pound;)"
+                  label="Hourly Rate (&pound;)"
                   type="number"
                   required
-                  value={dailyRate}
-                  onChange={(e) => setDailyRate(e.target.value)}
+                  value={hourlyRate}
+                  onChange={(e) => setHourlyRate(e.target.value)}
                   slotProps={{ htmlInput: { min: 0.01, step: '0.01' } }}
                   sx={{ width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 240 } }}
                 />
@@ -263,7 +263,7 @@ export default function FinancePaymentPage() {
                       color: palette.textMuted,
                     }}
                   >
-                    daily rate x total hours / 8
+                    hourly rate x total hours
                   </Typography>
                 </Box>
 
@@ -283,7 +283,7 @@ export default function FinancePaymentPage() {
                     color="primary"
                     startIcon={<PaymentIcon />}
                     onClick={handleProcessPayment}
-                    disabled={submitting || !isDailyRateValid}
+                    disabled={submitting || !isHourlyRateValid}
                     fullWidth={isMobile}
                   >
                     Process Payment
@@ -298,9 +298,9 @@ export default function FinancePaymentPage() {
             <>
               <Alert severity="success" sx={{ mt: 2 }}>
                 <Typography fontWeight={600} gutterBottom sx={{ fontSize: '0.85rem' }}>
-                  Payment Completed
+                  Payment Recorded
                 </Typography>
-                This timesheet has been fully processed and payment has been recorded.
+                This timesheet is marked as paid and the payment has been recorded.
               </Alert>
 
               {fetchedNotes.length > 0 && (

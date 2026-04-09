@@ -303,12 +303,12 @@ export async function processPaymentHandler(req, res, next) {
   try {
     if (!requireUuid(res, req.params.id, 'Timesheet id')) return
 
-    const { dailyRate, notes } = req.body
+    const { hourlyRate, notes } = req.body
 
-    const parsedDailyRate = Number(dailyRate)
+    const parsedHourlyRate = Number(hourlyRate)
 
-    if (!Number.isFinite(parsedDailyRate) || parsedDailyRate <= 0) {
-      return res.status(400).json({ error: 'dailyRate is required and must be greater than 0' })
+    if (!Number.isFinite(parsedHourlyRate) || parsedHourlyRate <= 0) {
+      return res.status(400).json({ error: 'hourlyRate is required and must be greater than 0' })
     }
 
     const timesheet = await getTimesheetById(req.params.id)
@@ -328,13 +328,13 @@ export async function processPaymentHandler(req, res, next) {
 
     const entries = await getEntriesByTimesheet(req.params.id)
     const totalHours = entries.reduce((sum, e) => sum + parseFloat(e.hours_worked), 0)
-    const amount = parseFloat(((parsedDailyRate * totalHours) / 8).toFixed(2))
+    const amount = parseFloat((parsedHourlyRate * totalHours).toFixed(2))
     const trimmedNotes = notes?.trim()
 
     const payment = await createPayment({
       timesheetId: req.params.id,
       processedBy: req.user.userId,
-      dailyRate: parsedDailyRate,
+      hourlyRate: parsedHourlyRate,
       amount,
     })
 
@@ -360,7 +360,7 @@ export async function processPaymentHandler(req, res, next) {
       action: 'PROCESSING',
       performedBy: req.user.userId,
       timesheetId: req.params.id,
-      detail: { dailyRate: parsedDailyRate, amount, totalHours },
+      detail: { hourlyRate: parsedHourlyRate, amount, totalHours },
     }, req)
 
     res.json(paymentDto(payment))

@@ -51,7 +51,7 @@ The base URL defaults to `http://localhost:3000` and can be overridden with the 
 | `auth.js` | `login`, `changePassword` |
 | `timesheets.js` | `getTimesheets`, `getTimesheet`, `createTimesheet`, `updateEntries`, `submitTimesheet`, `autofillTimesheet`, `reviewTimesheet`, `processPayment`, `getTimesheetNotes` |
 | `users.js` | `getUsers`, `createUser`, `updateUserRole`, `deleteUser` |
-| `assignments.js` | `getAssignments`, `createAssignment`, `deleteAssignment`, `getManagerAssignments`, `createManagerAssignment`, `deleteManagerAssignment` |
+| `assignments.js` | `getAssignments`, `createAssignment`, `deleteAssignment`, `getManagerAssignments`, `createManagerAssignment`, `updateManagerAssignment`, `deleteManagerAssignment` |
 | `audit.js` | `getAuditLog` |
 
 ---
@@ -158,8 +158,8 @@ The root path (`/`) renders `RootRedirect`, which sends authenticated users to t
 
 | Page | Path | Description |
 |---|---|---|
-| Team timesheets | `/manager/timesheets` | Lists timesheets for all consultants assigned to this manager. Filterable by status (ALL / DRAFT / PENDING / APPROVED / REJECTED). |
-| Review timesheet | `/manager/timesheets/:id` | Shows full timesheet detail. Allows approving or rejecting. A rejection comment is required. Calls `PATCH /api/timesheets/:id/review`. |
+| Team timesheets | `/manager/timesheets` | Lists timesheets for all consultants assigned to this manager. Uses `Open Timesheet` actions to access the full detail view. |
+| Open timesheet | `/manager/timesheets/:id` | Shows full timesheet detail. Allows approving or rejecting. A rejection comment is required. Calls `PATCH /api/timesheets/:id/review`. |
 
 ---
 
@@ -169,8 +169,8 @@ The root path (`/`) renders `RootRedirect`, which sends authenticated users to t
 
 | Page | Path | Description |
 |---|---|---|
-| Approved timesheets | `/finance/timesheets` | Lists timesheets with APPROVED or COMPLETED status. Entry point for payment processing. |
-| Payment page | `/finance/timesheets/:id` | Shows timesheet details and hours worked. Accepts a daily rate (£/day) and optional payment notes. Calculates the total payment (`dailyRate × totalHours / 8`) and submits via `POST /api/timesheets/:id/payment`. Once processed (COMPLETED), displays payment summary and all finance notes. |
+| Timesheets for payment | `/finance/timesheets` | Lists timesheets with APPROVED or COMPLETED status. `COMPLETED` is displayed in the UI as `Paid`. |
+| Payment page | `/finance/timesheets/:id` | Shows timesheet details and hours worked. Accepts an hourly rate (£/hr) and optional payment notes. Calculates the total payment (`hourlyRate × totalHours`) and submits via `POST /api/timesheets/:id/payment`. Once processed, the UI displays the timesheet status as `Paid` and shows finance notes. |
 
 ---
 
@@ -181,7 +181,7 @@ The root path (`/`) renders `RootRedirect`, which sends authenticated users to t
 | Page | Path | Description |
 |---|---|---|
 | User management | `/admin/users` | Lists all users. Allows creating new users (name, email, password, role), changing a user's role, and deleting users. |
-| Assignments | `/admin/assignments` | Two sections: (1) client assignments - link a consultant to a client with start/end dates; (2) manager assignments - assign a consultant to a line manager. Both support create and delete. |
+| Assignments | `/admin/assignments` | Two sections: (1) client assignments - link a consultant to a client with start/end dates; (2) manager assignments - assign a consultant to a line manager. Client assignments support create and delete; manager assignments support create, edit, and delete. |
 | Audit log | `/admin/audit` | Append-only log of all significant system events (SUBMISSION, APPROVAL, REJECTION, PROCESSING). Filterable by action type, author, and date range. |
 
 ---

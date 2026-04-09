@@ -14,6 +14,11 @@ import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -40,6 +45,8 @@ export default function TimesheetReviewPage() {
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [approveDialogOpen, setApproveDialogOpen] = useState(false)
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -56,6 +63,7 @@ export default function TimesheetReviewPage() {
     try {
       await reviewTimesheet(id, { action: 'APPROVE', comment: '' })
       setFeedback({ severity: 'success', message: 'Timesheet approved successfully.' })
+      setApproveDialogOpen(false)
       setRefreshKey((k) => k + 1)
     } catch (err) {
       setFeedback({ severity: 'error', message: err.message ?? 'Failed to approve timesheet.' })
@@ -74,6 +82,7 @@ export default function TimesheetReviewPage() {
         severity: 'info',
         message: 'Timesheet rejected and returned to the consultant for changes.',
       })
+      setRejectDialogOpen(false)
       setRejectionComment('')
       setRefreshKey((k) => k + 1)
     } catch (err) {
@@ -243,7 +252,7 @@ export default function TimesheetReviewPage() {
                     variant="contained"
                     color="success"
                     startIcon={<CheckCircleIcon />}
-                    onClick={handleApprove}
+                    onClick={() => setApproveDialogOpen(true)}
                     disabled={submitting}
                     fullWidth={isMobile}
                   >
@@ -273,7 +282,7 @@ export default function TimesheetReviewPage() {
                         variant="contained"
                         color="error"
                         startIcon={<CancelIcon />}
-                        onClick={handleReject}
+                        onClick={() => setRejectDialogOpen(true)}
                         disabled={submitting || !rejectionComment.trim()}
                         fullWidth={isMobile}
                       >
@@ -285,6 +294,71 @@ export default function TimesheetReviewPage() {
               </Stack>
             </Paper>
           )}
+
+          <Dialog
+            open={approveDialogOpen}
+            onClose={submitting ? undefined : () => setApproveDialogOpen(false)}
+            fullWidth
+            maxWidth="xs"
+          >
+            <DialogTitle>Approve timesheet?</DialogTitle>
+            <DialogContent>
+              <DialogContentText>
+                Approving this timesheet will mark it as approved and make it available to finance
+                for payment processing.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setApproveDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleApprove}
+                color="success"
+                variant="contained"
+                disabled={submitting}
+              >
+                {submitting ? 'Approving...' : 'Confirm approval'}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={rejectDialogOpen}
+            onClose={submitting ? undefined : () => setRejectDialogOpen(false)}
+            fullWidth
+            maxWidth="sm"
+          >
+            <DialogTitle>Reject timesheet?</DialogTitle>
+            <DialogContent>
+              <DialogContentText sx={{ mb: 2 }}>
+                Rejecting this timesheet will return it to the consultant for changes.
+              </DialogContentText>
+              <TextField
+                label="Rejection Comment"
+                multiline
+                minRows={3}
+                fullWidth
+                value={rejectionComment}
+                onChange={(e) => setRejectionComment(e.target.value)}
+                required
+                disabled={submitting}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setRejectDialogOpen(false)} disabled={submitting}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleReject}
+                color="error"
+                variant="contained"
+                disabled={submitting || !rejectionComment.trim()}
+              >
+                {submitting ? 'Rejecting...' : 'Confirm rejection'}
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED') && (
             <Alert

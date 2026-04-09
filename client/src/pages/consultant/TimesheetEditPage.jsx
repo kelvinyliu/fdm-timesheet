@@ -15,6 +15,11 @@ import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
@@ -56,6 +61,7 @@ export default function TimesheetEditPage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [autofilling, setAutofilling] = useState(false)
+  const [confirmAction, setConfirmAction] = useState(null)
 
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
@@ -111,44 +117,74 @@ export default function TimesheetEditPage() {
     setSnackbar({ open: true, message, severity })
   }
 
-  async function handleSaveDraft() {
+  async function saveDraft() {
     setSaving(true)
     try {
       await updateEntries(id, getEntriesPayload())
       showSnackbar('Draft saved successfully.')
+      return true
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to save draft.', 'error')
+      return false
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleSubmit() {
+  async function submitTimesheetWithConfirmation() {
     setSubmitting(true)
     try {
       await updateEntries(id, getEntriesPayload())
       await submitTimesheet(id)
       navigate(`/consultant/timesheets/${id}`)
+      return true
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to submit timesheet.', 'error')
       setSubmitting(false)
+      return false
     }
   }
 
-  async function handleAutofill() {
+  async function autofillEntries() {
     setAutofilling(true)
     try {
       const prevEntries = await autofillTimesheet(id)
       if (!prevEntries || prevEntries.length === 0) {
         showSnackbar('No previous week entries found.', 'info')
-        return
+        return true
       }
       setHours(buildAutofillHours(timesheet.weekStart, prevEntries))
       showSnackbar('Hours filled from previous week.')
+      return true
     } catch (err) {
       showSnackbar(err.message ?? 'Autofill failed.', 'error')
+      return false
     } finally {
       setAutofilling(false)
+    }
+  }
+
+  function openConfirmation(action) {
+    setConfirmAction(action)
+  }
+
+  function closeConfirmation() {
+    if (isBusy) return
+    setConfirmAction(null)
+  }
+
+  async function handleConfirmedAction() {
+    let succeeded = false
+    if (confirmAction === 'save') {
+      succeeded = await saveDraft()
+    } else if (confirmAction === 'submit') {
+      succeeded = await submitTimesheetWithConfirmation()
+    } else if (confirmAction === 'autofill') {
+      succeeded = await autofillEntries()
+    }
+
+    if (succeeded) {
+      setConfirmAction(null)
     }
   }
 
@@ -181,7 +217,7 @@ export default function TimesheetEditPage() {
         <Button
           variant="outlined"
           startIcon={<AutoFixHighIcon />}
-          onClick={handleAutofill}
+          onClick={() => openConfirmation('autofill')}
           disabled={isBusy}
         >
           {autofilling ? 'Loading...' : 'Autofill from last week'}
@@ -343,7 +379,7 @@ export default function TimesheetEditPage() {
           variant="contained"
           color="primary"
           startIcon={<SaveIcon />}
-          onClick={handleSaveDraft}
+          onClick={() => openConfirmation('save')}
           disabled={isBusy}
         >
           {saving ? 'Saving...' : 'Save Draft'}
@@ -352,7 +388,7 @@ export default function TimesheetEditPage() {
           variant="contained"
           color="success"
           startIcon={<SendIcon />}
-          onClick={handleSubmit}
+          onClick={() => openConfirmation('submit')}
           disabled={isBusy}
         >
           {submitting ? 'Submitting...' : 'Submit Timesheet'}
@@ -380,6 +416,41 @@ export default function TimesheetEditPage() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      <Dialog
+        open={Boolean(confirmAction)}
+        onClose={closeConfirmation}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>
+          {confirmAction === 'save' && 'Save draft?'}
+          {confirmAction === 'submit' && 'Submit timesheet?'}
+          {confirmAction === 'autofill' && 'Autofill timesheet?'}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {confirmAction === 'save' && 'This will save your current hours as a draft.'}
+            {confirmAction === 'submit' && 'This will save your current hours and submit the timesheet for manager review.'}
+            {confirmAction === 'autofill' && 'This will replace the current hours on this form with values copied from the previous week when available.'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeConfirmation} disabled={isBusy}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleConfirmedAction}
+            variant="contained"
+            color={confirmAction === 'submit' ? 'success' : 'primary'}
+            disabled={isBusy}
+          >
+            {confirmAction === 'save' && (saving ? 'Saving...' : 'Confirm save')}
+            {confirmAction === 'submit' && (submitting ? 'Submitting...' : 'Confirm submit')}
+            {confirmAction === 'autofill' && (autofilling ? 'Loading...' : 'Confirm autofill')}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

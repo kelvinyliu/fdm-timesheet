@@ -11,6 +11,11 @@ import Checkbox from '@mui/material/Checkbox'
 import Alert from '@mui/material/Alert'
 import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { palette } from '../../theme.js'
@@ -32,6 +37,7 @@ export default function TimesheetCreatePage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
     Promise.all([getAssignments(), getTimesheets()])
@@ -53,8 +59,7 @@ export default function TimesheetCreatePage() {
       .catch(() => setLoading(false))
   }, [navigate, weekStart])
 
-  async function handleSubmit(e) {
-    e.preventDefault()
+  async function createTimesheetWithOptions() {
     setSubmitError(null)
     setSubmitting(true)
     try {
@@ -62,6 +67,7 @@ export default function TimesheetCreatePage() {
       if (assignmentId) body.assignmentId = assignmentId
 
       const newTimesheet = await createTimesheet(body)
+      setConfirmOpen(false)
       const newId = newTimesheet.id
       let autofillFeedback = null
 
@@ -93,6 +99,11 @@ export default function TimesheetCreatePage() {
       setSubmitError(err.message ?? 'Failed to create timesheet.')
       setSubmitting(false)
     }
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    setConfirmOpen(true)
   }
 
   if (loading) return <LoadingSpinner />
@@ -160,6 +171,33 @@ export default function TimesheetCreatePage() {
           </Stack>
         </Box>
       </Paper>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={submitting ? undefined : () => setConfirmOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Create timesheet?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            This will create your timesheet for the week of {formatWeekStart(weekStart)}
+            {autofill ? ' and copy hours from the previous week when available.' : '.'}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={createTimesheetWithOptions}
+            variant="contained"
+            disabled={submitting}
+          >
+            {submitting ? 'Creating...' : 'Confirm create'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

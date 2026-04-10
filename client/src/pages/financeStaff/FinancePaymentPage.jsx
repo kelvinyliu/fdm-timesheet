@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, Fragment } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -97,6 +97,7 @@ function buildCompletedSummaryItems(timesheet) {
 export default function FinancePaymentPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const location = useLocation()
   const navigate = useNavigate()
   const { id } = useParams()
 
@@ -135,9 +136,9 @@ export default function FinancePaymentPage() {
       .finally(() => setLoading(false))
   }, [id, refreshKey])
 
-  const workSummary = timesheet?.workSummary ?? []
+  const workSummary = timesheet?.workSummary
   const computedBuckets = useMemo(() => (
-    workSummary.map((item) => {
+    (workSummary ?? []).map((item) => {
       const values = bucketRates[bucketKey(item)] ?? { billRate: '', payRate: '' }
       const billRate = Number(values.billRate)
       const payRate = Number(values.payRate)
@@ -228,11 +229,13 @@ export default function FinancePaymentPage() {
         {
           key: 'buckets',
           label: 'Work Categories',
-          value: getWorkSummaryDisplayLabel(workSummary, 3),
+          value: getWorkSummaryDisplayLabel(workSummary ?? [], 3),
         },
         ...buildCompletedSummaryItems(timesheet),
       ]
     : []
+
+  const backDestination = location.state?.returnTo ?? '/finance/timesheets?tab=to-pay'
 
   return (
     <Box>
@@ -240,7 +243,7 @@ export default function FinancePaymentPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/finance/timesheets')}
+          onClick={() => navigate(backDestination)}
         >
           Back
         </Button>
@@ -272,7 +275,7 @@ export default function FinancePaymentPage() {
               Work Summary
             </Typography>
             <Stack spacing={1.25}>
-              {workSummary.map((item) => (
+              {(workSummary ?? []).map((item) => (
                 <Box
                   key={bucketKey(item)}
                   sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}

@@ -25,6 +25,8 @@ import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import SearchIcon from '@mui/icons-material/Search'
+import InputAdornment from '@mui/material/InputAdornment'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getUsers, createUser, updateUserRole, deleteUser } from '../../api/users'
@@ -37,6 +39,7 @@ export default function UserManagementPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [users, setUsers] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -141,9 +144,30 @@ export default function UserManagementPage() {
 
   if (loading) return <LoadingSpinner />
 
+  const filteredUsers = users.filter((u) => {
+    const q = searchQuery.toLowerCase()
+    return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)
+  })
+
   return (
     <Box>
       <PageHeader title="User Management" subtitle="Create, manage, and assign roles to users">
+        <TextField
+          placeholder="Search users..."
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ minWidth: { sm: 240 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
         <Button variant="contained" startIcon={<AddIcon />} onClick={openDialog}>
           Create User
         </Button>
@@ -156,7 +180,7 @@ export default function UserManagementPage() {
       )}
 
       {isMobile ? (
-        users.length === 0 ? (
+        filteredUsers.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
             <Typography variant="body2" color="text.secondary">
               No users found.
@@ -164,7 +188,7 @@ export default function UserManagementPage() {
           </Paper>
         ) : (
           <Stack spacing={1.5}>
-            {users.map((u) => {
+            {filteredUsers.map((u) => {
               const currentRole = pendingRoles[u.id] ?? u.role
               const isDirty = pendingRoles[u.id] !== undefined && pendingRoles[u.id] !== u.role
               return (
@@ -242,7 +266,7 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((u) => {
+              {filteredUsers.map((u) => {
                 const currentRole = pendingRoles[u.id] ?? u.role
                 const isDirty = pendingRoles[u.id] !== undefined && pendingRoles[u.id] !== u.role
                 return (
@@ -305,7 +329,7 @@ export default function UserManagementPage() {
                   </TableRow>
                 )
               })}
-              {users.length === 0 && (
+              {filteredUsers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                     No users found.

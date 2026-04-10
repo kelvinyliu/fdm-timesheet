@@ -15,6 +15,8 @@ import Stack from '@mui/material/Stack'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
+import SearchIcon from '@mui/icons-material/Search'
+import InputAdornment from '@mui/material/InputAdornment'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getConsultantPayRates, updateDefaultPayRate } from '../../api/users'
@@ -24,6 +26,7 @@ export default function FinancePayRatesPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const [consultants, setConsultants] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
   const [pendingRates, setPendingRates] = useState({})
   const [savingById, setSavingById] = useState({})
   const [loading, setLoading] = useState(true)
@@ -83,12 +86,34 @@ export default function FinancePayRatesPage() {
 
   if (loading) return <LoadingSpinner />
 
+  const filteredConsultants = consultants.filter((consultant) => {
+    const q = searchQuery.toLowerCase()
+    return (consultant.name || '').toLowerCase().includes(q) || (consultant.email || '').toLowerCase().includes(q)
+  })
+
   return (
     <Box>
       <PageHeader
         title="Consultant Pay Rates"
         subtitle="Configure the default consultant pay rate used to prefill outgoing payroll costs"
-      />
+      >
+        <TextField
+          placeholder="Search consultants..."
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ minWidth: { sm: 240 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+      </PageHeader>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
@@ -102,7 +127,7 @@ export default function FinancePayRatesPage() {
         </Alert>
       )}
 
-      {consultants.length === 0 ? (
+      {filteredConsultants.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
           <Typography variant="body2" color="text.secondary">
             No consultants found.
@@ -110,7 +135,7 @@ export default function FinancePayRatesPage() {
         </Paper>
       ) : isMobile ? (
         <Stack spacing={1.5}>
-          {consultants.map((consultant) => {
+          {filteredConsultants.map((consultant) => {
             const currentRate = pendingRates[consultant.id] ?? ''
             const isDirty = currentRate !== (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
 
@@ -171,7 +196,7 @@ export default function FinancePayRatesPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {consultants.map((consultant) => {
+              {filteredConsultants.map((consultant) => {
                 const currentRate = pendingRates[consultant.id] ?? ''
                 const isDirty = currentRate !== (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
 

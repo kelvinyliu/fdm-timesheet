@@ -191,12 +191,7 @@ export default function ManagerTimesheetListPage() {
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
-                <TableRow     sx={{
-      '& .MuiTableCell-root': {
-        fontSize: '1.8 em',
-        fontWeight: 800,
-      },
-    }}>
+                <TableRow>
                   <TableCell>Consultant</TableCell>
                   <TableCell>Week of</TableCell>
                   <TableCell>Status</TableCell>

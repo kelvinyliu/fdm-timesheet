@@ -301,33 +301,19 @@ export default function TimesheetReviewPage() {
                 <Divider />
 
                 <Box>
-                  <Typography variant="subtitle1" gutterBottom fontWeight={600} sx={{ fontSize: '0.85rem' }}>
-                    Reject Timesheet
-                  </Typography>
-                  <Stack spacing={2}>
-                    <TextField
-                      label="Rejection Comment"
-                      multiline
-                      minRows={3}
-                      fullWidth
-                      value={rejectionComment}
-                      onChange={(e) => setRejectionComment(e.target.value)}
-                      required
-                      placeholder="Provide a reason for rejection (required)"
-                    />
-                    <Box>
-                      <Button
-                        variant="contained"
-                        color="error"
-                        startIcon={<CancelIcon />}
-                        onClick={() => setRejectDialogOpen(true)}
-                        disabled={submitting || !rejectionComment.trim()}
-                        fullWidth={isMobile}
-                      >
-                        Reject
-                      </Button>
-                    </Box>
-                  </Stack>
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    startIcon={<CancelIcon />}
+                    onClick={() => {
+                      setRejectionComment('')
+                      setRejectDialogOpen(true)
+                    }}
+                    disabled={submitting}
+                    fullWidth={isMobile}
+                  >
+                    Reject
+                  </Button>
                 </Box>
               </Stack>
             </Paper>

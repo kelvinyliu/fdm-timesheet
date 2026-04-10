@@ -19,16 +19,16 @@ React 19 frontend for the FDM Timesheet application. Built with Vite and Materia
 
 ## Current logins
 
-Email / Username   | Role             | Password
--------------------|------------------|----------
-admin@fdm.com      | SYSTEM_ADMIN     | temp
-finance@fdm.com    | FINANCE_MANAGER  | temp
-alice@fdm.com      | LINE_MANAGER     | temp
-bob@fdm.com        | LINE_MANAGER     | temp
-charlie@fdm.com    | CONSULTANT       | temp
-diana@fdm.com      | CONSULTANT       | temp
-eve@fdm.com        | CONSULTANT       | temp
-frank@fdm.com      | CONSULTANT       | temp
+Email / Username      | Role             | Password
+----------------------|------------------|-------------
+admin@demo.test       | SYSTEM_ADMIN     | admin1234
+finance@demo.test     | FINANCE_MANAGER  | finance1234
+alice@demo.test       | LINE_MANAGER     | alice1234
+bob@demo.test         | LINE_MANAGER     | bob1234
+charlie@demo.test     | CONSULTANT       | charlie1234
+diana@demo.test       | CONSULTANT       | diana1234
+eve@demo.test         | CONSULTANT       | eve1234
+frank@demo.test       | CONSULTANT       | frank1234
 
 
 ## Backend Communication

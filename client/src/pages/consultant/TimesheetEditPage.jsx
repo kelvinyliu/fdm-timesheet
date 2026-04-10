@@ -15,50 +15,53 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
-import Chip from '@mui/material/Chip'
 import SaveIcon from '@mui/icons-material/Save'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
+import Table from '@mui/material/Table'
+import TableBody from '@mui/material/TableBody'
+import TableCell from '@mui/material/TableCell'
+import TableContainer from '@mui/material/TableContainer'
+import TableHead from '@mui/material/TableHead'
+import TableRow from '@mui/material/TableRow'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet, getTimesheets } from '../../api/timesheets'
 import { getAssignments } from '../../api/assignments'
-import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
+import { buildWeekDates, formatWeekStart, formatDayName } from '../../utils/dateFormatters'
+import { palette } from '../../theme.js'
 import {
   buildAutofillEntries,
   getMostRecentClientAssignmentId,
   isConsultantEditableStatus,
 } from '../../utils/timesheetWorkflow.js'
 
-function getBucketValue(entry) {
-  return entry.entryKind === 'CLIENT' ? entry.assignmentId ?? '' : 'INTERNAL'
+function getBucketValue(entryKind, assignmentId) {
+  return entryKind === 'CLIENT' ? assignmentId || '' : 'INTERNAL'
 }
 
-function createLocalEntries(entries, nextLocalId) {
-  return (entries ?? []).map((entry) => ({
-    id: `row-${nextLocalId()}`,
-    date: entry.date,
-    entryKind: entry.entryKind,
-    assignmentId: entry.assignmentId ?? null,
-    hoursWorked: String(entry.hoursWorked ?? '0'),
-  }))
+function parseBucketValue(value) {
+  if (value === 'INTERNAL') return { entryKind: 'INTERNAL', assignmentId: null }
+  return { entryKind: 'CLIENT', assignmentId: value }
 }
 
-function buildDefaultEntry(date, assignments, preferredAssignmentId, nextLocalId) {
-  const preferredAssignment = assignments.find((assignment) => assignment.id === preferredAssignmentId) ?? null
-  const onlyAssignment = assignments.length === 1 ? assignments[0] : null
-  const selectedAssignment = onlyAssignment ?? preferredAssignment
-
-  return {
-    id: `row-${nextLocalId()}`,
-    date,
-    entryKind: selectedAssignment ? 'CLIENT' : 'INTERNAL',
-    assignmentId: selectedAssignment?.id ?? null,
-    hoursWorked: '0',
-  }
+function entriesToMatrixRows(entries, nextLocalId) {
+  const rowMap = new Map() // key: bucketValue
+  entries.forEach(entry => {
+    const key = getBucketValue(entry.entryKind, entry.assignmentId)
+    if (!rowMap.has(key)) {
+      rowMap.set(key, {
+        id: `row-${nextLocalId()}`,
+        ...parseBucketValue(key),
+        hours: {}
+      })
+    }
+    rowMap.get(key).hours[entry.date] = String(entry.hoursWorked ?? '0')
+  })
+  return Array.from(rowMap.values())
 }
 
 function buildArchivedAssignments(timesheet, activeAssignments = []) {
@@ -101,7 +104,7 @@ export default function TimesheetEditPage() {
   const autofillWarningShown = useRef(false)
 
   const [timesheet, setTimesheet] = useState(null)
-  const [entries, setEntries] = useState([])
+  const [matrixRows, setMatrixRows] = useState([])
   const [assignments, setAssignments] = useState([])
   const [archivedAssignments, setArchivedAssignments] = useState([])
   const [preferredAssignmentId, setPreferredAssignmentId] = useState(null)
@@ -148,7 +151,7 @@ export default function TimesheetEditPage() {
         setAssignments(fetchedAssignments)
         setArchivedAssignments(buildArchivedAssignments(ts, fetchedAssignments))
         setPreferredAssignmentId(getMostRecentClientAssignmentId(allTimesheets, id))
-        setEntries(createLocalEntries(ts.entries, nextLocalId))
+        setMatrixRows(entriesToMatrixRows(ts.entries ?? [], nextLocalId))
       })
       .catch((err) => setFetchError(err.message ?? 'Failed to load timesheet'))
       .finally(() => setLoading(false))
@@ -159,46 +162,57 @@ export default function TimesheetEditPage() {
   const allowedAutofillAssignmentIds = new Set(availableAssignments.map((assignment) => assignment.id))
   const isBusy = saving || submitting || autofilling
   const canChangeBuckets = isConsultantEditableStatus(timesheet?.status)
-  const totalHours = entries.reduce((sum, entry) => sum + (parseFloat(entry.hoursWorked) || 0), 0)
+
+  const totalHours = matrixRows.reduce((sum, row) => {
+    return sum + weekDates.reduce((daySum, date) => daySum + (parseFloat(row.hours[date]) || 0), 0)
+  }, 0)
 
   function showSnackbar(message, severity = 'success') {
     setSnackbar({ open: true, message, severity })
   }
 
-  function handleRowChange(rowId, patch) {
-    setEntries((prev) => prev.map((entry) => (entry.id === rowId ? { ...entry, ...patch } : entry)))
+  function handleRowCategoryChange(rowId, value) {
+    if (!canChangeBuckets) return
+    const { entryKind, assignmentId } = parseBucketValue(value)
+    setMatrixRows(prev => prev.map(r => r.id === rowId ? { ...r, entryKind, assignmentId } : r))
   }
 
-  function handleBucketChange(rowId, value) {
-    if (!canChangeBuckets) return
-
-    handleRowChange(rowId, value === 'INTERNAL'
-      ? { entryKind: 'INTERNAL', assignmentId: null }
-      : { entryKind: 'CLIENT', assignmentId: value })
+  function handleRowHoursChange(rowId, date, value) {
+    setMatrixRows(prev => prev.map(r => r.id === rowId ? { ...r, hours: { ...r.hours, [date]: value } } : r))
   }
 
-  function handleAddRow(date) {
+  function handleAddRow() {
     if (!canChangeBuckets) return
-
-    setEntries((prev) => [
-      ...prev,
-      buildDefaultEntry(date, availableAssignments, preferredAssignmentId, nextLocalId),
-    ])
+    const selectedAssignment = availableAssignments.length === 1 ? availableAssignments[0] : (availableAssignments.find(a => a.id === preferredAssignmentId) || null)
+    setMatrixRows(prev => [...prev, {
+      id: `row-${nextLocalId()}`,
+      entryKind: selectedAssignment ? 'CLIENT' : 'INTERNAL',
+      assignmentId: selectedAssignment?.id ?? null,
+      hours: {}
+    }])
   }
 
   function handleRemoveRow(rowId) {
     if (!canChangeBuckets) return
-
-    setEntries((prev) => prev.filter((entry) => entry.id !== rowId))
+    setMatrixRows(prev => prev.filter(r => r.id !== rowId))
   }
 
   function getEntriesPayload() {
-    return entries.map((entry) => ({
-      date: entry.date,
-      entryKind: entry.entryKind,
-      assignmentId: entry.entryKind === 'CLIENT' ? entry.assignmentId : null,
-      hoursWorked: parseFloat(entry.hoursWorked) || 0,
-    }))
+    const entries = []
+    matrixRows.forEach(row => {
+      weekDates.forEach(date => {
+        const hw = parseFloat(row.hours[date]) || 0
+        if (hw > 0) {
+          entries.push({
+            date,
+            entryKind: row.entryKind,
+            assignmentId: row.entryKind === 'CLIENT' ? row.assignmentId : null,
+            hoursWorked: hw
+          })
+        }
+      })
+    })
+    return entries
   }
 
   async function saveDraft() {
@@ -245,7 +259,7 @@ export default function TimesheetEditPage() {
         return
       }
 
-      setEntries(createLocalEntries(nextEntries, nextLocalId))
+      setMatrixRows(entriesToMatrixRows(nextEntries, nextLocalId))
 
       if (skippedBucketLabels.length > 0) {
         showSnackbar('Hours copied, but some archived client categories were skipped.', 'warning')
@@ -316,131 +330,133 @@ export default function TimesheetEditPage() {
         </Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
-          <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="h6">Work Categories</Typography>
-            <Typography variant="body2" color="text.secondary">
-              Split each day across client assignments or Internal work.
-            </Typography>
-          </Box>
-          <Chip label={`${totalHours.toFixed(2)}h total`} variant="outlined" />
-        </Stack>
-      </Paper>
-
-      <Stack spacing={2.5}>
-        {weekDates.map((date) => {
-          const rows = entries.filter((entry) => entry.date === date)
-          const dayTotal = rows.reduce((sum, entry) => sum + (parseFloat(entry.hoursWorked) || 0), 0)
-
-          return (
-            <Paper key={date} sx={{ p: { xs: 2, sm: 2.5 } }}>
-              <Stack
-                direction={{ xs: 'column', sm: 'row' }}
-                spacing={1.5}
-                alignItems={{ sm: 'center' }}
-                justifyContent="space-between"
-                sx={{ mb: 2 }}
-              >
-                <Box>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {formatWeekStart(date)}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {dayTotal.toFixed(2)}h scheduled
-                  </Typography>
-                </Box>
-                {canChangeBuckets && (
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<AddIcon />}
-                    onClick={() => handleAddRow(date)}
-                    disabled={isBusy}
-                  >
-                    Add Row
-                  </Button>
-                )}
-              </Stack>
-
-              {rows.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  No work categories added for this day.
-                </Typography>
+      <Paper sx={{ mb: 3, p: { xs: 0, sm: 0 }, overflow: 'hidden' }}>
+        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
+           <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
+           <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}>
+             {totalHours.toFixed(2)}h Total
+           </Typography>
+        </Box>
+        <TableContainer sx={{ borderTop: `2px solid ${palette.borderStrong}` }}>
+          <Table size="small" sx={{ minWidth: 800 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ width: 250, borderRight: `2px solid ${palette.border}` }}>Work Category</TableCell>
+                {weekDates.map(date => (
+                  <TableCell key={date} align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>
+                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: palette.textPrimary }}>
+                      {formatDayName(date).slice(0, 3)}
+                    </Typography>
+                    <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}>
+                      {date.slice(5)}
+                    </Typography>
+                  </TableCell>
+                ))}
+                <TableCell align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>Total</TableCell>
+                <TableCell align="center" sx={{ width: 60 }}>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {matrixRows.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={10} align="center" sx={{ py: 6, color: palette.textSecondary }}>
+                    No rows added. Click "Add Row" below.
+                  </TableCell>
+                </TableRow>
               ) : (
-                <Stack spacing={1.5}>
-                  {rows.map((entry) => (
-                    <Box
-                      key={entry.id}
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: { xs: '1fr', sm: 'minmax(240px, 1fr) 120px auto' },
-                        gap: 1.5,
-                        alignItems: 'center',
-                      }}
-                    >
-                      <TextField
-                        select
-                        label="Work Category"
-                        value={getBucketValue(entry)}
-                        onChange={(event) => handleBucketChange(entry.id, event.target.value)}
-                        disabled={isBusy || !canChangeBuckets}
-                        fullWidth
-                      >
-                        {availableAssignments.map((assignment) => (
-                          <MenuItem key={assignment.id} value={assignment.id}>
-                            {getAssignmentOptionLabel(assignment)}
-                          </MenuItem>
-                        ))}
-                        <MenuItem value="INTERNAL">Internal</MenuItem>
-                      </TextField>
-
-                      <TextField
-                        label="Hours"
-                        type="number"
-                        value={entry.hoursWorked}
-                        onChange={(event) => handleRowChange(entry.id, { hoursWorked: event.target.value })}
-                        disabled={isBusy}
-                        slotProps={{ htmlInput: { min: 0, max: 24, step: '0.25' } }}
-                      />
-
-                      <Box sx={{ display: 'flex', justifyContent: { xs: 'flex-end', sm: 'flex-start' } }}>
-                        {canChangeBuckets ? (
-                          <IconButton
-                            aria-label="Remove work row"
-                            onClick={() => handleRemoveRow(entry.id)}
+                matrixRows.map(row => {
+                  const rowTotal = weekDates.reduce((sum, date) => sum + (parseFloat(row.hours[date]) || 0), 0)
+                  return (
+                    <TableRow key={row.id}>
+                      <TableCell sx={{ borderRight: `2px solid ${palette.border}` }}>
+                        <TextField
+                          select
+                          variant="outlined"
+                          size="small"
+                          value={getBucketValue(row.entryKind, row.assignmentId)}
+                          onChange={(e) => handleRowCategoryChange(row.id, e.target.value)}
+                          disabled={isBusy || !canChangeBuckets}
+                          fullWidth
+                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+                        >
+                          {availableAssignments.map((assignment) => (
+                            <MenuItem key={assignment.id} value={assignment.id}>
+                              {getAssignmentOptionLabel(assignment)}
+                            </MenuItem>
+                          ))}
+                          <MenuItem value="INTERNAL">Internal</MenuItem>
+                        </TextField>
+                      </TableCell>
+                      {weekDates.map(date => (
+                        <TableCell key={date} align="center" sx={{ p: 1, borderRight: `2px solid ${palette.border}` }}>
+                          <TextField
+                            variant="outlined"
+                            size="small"
+                            type="number"
+                            value={row.hours[date] ?? ''}
+                            onChange={(e) => handleRowHoursChange(row.id, date, e.target.value)}
                             disabled={isBusy}
+                            slotProps={{ htmlInput: { min: 0, max: 24, step: '0.25', style: { textAlign: 'center', padding: '8px 4px' } } }}
+                            sx={{ width: '100%', '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
+                          />
+                        </TableCell>
+                      ))}
+                      <TableCell align="center" sx={{ borderRight: `2px solid ${palette.border}` }}>
+                        <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+                          {rowTotal.toFixed(2)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                         {canChangeBuckets && (
+                          <IconButton
+                            onClick={() => handleRemoveRow(row.id)}
+                            disabled={isBusy}
+                            color="error"
+                            size="small"
                           >
                             <DeleteOutlineIcon />
                           </IconButton>
-                        ) : (
-                          <Box sx={{ width: 40 }} />
                         )}
-                      </Box>
-                    </Box>
-                  ))}
-                </Stack>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
               )}
-            </Paper>
-          )
-        })}
-      </Stack>
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {canChangeBuckets && (
+          <Box sx={{ p: 2, borderTop: `2px solid ${palette.border}` }}>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={handleAddRow}
+              disabled={isBusy}
+            >
+              Add Row
+            </Button>
+          </Box>
+        )}
+      </Paper>
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mt: 3 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mt: 3, backgroundColor: palette.surfaceRaised }}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
           <Button
             variant="outlined"
             startIcon={<SaveIcon />}
             onClick={saveDraft}
             disabled={isBusy}
+            size="large"
           >
             {saving ? 'Saving...' : 'Save Draft'}
           </Button>
           <Button
             variant="contained"
+            color="primary"
             startIcon={<SendIcon />}
             onClick={() => setSubmitConfirmOpen(true)}
             disabled={isBusy}
+            size="large"
           >
             {submitting ? 'Submitting...' : 'Submit for Review'}
           </Button>

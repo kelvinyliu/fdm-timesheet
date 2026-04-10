@@ -19,13 +19,14 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import PaymentIcon from '@mui/icons-material/Payment'
+import FastForwardIcon from '@mui/icons-material/FastForward'
 import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
 import { palette } from '../../theme.js'
-import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
-import { formatDayName, formatLongDate, formatWeekStart, formatTimestamp } from '../../utils/dateFormatters'
+import { getTimesheet, processPayment, getTimesheetNotes, getTimesheets } from '../../api/timesheets'
+import { formatDayName, buildWeekDates, formatWeekStart, formatTimestamp } from '../../utils/dateFormatters'
 import {
   getConsultantDisplayLabel,
   getWorkBucketDisplayLabel,
@@ -55,7 +56,7 @@ function buildCompletedSummaryItems(timesheet) {
       value: (
         <Typography
           variant="body2"
-          fontWeight={600}
+          fontWeight={700}
           sx={{ color: palette.success, fontFamily: '"JetBrains Mono", monospace' }}
         >
           {timesheet.totalBillAmount != null ? formatCurrency(timesheet.totalBillAmount) : '-'}
@@ -68,7 +69,7 @@ function buildCompletedSummaryItems(timesheet) {
       value: (
         <Typography
           variant="body2"
-          fontWeight={600}
+          fontWeight={700}
           sx={{ color: palette.error, fontFamily: '"JetBrains Mono", monospace' }}
         >
           {timesheet.totalPayAmount != null ? formatCurrency(timesheet.totalPayAmount) : '-'}
@@ -81,7 +82,7 @@ function buildCompletedSummaryItems(timesheet) {
       value: (
         <Typography
           variant="body2"
-          fontWeight={600}
+          fontWeight={700}
           sx={{
             fontFamily: '"JetBrains Mono", monospace',
             color: (timesheet.marginAmount ?? 0) >= 0 ? palette.success : palette.error,
@@ -94,6 +95,28 @@ function buildCompletedSummaryItems(timesheet) {
   ]
 }
 
+function getBucketValue(entryKind, assignmentId) {
+  return entryKind === 'CLIENT' ? assignmentId || '' : 'INTERNAL'
+}
+
+function entriesToMatrixRows(entries) {
+  const rowMap = new Map()
+  entries.forEach(entry => {
+    const key = getBucketValue(entry.entryKind, entry.assignmentId)
+    if (!rowMap.has(key)) {
+      rowMap.set(key, {
+        id: key,
+        entryKind: entry.entryKind,
+        assignmentId: entry.assignmentId,
+        bucketLabel: entry.bucketLabel,
+        hours: {}
+      })
+    }
+    rowMap.get(key).hours[entry.date] = entry.hoursWorked
+  })
+  return Array.from(rowMap.values())
+}
+
 export default function FinancePaymentPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -102,6 +125,7 @@ export default function FinancePaymentPage() {
   const { id } = useParams()
 
   const [timesheet, setTimesheet] = useState(null)
+  const [approvedQueue, setApprovedQueue] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [bucketRates, setBucketRates] = useState({})
@@ -114,9 +138,10 @@ export default function FinancePaymentPage() {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    getTimesheet(id)
-      .then((ts) => {
+    Promise.all([getTimesheet(id), getTimesheets()])
+      .then(([ts, all]) => {
         setTimesheet(ts)
+        setApprovedQueue(all.filter(t => t.status === 'APPROVED'))
         setBucketRates(
           Object.fromEntries(
             (ts.workSummary ?? []).map((item) => [
@@ -172,7 +197,18 @@ export default function FinancePaymentPage() {
   }), { incoming: 0, outgoing: 0 })
   const netMargin = totals.incoming - totals.outgoing
 
-  async function handleProcessPayment() {
+  function getNextApprovedId() {
+    const idx = approvedQueue.findIndex(ts => ts.id === id)
+    if (idx !== -1 && idx + 1 < approvedQueue.length) {
+      return approvedQueue[idx + 1].id
+    }
+    const nextUnseen = approvedQueue.find(ts => ts.id !== id)
+    return nextUnseen ? nextUnseen.id : null
+  }
+
+  const nextId = getNextApprovedId()
+
+  async function handleProcessPayment(goNext = false) {
     if (!isPaymentReady) return
     setSubmitting(true)
     setFeedback(null)
@@ -186,8 +222,14 @@ export default function FinancePaymentPage() {
         })),
         notes: notes.trim(),
       })
-      setFeedback({ severity: 'success', message: 'Payment processed successfully.' })
-      setRefreshKey((k) => k + 1)
+      
+      if (goNext && nextId) {
+        setFeedback({ severity: 'success', message: 'Payment processed. Showing next approved timesheet.' })
+        navigate(`/finance/timesheets/${nextId}`, { replace: true })
+      } else {
+        setFeedback({ severity: 'success', message: 'Payment processed successfully.' })
+        setRefreshKey((k) => k + 1)
+      }
     } catch (err) {
       setFeedback({ severity: 'error', message: err.message ?? 'Failed to process payment.' })
     } finally {
@@ -220,7 +262,7 @@ export default function FinancePaymentPage() {
           value: (
             <Typography
               variant="body2"
-              sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}
+              sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
             >
               {timesheet.totalHours ?? '-'}
             </Typography>
@@ -236,6 +278,8 @@ export default function FinancePaymentPage() {
     : []
 
   const backDestination = location.state?.returnTo ?? '/finance/timesheets?tab=to-pay'
+  const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
+  const matrixRows = timesheet ? entriesToMatrixRows(timesheet.entries ?? []) : []
 
   return (
     <Box>
@@ -285,7 +329,7 @@ export default function FinancePaymentPage() {
                   </Typography>
                   <Typography
                     variant="body2"
-                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 }}
+                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
                   >
                     {item.totalHours}
                   </Typography>
@@ -295,85 +339,65 @@ export default function FinancePaymentPage() {
           </Paper>
 
           {timesheet.entries && timesheet.entries.length > 0 && (
-            <Paper sx={{ mb: 3 }}>
-              <Box sx={{ p: 2, pb: 1 }}>
-                <Typography variant="h6">Daily Entries</Typography>
+            <Paper sx={{ mb: 3, p: { xs: 0, sm: 0 }, overflow: 'hidden' }}>
+              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
+                 <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
+                 <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}>
+                   {timesheet.totalHours ?? '-'}h Total
+                 </Typography>
               </Box>
-              {isMobile ? (
-                <Stack divider={<Divider flexItem />}>
-                  {timesheet.entries.map((entry) => (
-                    <Box key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`} sx={{ px: 2, py: 1.75 }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'flex-start',
-                          gap: 2,
-                          mb: 0.5,
-                        }}
-                      >
-                        <Box>
-                          <Typography variant="body2" fontWeight={600}>
-                            {formatDayName(entry.date)}
+              <TableContainer sx={{ borderTop: `2px solid ${palette.borderStrong}` }}>
+                <Table size="small" sx={{ minWidth: 800 }}>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell sx={{ width: 250, borderRight: `2px solid ${palette.border}` }}>Work Category</TableCell>
+                      {weekDates.map(date => (
+                        <TableCell key={date} align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>
+                          <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: palette.textPrimary }}>
+                            {formatDayName(date).slice(0, 3)}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {getWorkBucketDisplayLabel(entry.bucketLabel)}
+                          <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}>
+                            {date.slice(5)}
                           </Typography>
-                        </Box>
-                        <Typography
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {entry.hoursWorked}
-                        </Typography>
-                      </Box>
-                      <Typography variant="body2" color="text.secondary">
-                        {formatLongDate(entry.date)}
-                      </Typography>
-                    </Box>
-                  ))}
-                </Stack>
-              ) : (
-                <TableContainer sx={{ overflowX: 'auto' }}>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Day</TableCell>
-                        <TableCell>Date</TableCell>
-                        <TableCell>Work Category</TableCell>
-                        <TableCell align="right">Hours</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {timesheet.entries.map((entry) => (
-                        <TableRow key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`}>
-                          <TableCell>{formatDayName(entry.date)}</TableCell>
-                          <TableCell>{formatLongDate(entry.date)}</TableCell>
-                          <TableCell>{getWorkBucketDisplayLabel(entry.bucketLabel)}</TableCell>
-                          <TableCell align="right">
-                            <Typography
-                              sx={{
-                                fontFamily: '"JetBrains Mono", monospace',
-                                fontSize: '0.85rem',
-                              }}
-                            >
-                              {entry.hoursWorked}
+                        </TableCell>
+                      ))}
+                      <TableCell align="center" sx={{ width: 80 }}>Total</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {matrixRows.map(row => {
+                      const rowTotal = weekDates.reduce((sum, date) => sum + (parseFloat(row.hours[date]) || 0), 0)
+                      return (
+                        <TableRow key={row.id}>
+                          <TableCell sx={{ borderRight: `2px solid ${palette.border}`, fontWeight: 600 }}>
+                            {getWorkBucketDisplayLabel(row.bucketLabel)}
+                          </TableCell>
+                          {weekDates.map(date => {
+                            const val = row.hours[date]
+                            return (
+                              <TableCell key={date} align="center" sx={{ p: 1, borderRight: `2px solid ${palette.border}` }}>
+                                <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', color: val ? palette.textPrimary : palette.textMuted }}>
+                                  {val || '-'}
+                                </Typography>
+                              </TableCell>
+                            )
+                          })}
+                          <TableCell align="center">
+                            <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+                              {rowTotal.toFixed(2)}
                             </Typography>
                           </TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              )}
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             </Paper>
           )}
 
           {timesheet.status === 'APPROVED' && (
-            <Paper sx={{ p: { xs: 2.5, sm: 3 } }}>
+            <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>
               <Typography variant="h6" gutterBottom>
                 Payment Details
               </Typography>
@@ -396,13 +420,13 @@ export default function FinancePaymentPage() {
               >
                 {!isMobile && (
                   <>
-                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: palette.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Work Category
                     </Typography>
-                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: palette.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Client Bill Rate
                     </Typography>
-                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: palette.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                       Consultant Pay Rate
                     </Typography>
                     <Box sx={{ gridColumn: '1 / -1', mt: -1 }}>
@@ -414,7 +438,7 @@ export default function FinancePaymentPage() {
                 {computedBuckets.map((item) => (
                   <Fragment key={bucketKey(item)}>
                     <Box sx={{ pt: { sm: 1 } }}>
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={700}>
                         {getWorkBucketDisplayLabel(item.bucketLabel)}
                       </Typography>
                       <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -438,7 +462,7 @@ export default function FinancePaymentPage() {
                       slotProps={{
                         input: {
                           startAdornment: <InputAdornment position="start">£</InputAdornment>,
-                          readOnly: item.entryKind === 'INTERNAL'
+                          readOnly: item.entryKind === 'INTERNAL',
                         },
                         htmlInput: { min: 0, step: '0.01' }
                       }}
@@ -475,12 +499,12 @@ export default function FinancePaymentPage() {
                 sx={{
                   p: 3,
                   mt: 5,
-                  borderRadius: 2,
-                  border: `1px solid ${palette.border}`,
-                  backgroundColor: palette.surfaceMuted,
+                  borderTop: `4px solid ${palette.textPrimary}`,
+                  borderBottom: `4px solid ${palette.textPrimary}`,
+                  backgroundColor: palette.surface,
                 }}
               >
-                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 700, textTransform: 'uppercase' }}>
+                <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                   Finance Totals
                 </Typography>
                 <Box
@@ -492,49 +516,52 @@ export default function FinancePaymentPage() {
                   }}
                 >
                   <Box>
-                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
-                      Money In
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}>
+                      MONEY IN
                     </Typography>
                     <Typography
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '1.5rem',
-                        fontWeight: 600,
+                        fontSize: '1.8rem',
+                        fontWeight: 800,
                         color: isPaymentReady ? palette.success : palette.textPrimary,
+                        lineHeight: 1
                       }}
                     >
                       {isPaymentReady ? formatCurrency(totals.incoming) : '-'}
                     </Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
-                      Money Out
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}>
+                      MONEY OUT
                     </Typography>
                     <Typography
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '1.5rem',
-                        fontWeight: 600,
+                        fontSize: '1.8rem',
+                        fontWeight: 800,
                         color: isPaymentReady ? palette.error : palette.textPrimary,
+                        lineHeight: 1
                       }}
                     >
                       {isPaymentReady ? formatCurrency(totals.outgoing) : '-'}
                     </Typography>
                   </Box>
                   <Box>
-                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
-                      Net Margin
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}>
+                      NET MARGIN
                     </Typography>
                     <Typography
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '1.5rem',
-                        fontWeight: 600,
+                        fontSize: '1.8rem',
+                        fontWeight: 800,
                         color: isPaymentReady
                           ? netMargin >= 0
                             ? palette.success
                             : palette.error
                           : palette.textPrimary,
+                        lineHeight: 1
                       }}
                     >
                       {isPaymentReady ? formatCurrency(netMargin) : '-'}
@@ -543,7 +570,7 @@ export default function FinancePaymentPage() {
                 </Box>
 
                 {computedBuckets.length > 0 && (
-                  <Stack spacing={1} sx={{ pt: 2, borderTop: `1px solid ${palette.border}` }}>
+                  <Stack spacing={1} sx={{ pt: 2, borderTop: `2px solid ${palette.border}` }}>
                     {computedBuckets.map((item) => {
                       const itemMargin = (item.billAmount ?? 0) - (item.payAmount ?? 0)
                       return (
@@ -606,17 +633,32 @@ export default function FinancePaymentPage() {
               </Box>
 
               <Box sx={{ mt: 3 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  startIcon={<PaymentIcon />}
-                  onClick={handleProcessPayment}
-                  disabled={submitting || !isPaymentReady}
-                  fullWidth={isMobile}
-                >
-                  Process Payment
-                </Button>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    size="large"
+                    startIcon={<PaymentIcon />}
+                    onClick={() => handleProcessPayment(false)}
+                    disabled={submitting || !isPaymentReady}
+                    fullWidth={isMobile}
+                  >
+                    Process Payment
+                  </Button>
+                  {nextId && (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      size="large"
+                      startIcon={<FastForwardIcon />}
+                      onClick={() => handleProcessPayment(true)}
+                      disabled={submitting || !isPaymentReady}
+                      fullWidth={isMobile}
+                    >
+                      Process & Next
+                    </Button>
+                  )}
+                </Stack>
               </Box>
             </Paper>
           )}
@@ -632,9 +674,9 @@ export default function FinancePaymentPage() {
                     key={n.id}
                     sx={{
                       p: 2,
-                      borderRadius: 1.5,
+                      borderRadius: 0,
                       backgroundColor: palette.surfaceMuted,
-                      border: `1px solid ${palette.border}`,
+                      border: `2px solid ${palette.border}`,
                     }}
                   >
                     <Typography variant="body2">{n.note}</Typography>

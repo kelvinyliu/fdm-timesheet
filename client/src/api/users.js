@@ -4,6 +4,10 @@ export async function getUsers() {
   return apiClient('/api/users')
 }
 
+export async function getConsultantPayRates() {
+  return apiClient('/api/users/consultants/pay-rates')
+}
+
 export async function createUser(body) {
   return apiClient('/api/users', {
     method: 'POST',
@@ -21,5 +25,12 @@ export async function updateUserRole(id, role) {
 export async function deleteUser(id) {
   return apiClient(`/api/users/${id}`, {
     method: 'DELETE',
+  })
+}
+
+export async function updateDefaultPayRate(id, defaultPayRate) {
+  return apiClient(`/api/users/${id}/default-pay-rate`, {
+    method: 'PATCH',
+    body: { defaultPayRate },
   })
 }

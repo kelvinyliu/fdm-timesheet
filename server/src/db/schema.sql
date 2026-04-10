@@ -11,15 +11,17 @@ CREATE TABLE users (
   email         VARCHAR(255) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role          user_role NOT NULL,
+  default_pay_rate NUMERIC(10,2) CHECK (default_pay_rate > 0),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Client assignments (consultant <-> client + hourly rate)
+-- Client assignments (consultant <-> client + client bill rate)
 CREATE TABLE client_assignments (
   assignment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   consultant_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   client_name   VARCHAR(255) NOT NULL,
-  hourly_rate   NUMERIC(10,2) NOT NULL CHECK (hourly_rate > 0),
+  client_bill_rate NUMERIC(10,2) NOT NULL CHECK (client_bill_rate > 0),
+  deleted_at    TIMESTAMPTZ,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -35,13 +37,24 @@ CREATE TABLE timesheets (
 );
 CREATE UNIQUE INDEX timesheets_consultant_week ON timesheets (consultant_id, week_start);
 
--- Timesheet entries (one per day; consultant enters hours worked for that day)
+-- Timesheet entries (multiple client/internal buckets per day)
 CREATE TABLE timesheet_entries (
   entry_id      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   timesheet_id  UUID NOT NULL REFERENCES timesheets(timesheet_id) ON DELETE CASCADE,
   entry_date    DATE NOT NULL,
+  entry_kind    VARCHAR(16) NOT NULL CHECK (entry_kind IN ('CLIENT', 'INTERNAL')),
+  assignment_id UUID REFERENCES client_assignments(assignment_id) ON DELETE SET NULL,
   hours_worked  NUMERIC(4,2) NOT NULL CHECK (hours_worked >= 0 AND hours_worked <= 24),
-  UNIQUE (timesheet_id, entry_date)
+  CHECK (
+    (entry_kind = 'CLIENT') OR
+    (entry_kind = 'INTERNAL' AND assignment_id IS NULL)
+  )
+);
+CREATE UNIQUE INDEX timesheet_entries_unique_bucket ON timesheet_entries (
+  timesheet_id,
+  entry_date,
+  entry_kind,
+  COALESCE(assignment_id, '00000000-0000-0000-0000-000000000000'::uuid)
 );
 
 -- Line manager -> consultant assignments (one active manager per consultant)
@@ -64,13 +77,29 @@ CREATE TABLE reviews (
 
 -- Payments (one per approved timesheet)
 CREATE TABLE payments (
-  payment_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  timesheet_id  UUID NOT NULL UNIQUE REFERENCES timesheets(timesheet_id),
-  processed_by  UUID NOT NULL REFERENCES users(user_id),
-  daily_rate    NUMERIC(10,2) NOT NULL CHECK (daily_rate > 0),
-  amount        NUMERIC(10,2) NOT NULL CHECK (amount >= 0),
-  status        payment_status NOT NULL DEFAULT 'PENDING',
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  payment_id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  timesheet_id       UUID NOT NULL UNIQUE REFERENCES timesheets(timesheet_id),
+  processed_by       UUID NOT NULL REFERENCES users(user_id),
+  total_bill_amount  NUMERIC(10,2) NOT NULL CHECK (total_bill_amount >= 0),
+  total_pay_amount   NUMERIC(10,2) NOT NULL CHECK (total_pay_amount >= 0),
+  margin_amount      NUMERIC(10,2) NOT NULL,
+  status             payment_status NOT NULL DEFAULT 'PENDING',
+  created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE payment_breakdowns (
+  breakdown_id  UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  payment_id    UUID NOT NULL REFERENCES payments(payment_id) ON DELETE CASCADE,
+  entry_kind    VARCHAR(16) NOT NULL CHECK (entry_kind IN ('CLIENT', 'INTERNAL')),
+  assignment_id UUID REFERENCES client_assignments(assignment_id) ON DELETE SET NULL,
+  bucket_label  VARCHAR(255) NOT NULL,
+  hours_worked  NUMERIC(6,2) NOT NULL CHECK (hours_worked >= 0),
+  bill_rate     NUMERIC(10,2) NOT NULL CHECK (bill_rate >= 0),
+  bill_amount   NUMERIC(10,2) NOT NULL CHECK (bill_amount >= 0),
+  pay_rate      NUMERIC(10,2) NOT NULL CHECK (pay_rate > 0),
+  pay_amount    NUMERIC(10,2) NOT NULL CHECK (pay_amount >= 0),
+  margin_amount NUMERIC(10,2) NOT NULL,
+  UNIQUE (payment_id, entry_kind, assignment_id)
 );
 
 -- Financial notes (finance staff notes on timesheets)

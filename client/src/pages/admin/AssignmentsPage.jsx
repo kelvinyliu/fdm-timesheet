@@ -52,7 +52,7 @@ function formatCurrency(value) {
   }).format(value)
 }
 
-const EMPTY_CLIENT_FORM = { consultantId: '', clientName: '', hourlyRate: '' }
+const EMPTY_CLIENT_FORM = { consultantId: '', clientName: '', clientBillRate: '' }
 const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
 
 export default function AssignmentsPage() {
@@ -181,22 +181,22 @@ export default function AssignmentsPage() {
 
   async function handleCreateClientAssignment() {
     setClientFormError('')
-    const { consultantId, clientName, hourlyRate } = clientForm
-    const parsedHourlyRate = Number(hourlyRate)
+    const { consultantId, clientName, clientBillRate } = clientForm
+    const parsedClientBillRate = Number(clientBillRate)
 
-    if (!consultantId || !clientName || !hourlyRate) {
-      setClientFormError('Consultant, Client Name, and Hourly Rate are required.')
+    if (!consultantId || !clientName || !clientBillRate) {
+      setClientFormError('Consultant, Client Name, and Client Bill Rate are required.')
       return
     }
 
-    if (!Number.isFinite(parsedHourlyRate) || parsedHourlyRate <= 0) {
-      setClientFormError('Hourly Rate must be greater than 0.')
+    if (!Number.isFinite(parsedClientBillRate) || parsedClientBillRate <= 0) {
+      setClientFormError('Client Bill Rate must be greater than 0.')
       return
     }
 
     setClientFormLoading(true)
     try {
-      await createAssignment({ consultantId, clientName, hourlyRate: parsedHourlyRate })
+      await createAssignment({ consultantId, clientName, clientBillRate: parsedClientBillRate })
       setClientDialogOpen(false)
       await fetchClientAssignments()
     } catch (err) {
@@ -355,13 +355,13 @@ export default function AssignmentsPage() {
                         </Box>
                         <Box>
                           <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                            Hourly Rate
+                            Client Bill Rate
                           </Typography>
                           <Typography
                             variant="body2"
                             sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
                           >
-                            {formatCurrency(a.hourlyRate)}
+                            {formatCurrency(a.clientBillRate)}
                           </Typography>
                         </Box>
                       </Box>
@@ -398,7 +398,7 @@ export default function AssignmentsPage() {
                   <TableRow>
                     <TableCell>Consultant</TableCell>
                     <TableCell>Client Name</TableCell>
-                    <TableCell>Hourly Rate</TableCell>
+                    <TableCell>Client Bill Rate</TableCell>
                     <TableCell>Created</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
@@ -421,7 +421,7 @@ export default function AssignmentsPage() {
                           variant="body2"
                           sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
                         >
-                          {formatCurrency(a.hourlyRate)}
+                          {formatCurrency(a.clientBillRate)}
                         </Typography>
                       </TableCell>
                       <TableCell>
@@ -640,10 +640,10 @@ export default function AssignmentsPage() {
             sx={{ mb: 2 }}
           />
           <TextField
-            label="Hourly Rate"
+            label="Client Bill Rate"
             type="number"
-            value={clientForm.hourlyRate}
-            onChange={(e) => setClientForm((p) => ({ ...p, hourlyRate: e.target.value }))}
+            value={clientForm.clientBillRate}
+            onChange={(e) => setClientForm((p) => ({ ...p, clientBillRate: e.target.value }))}
             fullWidth
             required
             sx={{ mb: 2 }}

@@ -6,13 +6,13 @@ import {
 } from '../models/clientAssignmentModel.js'
 import { findUserById } from '../models/userModel.js'
 import { Role } from '../constants/roles.js'
-import { clientAssignmentDto } from '../dtos/clientAssignmentDto.js'
+import { clientAssignmentDto, consultantClientAssignmentDto } from '../dtos/clientAssignmentDto.js'
 import { isUuid } from '../utils/validation.js'
 
 export async function listAssignments(req, res, next) {
   try {
     const assignments = await getAssignmentsByConsultant(req.user.userId)
-    res.json(assignments.map(clientAssignmentDto))
+    res.json(assignments.map(consultantClientAssignmentDto))
   } catch (err) {
     next(err)
   }
@@ -29,19 +29,26 @@ export async function listAllAssignments(req, res, next) {
 
 export async function createAssignmentHandler(req, res, next) {
   try {
-    const { consultantId, clientName, hourlyRate } = req.body
+    const { consultantId, clientName, clientBillRate, hourlyRate } = req.body
+    const resolvedClientBillRate = clientBillRate ?? hourlyRate
 
-    if (!consultantId || !clientName?.trim() || hourlyRate === undefined || hourlyRate === null || hourlyRate === '') {
-      return res.status(400).json({ error: 'consultantId, clientName and hourlyRate are required' })
+    if (
+      !consultantId ||
+      !clientName?.trim() ||
+      resolvedClientBillRate === undefined ||
+      resolvedClientBillRate === null ||
+      resolvedClientBillRate === ''
+    ) {
+      return res.status(400).json({ error: 'consultantId, clientName and clientBillRate are required' })
     }
 
     if (!isUuid(consultantId)) {
       return res.status(400).json({ error: 'consultantId must be a valid UUID' })
     }
 
-    const parsedHourlyRate = Number(hourlyRate)
-    if (!Number.isFinite(parsedHourlyRate) || parsedHourlyRate <= 0) {
-      return res.status(400).json({ error: 'hourlyRate must be greater than 0' })
+    const parsedClientBillRate = Number(resolvedClientBillRate)
+    if (!Number.isFinite(parsedClientBillRate) || parsedClientBillRate <= 0) {
+      return res.status(400).json({ error: 'clientBillRate must be greater than 0' })
     }
 
     const consultant = await findUserById(consultantId)
@@ -55,7 +62,7 @@ export async function createAssignmentHandler(req, res, next) {
     const assignment = await createAssignment({
       consultantId,
       clientName,
-      hourlyRate: parsedHourlyRate,
+      clientBillRate: parsedClientBillRate,
     })
     res.status(201).json(clientAssignmentDto(assignment))
   } catch (err) {

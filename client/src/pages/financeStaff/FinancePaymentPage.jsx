@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useEffect, useMemo, useState, Fragment } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -14,6 +14,7 @@ import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
+import InputAdornment from '@mui/material/InputAdornment'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -25,18 +26,85 @@ import DetailList from '../../components/shared/DetailList.jsx'
 import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes } from '../../api/timesheets'
 import { formatDayName, formatLongDate, formatWeekStart, formatTimestamp } from '../../utils/dateFormatters'
-import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+import {
+  getConsultantDisplayLabel,
+  getWorkBucketDisplayLabel,
+  getWorkSummaryDisplayLabel,
+} from '../../utils/displayLabels'
+
+function bucketKey(item) {
+  return `${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+function buildCompletedSummaryItems(timesheet) {
+  if (timesheet?.status !== 'COMPLETED') return []
+
+  return [
+    {
+      key: 'received',
+      label: 'Money In',
+      value: (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          sx={{ color: palette.success, fontFamily: '"JetBrains Mono", monospace' }}
+        >
+          {timesheet.totalBillAmount != null ? formatCurrency(timesheet.totalBillAmount) : '-'}
+        </Typography>
+      ),
+    },
+    {
+      key: 'paidOut',
+      label: 'Money Out',
+      value: (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          sx={{ color: palette.error, fontFamily: '"JetBrains Mono", monospace' }}
+        >
+          {timesheet.totalPayAmount != null ? formatCurrency(timesheet.totalPayAmount) : '-'}
+        </Typography>
+      ),
+    },
+    {
+      key: 'net',
+      label: 'Net Margin',
+      value: (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          sx={{
+            fontFamily: '"JetBrains Mono", monospace',
+            color: (timesheet.marginAmount ?? 0) >= 0 ? palette.success : palette.error,
+          }}
+        >
+          {timesheet.marginAmount != null ? formatCurrency(timesheet.marginAmount) : '-'}
+        </Typography>
+      ),
+    },
+  ]
+}
 
 export default function FinancePaymentPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const location = useLocation()
   const navigate = useNavigate()
   const { id } = useParams()
 
   const [timesheet, setTimesheet] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [hourlyRate, setHourlyRate] = useState('')
+  const [bucketRates, setBucketRates] = useState({})
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
@@ -49,6 +117,17 @@ export default function FinancePaymentPage() {
     getTimesheet(id)
       .then((ts) => {
         setTimesheet(ts)
+        setBucketRates(
+          Object.fromEntries(
+            (ts.workSummary ?? []).map((item) => [
+              bucketKey(item),
+              {
+                billRate: item.suggestedBillRate != null ? String(item.suggestedBillRate) : '',
+                payRate: item.suggestedPayRate != null ? String(item.suggestedPayRate) : '',
+              },
+            ])
+          )
+        )
         if (ts.status === 'COMPLETED') {
           getTimesheetNotes(id).then(setFetchedNotes).catch(() => {})
         }
@@ -57,17 +136,56 @@ export default function FinancePaymentPage() {
       .finally(() => setLoading(false))
   }, [id, refreshKey])
 
-  const totalHours = timesheet?.totalHours ? Number(timesheet.totalHours) : 0
-  const hourlyRateNum = parseFloat(hourlyRate)
-  const isHourlyRateValid = Number.isFinite(hourlyRateNum) && hourlyRateNum > 0
-  const totalPayment = isHourlyRateValid ? (hourlyRateNum * totalHours).toFixed(2) : null
+  const workSummary = timesheet?.workSummary
+  const computedBuckets = useMemo(() => (
+    (workSummary ?? []).map((item) => {
+      const values = bucketRates[bucketKey(item)] ?? { billRate: '', payRate: '' }
+      const billRate = Number(values.billRate)
+      const payRate = Number(values.payRate)
+      const hours = Number(item.totalHours ?? 0)
+      const hasValidBillRate = item.entryKind === 'INTERNAL'
+        ? billRate === 0
+        : Number.isFinite(billRate) && billRate > 0
+      const hasValidPayRate = Number.isFinite(payRate) && payRate > 0
+
+      return {
+        ...item,
+        values,
+        hours,
+        billRate,
+        payRate,
+        hasValidBillRate,
+        hasValidPayRate,
+        billAmount: hasValidBillRate ? billRate * hours : null,
+        payAmount: hasValidPayRate ? payRate * hours : null,
+      }
+    })
+  ), [bucketRates, workSummary])
+
+  const isPaymentReady = computedBuckets.length > 0 && computedBuckets.every((item) => (
+    item.hasValidBillRate && item.hasValidPayRate
+  ))
+
+  const totals = computedBuckets.reduce((sum, item) => ({
+    incoming: sum.incoming + (item.billAmount ?? 0),
+    outgoing: sum.outgoing + (item.payAmount ?? 0),
+  }), { incoming: 0, outgoing: 0 })
+  const netMargin = totals.incoming - totals.outgoing
 
   async function handleProcessPayment() {
-    if (!isHourlyRateValid) return
+    if (!isPaymentReady) return
     setSubmitting(true)
     setFeedback(null)
     try {
-      await processPayment(id, { hourlyRate: hourlyRateNum, notes: notes.trim() })
+      await processPayment(id, {
+        breakdowns: computedBuckets.map((item) => ({
+          entryKind: item.entryKind,
+          assignmentId: item.assignmentId ?? null,
+          billRate: item.entryKind === 'INTERNAL' ? 0 : Number(item.values.billRate),
+          payRate: Number(item.values.payRate),
+        })),
+        notes: notes.trim(),
+      })
       setFeedback({ severity: 'success', message: 'Payment processed successfully.' })
       setRefreshKey((k) => k + 1)
     } catch (err) {
@@ -108,8 +226,16 @@ export default function FinancePaymentPage() {
             </Typography>
           ),
         },
+        {
+          key: 'buckets',
+          label: 'Work Categories',
+          value: getWorkSummaryDisplayLabel(workSummary ?? [], 3),
+        },
+        ...buildCompletedSummaryItems(timesheet),
       ]
     : []
+
+  const backDestination = location.state?.returnTo ?? '/finance/timesheets?tab=to-pay'
 
   return (
     <Box>
@@ -117,7 +243,7 @@ export default function FinancePaymentPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/finance/timesheets')}
+          onClick={() => navigate(backDestination)}
         >
           Back
         </Button>
@@ -137,7 +263,6 @@ export default function FinancePaymentPage() {
 
       {timesheet && (
         <>
-          {/* Summary */}
           <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Summary
@@ -145,7 +270,30 @@ export default function FinancePaymentPage() {
             <DetailList items={summaryItems} />
           </Paper>
 
-          {/* Entries */}
+          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+            <Typography variant="h6" gutterBottom>
+              Work Summary
+            </Typography>
+            <Stack spacing={1.25}>
+              {(workSummary ?? []).map((item) => (
+                <Box
+                  key={bucketKey(item)}
+                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
+                >
+                  <Typography variant="body2">
+                    {getWorkBucketDisplayLabel(item.bucketLabel)}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 600 }}
+                  >
+                    {item.totalHours}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+          </Paper>
+
           {timesheet.entries && timesheet.entries.length > 0 && (
             <Paper sx={{ mb: 3 }}>
               <Box sx={{ p: 2, pb: 1 }}>
@@ -154,7 +302,7 @@ export default function FinancePaymentPage() {
               {isMobile ? (
                 <Stack divider={<Divider flexItem />}>
                   {timesheet.entries.map((entry) => (
-                    <Box key={entry.id ?? entry.date} sx={{ px: 2, py: 1.75 }}>
+                    <Box key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`} sx={{ px: 2, py: 1.75 }}>
                       <Box
                         sx={{
                           display: 'flex',
@@ -164,9 +312,14 @@ export default function FinancePaymentPage() {
                           mb: 0.5,
                         }}
                       >
-                        <Typography variant="body2" fontWeight={600}>
-                          {formatDayName(entry.date)}
-                        </Typography>
+                        <Box>
+                          <Typography variant="body2" fontWeight={600}>
+                            {formatDayName(entry.date)}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {getWorkBucketDisplayLabel(entry.bucketLabel)}
+                          </Typography>
+                        </Box>
                         <Typography
                           sx={{
                             fontFamily: '"JetBrains Mono", monospace',
@@ -190,14 +343,16 @@ export default function FinancePaymentPage() {
                       <TableRow>
                         <TableCell>Day</TableCell>
                         <TableCell>Date</TableCell>
+                        <TableCell>Work Category</TableCell>
                         <TableCell align="right">Hours</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {timesheet.entries.map((entry) => (
-                        <TableRow key={entry.id ?? entry.date}>
+                        <TableRow key={entry.id ?? `${entry.date}-${entry.assignmentId ?? 'INTERNAL'}`}>
                           <TableCell>{formatDayName(entry.date)}</TableCell>
                           <TableCell>{formatLongDate(entry.date)}</TableCell>
+                          <TableCell>{getWorkBucketDisplayLabel(entry.bucketLabel)}</TableCell>
                           <TableCell align="right">
                             <Typography
                               sx={{
@@ -217,126 +372,287 @@ export default function FinancePaymentPage() {
             </Paper>
           )}
 
-          {/* Payment form */}
           {timesheet.status === 'APPROVED' && (
             <Paper sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Typography variant="h6" gutterBottom>
                 Payment Details
               </Typography>
-              <Stack spacing={3}>
-                <TextField
-                  label="Hourly Rate (&pound;)"
-                  type="number"
-                  required
-                  value={hourlyRate}
-                  onChange={(e) => setHourlyRate(e.target.value)}
-                  slotProps={{ htmlInput: { min: 0.01, step: '0.01' } }}
-                  sx={{ width: { xs: '100%', sm: 'auto' }, maxWidth: { sm: 240 } }}
-                />
+              <Alert severity="info" sx={{ mb: 4 }}>
+                Rates are pre-filled from client assignments and consultant defaults.
+                Overrides only affect this payment processing.
+              </Alert>
 
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: '1fr 160px 160px',
+                  },
+                  columnGap: 2,
+                  rowGap: { xs: 4, sm: 3 },
+                  alignItems: 'start',
+                }}
+              >
+                {!isMobile && (
+                  <>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Work Category
+                    </Typography>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Client Bill Rate
+                    </Typography>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Consultant Pay Rate
+                    </Typography>
+                    <Box sx={{ gridColumn: '1 / -1', mt: -1 }}>
+                      <Divider />
+                    </Box>
+                  </>
+                )}
+
+                {computedBuckets.map((item) => (
+                  <Fragment key={bucketKey(item)}>
+                    <Box sx={{ pt: { sm: 1 } }}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {getWorkBucketDisplayLabel(item.bucketLabel)}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {item.totalHours} hours recorded
+                      </Typography>
+                    </Box>
+
+                    <TextField
+                      label={isMobile ? "Client Bill Rate (£/hr)" : ""}
+                      type="number"
+                      size="small"
+                      required={item.entryKind === 'CLIENT'}
+                      value={bucketRates[bucketKey(item)]?.billRate ?? ''}
+                      onChange={(event) => setBucketRates((prev) => ({
+                        ...prev,
+                        [bucketKey(item)]: {
+                          ...(prev[bucketKey(item)] ?? {}),
+                          billRate: event.target.value,
+                        },
+                      }))}
+                      slotProps={{
+                        input: {
+                          startAdornment: <InputAdornment position="start">£</InputAdornment>,
+                          readOnly: item.entryKind === 'INTERNAL'
+                        },
+                        htmlInput: { min: 0, step: '0.01' }
+                      }}
+                      disabled={item.entryKind === 'INTERNAL'}
+                      fullWidth
+                    />
+
+                    <TextField
+                      label={isMobile ? "Consultant Pay Rate (£/hr)" : ""}
+                      type="number"
+                      size="small"
+                      required
+                      value={bucketRates[bucketKey(item)]?.payRate ?? ''}
+                      onChange={(event) => setBucketRates((prev) => ({
+                        ...prev,
+                        [bucketKey(item)]: {
+                          ...(prev[bucketKey(item)] ?? {}),
+                          payRate: event.target.value,
+                        },
+                      }))}
+                      slotProps={{
+                        input: {
+                          startAdornment: <InputAdornment position="start">£</InputAdornment>,
+                        },
+                        htmlInput: { min: 0.01, step: '0.01' }
+                      }}
+                      fullWidth
+                    />
+                  </Fragment>
+                ))}
+              </Box>
+
+              <Box
+                sx={{
+                  p: 3,
+                  mt: 5,
+                  borderRadius: 2,
+                  border: `1px solid ${palette.border}`,
+                  backgroundColor: palette.surfaceMuted,
+                }}
+              >
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 700, textTransform: 'uppercase' }}>
+                  Finance Totals
+                </Typography>
                 <Box
                   sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    border: `1px solid ${palette.border}`,
-                    backgroundColor: palette.surfaceMuted,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                    gap: 3,
+                    mb: computedBuckets.length > 0 ? 4 : 0,
                   }}
                 >
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Estimated Total Payment
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '1.75rem',
-                      fontWeight: 600,
-                      color: palette.textPrimary,
-                    }}
-                  >
-                    {totalPayment !== null ? `\u00A3${totalPayment}` : '-'}
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '0.65rem',
-                      color: palette.textMuted,
-                    }}
-                  >
-                    hourly rate x total hours
-                  </Typography>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
+                      Money In
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '1.5rem',
+                        fontWeight: 600,
+                        color: isPaymentReady ? palette.success : palette.textPrimary,
+                      }}
+                    >
+                      {isPaymentReady ? formatCurrency(totals.incoming) : '-'}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
+                      Money Out
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '1.5rem',
+                        fontWeight: 600,
+                        color: isPaymentReady ? palette.error : palette.textPrimary,
+                      }}
+                    >
+                      {isPaymentReady ? formatCurrency(totals.outgoing) : '-'}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
+                      Net Margin
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '1.5rem',
+                        fontWeight: 600,
+                        color: isPaymentReady
+                          ? netMargin >= 0
+                            ? palette.success
+                            : palette.error
+                          : palette.textPrimary,
+                      }}
+                    >
+                      {isPaymentReady ? formatCurrency(netMargin) : '-'}
+                    </Typography>
+                  </Box>
                 </Box>
 
+                {computedBuckets.length > 0 && (
+                  <Stack spacing={1} sx={{ pt: 2, borderTop: `1px solid ${palette.border}` }}>
+                    {computedBuckets.map((item) => {
+                      const itemMargin = (item.billAmount ?? 0) - (item.payAmount ?? 0)
+                      return (
+                        <Box
+                          key={`working-${bucketKey(item)}`}
+                          sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: 1,
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.725rem',
+                          }}
+                        >
+                          <Typography variant="inherit" sx={{ fontWeight: 600, color: palette.textSecondary, minWidth: 120 }}>
+                            {getWorkBucketDisplayLabel(item.bucketLabel)}:
+                          </Typography>
+                          <Typography variant="inherit" sx={{ color: palette.textMuted }}>
+                            {item.hours}h
+                          </Typography>
+                          <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                          <Typography variant="inherit" sx={{ color: palette.success, fontWeight: 500 }}>
+                            In {item.hasValidBillRate ? formatCurrency(item.billAmount ?? 0) : '-'}
+                          </Typography>
+                          <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                          <Typography variant="inherit" sx={{ color: palette.error, fontWeight: 500 }}>
+                            Out {item.hasValidPayRate ? formatCurrency(item.payAmount ?? 0) : '-'}
+                          </Typography>
+                          {item.hasValidBillRate && item.hasValidPayRate && (
+                            <>
+                              <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                              <Typography
+                                variant="inherit"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: itemMargin >= 0 ? palette.success : palette.error,
+                                }}
+                              >
+                                Net {formatCurrency(itemMargin)}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
+                      )
+                    })}
+                  </Stack>
+                )}
+              </Box>
+
+              <Box sx={{ mt: 4 }}>
                 <TextField
-                  label="Notes"
+                  label="Payment Notes"
                   multiline
                   minRows={3}
                   fullWidth
                   value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Optional notes for this payment"
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Optional notes for this payment (e.g. processing references)"
                 />
+              </Box>
 
-                <Box>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<PaymentIcon />}
-                    onClick={handleProcessPayment}
-                    disabled={submitting || !isHourlyRateValid}
-                    fullWidth={isMobile}
-                  >
-                    Process Payment
-                  </Button>
-                </Box>
-              </Stack>
+              <Box sx={{ mt: 3 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  startIcon={<PaymentIcon />}
+                  onClick={handleProcessPayment}
+                  disabled={submitting || !isPaymentReady}
+                  fullWidth={isMobile}
+                >
+                  Process Payment
+                </Button>
+              </Box>
             </Paper>
           )}
 
-          {/* Completed state */}
-          {timesheet.status === 'COMPLETED' && (
-            <>
-              <Alert severity="success" sx={{ mt: 2 }}>
-                <Typography fontWeight={600} gutterBottom sx={{ fontSize: '0.85rem' }}>
-                  Payment Recorded
-                </Typography>
-                This timesheet is marked as paid and the payment has been recorded.
-              </Alert>
-
-              {fetchedNotes.length > 0 && (
-                <Paper sx={{ p: 3, mt: 2 }}>
-                  <Typography variant="h6" gutterBottom>
-                    Finance Notes
-                  </Typography>
-                  <Stack spacing={2}>
-                    {fetchedNotes.map((n) => (
-                      <Box
-                        key={n.id}
-                        sx={{
-                          p: 2,
-                          borderRadius: 1.5,
-                          backgroundColor: palette.surfaceMuted,
-                          border: `1px solid ${palette.border}`,
-                        }}
-                      >
-                        <Typography variant="body2">{n.note}</Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.65rem',
-                            mt: 0.5,
-                            display: 'block',
-                          }}
-                        >
-                          {n.authoredByName ?? 'Finance'} - {formatTimestamp(n.createdAt)}
-                        </Typography>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Paper>
-              )}
-            </>
+          {timesheet.status === 'COMPLETED' && fetchedNotes.length > 0 && (
+            <Paper sx={{ p: 3, mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Finance Notes
+              </Typography>
+              <Stack spacing={2}>
+                {fetchedNotes.map((n) => (
+                  <Box
+                    key={n.id}
+                    sx={{
+                      p: 2,
+                      borderRadius: 1.5,
+                      backgroundColor: palette.surfaceMuted,
+                      border: `1px solid ${palette.border}`,
+                    }}
+                  >
+                    <Typography variant="body2">{n.note}</Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.65rem',
+                        mt: 0.5,
+                        display: 'block',
+                      }}
+                    >
+                      {n.authoredByName ?? 'Finance'} - {formatTimestamp(n.createdAt)}
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            </Paper>
           )}
         </>
       )}

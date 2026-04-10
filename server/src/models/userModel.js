@@ -10,7 +10,7 @@ export async function findUserByEmail(email) {
 
 export async function findUserById(id) {
   const { rows } = await pool.query(
-    'SELECT user_id, name, email, role, created_at FROM users WHERE user_id = $1',
+    'SELECT user_id, name, email, role, default_pay_rate, created_at FROM users WHERE user_id = $1',
     [id]
   )
   return rows[0] ?? null
@@ -26,7 +26,7 @@ export async function findUserByIdWithHash(id) {
 
 export async function getAllUsers() {
   const { rows } = await pool.query(
-    'SELECT user_id, name, email, role, created_at FROM users ORDER BY created_at DESC'
+    'SELECT user_id, name, email, role, default_pay_rate, created_at FROM users ORDER BY created_at DESC'
   )
   return rows
 }
@@ -35,7 +35,7 @@ export async function createUser({ name, email, passwordHash, role }) {
   const { rows } = await pool.query(
     `INSERT INTO users (name, email, password_hash, role)
      VALUES ($1, $2, $3, $4)
-     RETURNING user_id, name, email, role, created_at`,
+     RETURNING user_id, name, email, role, default_pay_rate, created_at`,
     [name, email, passwordHash, role]
   )
   return rows[0]
@@ -44,8 +44,29 @@ export async function createUser({ name, email, passwordHash, role }) {
 export async function updateUserRole(id, role) {
   const { rows } = await pool.query(
     `UPDATE users SET role = $1 WHERE user_id = $2
-     RETURNING user_id, name, email, role`,
+     RETURNING user_id, name, email, role, default_pay_rate, created_at`,
     [role, id]
+  )
+  return rows[0] ?? null
+}
+
+export async function getConsultantPayRates() {
+  const { rows } = await pool.query(
+    `SELECT user_id, name, email, role, default_pay_rate, created_at
+     FROM users
+     WHERE role = 'CONSULTANT'
+     ORDER BY name ASC, created_at DESC`
+  )
+  return rows
+}
+
+export async function updateUserDefaultPayRate(id, defaultPayRate) {
+  const { rows } = await pool.query(
+    `UPDATE users
+     SET default_pay_rate = $1
+     WHERE user_id = $2
+     RETURNING user_id, name, email, role, default_pay_rate, created_at`,
+    [defaultPayRate, id]
   )
   return rows[0] ?? null
 }

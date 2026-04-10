@@ -1,8 +1,29 @@
 import { entryDto } from './entryDto.js'
 import { formatDateOnly } from '../utils/dateOnly.js'
 
-export function timesheetDto(row) {
-  return {
+export function workSummaryDto(row) {
+  const dto = {
+    entryKind: row.entry_kind,
+    assignmentId: row.assignment_id ?? null,
+    bucketLabel: row.bucket_label ?? null,
+    totalHours: parseFloat(row.total_hours),
+  }
+
+  const suggestedBillRate = row.suggested_bill_rate ?? row.suggestedBillRate
+  if (suggestedBillRate !== undefined) {
+    dto.suggestedBillRate = suggestedBillRate == null ? null : parseFloat(suggestedBillRate)
+  }
+
+  const suggestedPayRate = row.suggested_pay_rate ?? row.suggestedPayRate
+  if (suggestedPayRate !== undefined) {
+    dto.suggestedPayRate = suggestedPayRate == null ? null : parseFloat(suggestedPayRate)
+  }
+
+  return dto
+}
+
+export function timesheetDto(row, workSummary = []) {
+  const dto = {
     id: row.timesheet_id,
     consultantId: row.consultant_id,
     consultantName: row.consultant_name ?? null,
@@ -12,12 +33,29 @@ export function timesheetDto(row) {
     status: row.status,
     rejectionComment: row.rejection_comment ?? null,
     totalHours: row.total_hours !== undefined ? parseFloat(row.total_hours) : null,
+    workSummary,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }
+
+  if (
+    row.total_bill_amount != null ||
+    row.total_pay_amount != null ||
+    row.margin_amount != null
+  ) {
+    dto.totalBillAmount = row.total_bill_amount == null ? null : parseFloat(row.total_bill_amount)
+    dto.totalPayAmount = row.total_pay_amount == null ? null : parseFloat(row.total_pay_amount)
+    dto.marginAmount = row.margin_amount == null ? null : parseFloat(row.margin_amount)
+  }
+
+  return dto
 }
 
-export function timesheetWithEntriesDto(row, entries) {
+export function timesheetWithEntriesDto(row, entries, workSummary = []) {
   const totalHours = entries.reduce((sum, e) => sum + parseFloat(e.hours_worked || 0), 0)
-  return { ...timesheetDto(row), totalHours, entries: entries.map(entryDto) }
+  return {
+    ...timesheetDto(row, workSummary),
+    totalHours,
+    entries: entries.map(entryDto),
+  }
 }

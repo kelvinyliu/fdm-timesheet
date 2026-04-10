@@ -1,30 +1,113 @@
 import pool from '../db.js'
 
+async function getPaymentBreakdownsWithDb(db, paymentId) {
+  const { rows } = await db.query(
+    `SELECT entry_kind,
+            assignment_id,
+            bucket_label,
+            hours_worked,
+            bill_rate,
+            bill_amount,
+            pay_rate,
+            pay_amount,
+            margin_amount
+     FROM payment_breakdowns
+     WHERE payment_id = $1
+     ORDER BY bucket_label`,
+    [paymentId]
+  )
+
+  return rows.map((row) => ({
+    entryKind: row.entry_kind,
+    assignmentId: row.assignment_id ?? null,
+    bucketLabel: row.bucket_label,
+    hoursWorked: row.hours_worked,
+    billRate: row.bill_rate,
+    billAmount: row.bill_amount,
+    payRate: row.pay_rate,
+    payAmount: row.pay_amount,
+    marginAmount: row.margin_amount,
+  }))
+}
+
 export async function getPaymentByTimesheet(timesheetId) {
   const { rows } = await pool.query(
     'SELECT * FROM payments WHERE timesheet_id = $1',
     [timesheetId]
   )
-  return rows[0] ?? null
+  if (rows.length === 0) return null
+
+  return {
+    ...rows[0],
+    breakdowns: await getPaymentBreakdownsWithDb(pool, rows[0].payment_id),
+  }
 }
 
-export async function createPayment({ timesheetId, processedBy, hourlyRate, amount }) {
+export async function createPayment({
+  timesheetId,
+  processedBy,
+  totalBillAmount,
+  totalPayAmount,
+  marginAmount,
+  breakdowns,
+}) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
     const { rows } = await client.query(
-      `INSERT INTO payments (timesheet_id, processed_by, daily_rate, amount, status)
-       VALUES ($1, $2, $3, $4, 'COMPLETED')
+      `INSERT INTO payments (
+         timesheet_id,
+         processed_by,
+         total_bill_amount,
+         total_pay_amount,
+         margin_amount,
+         status
+       )
+       VALUES ($1, $2, $3, $4, $5, 'COMPLETED')
        RETURNING *`,
-      [timesheetId, processedBy, hourlyRate, amount]
+      [timesheetId, processedBy, totalBillAmount, totalPayAmount, marginAmount]
     )
+
+    for (const breakdown of breakdowns) {
+      await client.query(
+        `INSERT INTO payment_breakdowns (
+           payment_id,
+           entry_kind,
+           assignment_id,
+           bucket_label,
+           hours_worked,
+           bill_rate,
+           bill_amount,
+           pay_rate,
+           pay_amount,
+           margin_amount
+         )
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          rows[0].payment_id,
+          breakdown.entryKind,
+          breakdown.assignmentId ?? null,
+          breakdown.bucketLabel,
+          breakdown.hoursWorked,
+          breakdown.billRate,
+          breakdown.billAmount,
+          breakdown.payRate,
+          breakdown.payAmount,
+          breakdown.marginAmount,
+        ]
+      )
+    }
+
     await client.query(
       `UPDATE timesheets SET status = 'COMPLETED', updated_at = NOW()
        WHERE timesheet_id = $1`,
       [timesheetId]
     )
     await client.query('COMMIT')
-    return rows[0]
+    return {
+      ...rows[0],
+      breakdowns: await getPaymentBreakdownsWithDb(client, rows[0].payment_id),
+    }
   } catch (err) {
     await client.query('ROLLBACK')
     throw err

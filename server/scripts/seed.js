@@ -56,12 +56,13 @@ function formatHours(hours) {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1)
 }
 
-async function insertEntries(client, timesheetId, entries) {
+async function insertEntries(client, timesheetId, entries, assignmentId = null) {
+  const entryKind = assignmentId ? 'CLIENT' : 'INTERNAL'
   for (const { date, hours } of entries) {
     await client.query(
-      `INSERT INTO timesheet_entries (timesheet_id, entry_date, hours_worked)
-       VALUES ($1, $2, $3)`,
-      [timesheetId, date, hours]
+      `INSERT INTO timesheet_entries (timesheet_id, entry_date, entry_kind, assignment_id, hours_worked)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [timesheetId, date, entryKind, assignmentId, hours]
     )
   }
 }
@@ -76,10 +77,20 @@ async function logAudit(client, action, performedBy, timesheetId, detail) {
 
 async function insertUser(client, user, passwordHash) {
   const { rows: [row] } = await client.query(
-    `INSERT INTO users (name, email, password_hash, role)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO users (name, email, password_hash, role, default_pay_rate)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING user_id`,
-    [user.name, user.email, passwordHash, user.role]
+    [user.name, user.email, passwordHash, user.role, user.defaultPayRate ?? null]
+  )
+  return row
+}
+
+async function insertAssignment(client, consultantId, clientName, hourlyRate, deletedAt = null) {
+  const { rows: [row] } = await client.query(
+    `INSERT INTO client_assignments (consultant_id, client_name, client_bill_rate, deleted_at)
+     VALUES ($1, $2, $3, $4)
+     RETURNING assignment_id`,
+    [consultantId, clientName, hourlyRate, deletedAt]
   )
   return row
 }
@@ -121,24 +132,28 @@ const DEMO_USERS = Object.freeze({
     email: 'charlie@demo.test',
     password: 'charlie1234',
     role: 'CONSULTANT',
+    defaultPayRate: 35.00,
   },
   diana: {
     name: 'Diana Consultant',
     email: 'diana@demo.test',
     password: 'diana1234',
     role: 'CONSULTANT',
+    defaultPayRate: 38.50,
   },
   eve: {
     name: 'Eve Consultant',
     email: 'eve@demo.test',
     password: 'eve1234',
     role: 'CONSULTANT',
+    defaultPayRate: 34.25,
   },
   frank: {
     name: 'Frank Consultant',
     email: 'frank@demo.test',
     password: 'frank1234',
     role: 'CONSULTANT',
+    defaultPayRate: 36.75,
   },
 })
 
@@ -183,22 +198,17 @@ try {
   const frank = await insertUser(client, DEMO_USERS.frank, passwordHashes.frank)
 
   // -- Client assignments ---------------------------------------------------
-  const { rows: [charlieAssign] } = await client.query(
-    `INSERT INTO client_assignments (consultant_id, client_name, hourly_rate) VALUES ($1,$2,$3) RETURNING assignment_id`,
-    [charlie.user_id, 'Barclays Platform', 55.00]
+  const charlieLegacyAssign = await insertAssignment(
+    client,
+    charlie.user_id,
+    'Barclays Platform',
+    55.00,
+    `${WEEK_STARTS.twoWeeksAgo}T09:00:00Z`
   )
-  const { rows: [dianaAssign] } = await client.query(
-    `INSERT INTO client_assignments (consultant_id, client_name, hourly_rate) VALUES ($1,$2,$3) RETURNING assignment_id`,
-    [diana.user_id, 'HSBC Mobile', 60.00]
-  )
-  const { rows: [eveAssign] } = await client.query(
-    `INSERT INTO client_assignments (consultant_id, client_name, hourly_rate) VALUES ($1,$2,$3) RETURNING assignment_id`,
-    [eve.user_id, 'Lloyds Reporting', 52.50]
-  )
-  const { rows: [frankAssign] } = await client.query(
-    `INSERT INTO client_assignments (consultant_id, client_name, hourly_rate) VALUES ($1,$2,$3) RETURNING assignment_id`,
-    [frank.user_id, 'NatWest Migration', 57.50]
-  )
+  const charlieAssign = await insertAssignment(client, charlie.user_id, 'Barclays Platform', 55.00)
+  const dianaAssign = await insertAssignment(client, diana.user_id, 'HSBC Mobile', 60.00)
+  const eveAssign = await insertAssignment(client, eve.user_id, 'Lloyds Reporting', 52.50)
+  const frankAssign = await insertAssignment(client, frank.user_id, 'NatWest Migration', 57.50)
 
   // -- Manager -> consultant links ------------------------------------------
   await client.query(
@@ -215,21 +225,43 @@ try {
   const { rows: [c3] } = await client.query(
     `INSERT INTO timesheets (consultant_id, assignment_id, week_start, status)
      VALUES ($1,$2,$3,'COMPLETED') RETURNING timesheet_id`,
-    [charlie.user_id, charlieAssign.assignment_id, WEEK_STARTS.threeWeeksAgo]
+    [charlie.user_id, charlieLegacyAssign.assignment_id, WEEK_STARTS.threeWeeksAgo]
   )
-  await insertEntries(client, c3.timesheet_id, weekEntries(WEEK_STARTS.threeWeeksAgo, c3Hours))
+  await insertEntries(client, c3.timesheet_id, weekEntries(WEEK_STARTS.threeWeeksAgo, c3Hours), charlieLegacyAssign.assignment_id)
   await client.query(
     `INSERT INTO reviews (timesheet_id, reviewer_id, decision) VALUES ($1,$2,'APPROVED')`,
     [c3.timesheet_id, alice.user_id]
   )
+  const { rows: [c3Payment] } = await client.query(
+    `INSERT INTO payments (timesheet_id, processed_by, total_bill_amount, total_pay_amount, margin_amount, status)
+     VALUES ($1,$2,$3,$4,$5,'COMPLETED')
+     RETURNING payment_id`,
+    [c3.timesheet_id, finance.user_id, 2172.50, 1382.50, 790.00]
+  )
   await client.query(
-    `INSERT INTO payments (timesheet_id, processed_by, daily_rate, amount, status)
-     VALUES ($1,$2,$3,$4,'COMPLETED')`,
-    [c3.timesheet_id, finance.user_id, 440.00, 2172.50]
+    `INSERT INTO payment_breakdowns (
+       payment_id,
+       entry_kind,
+       assignment_id,
+       bucket_label,
+       hours_worked,
+       bill_rate,
+       bill_amount,
+       pay_rate,
+       pay_amount,
+       margin_amount
+     )
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
+    [c3Payment.payment_id, 'CLIENT', charlieLegacyAssign.assignment_id, 'Barclays Platform', 39.5, 55.00, 2172.50, 35.00, 1382.50, 790.00]
   )
   await logAudit(client, 'SUBMISSION', charlie.user_id, c3.timesheet_id, { previousStatus: 'DRAFT' })
   await logAudit(client, 'APPROVAL', alice.user_id, c3.timesheet_id, { decision: 'APPROVED' })
-  await logAudit(client, 'PROCESSING', finance.user_id, c3.timesheet_id, { dailyRate: 440.00, amount: 2172.50, totalHours: 39.5 })
+  await logAudit(client, 'PROCESSING', finance.user_id, c3.timesheet_id, {
+    totalBillAmount: 2172.50,
+    totalPayAmount: 1382.50,
+    marginAmount: 790.00,
+    totalHours: 39.5,
+  })
   seededTimesheets.push({
     consultant: DEMO_USERS.charlie.name,
     manager: DEMO_USERS.alice.name,
@@ -238,6 +270,7 @@ try {
     weekEnd: weekEnd(WEEK_STARTS.threeWeeksAgo),
     status: 'COMPLETED',
     hours: formatHours(totalHours(c3Hours)),
+    notes: 'Historical assignment was soft-deleted; same client name now exists as a new active assignment.',
   })
 
   const c2Hours = [8, 8, 8, 8, 7]
@@ -246,7 +279,7 @@ try {
      VALUES ($1,$2,$3,'APPROVED') RETURNING timesheet_id`,
     [charlie.user_id, charlieAssign.assignment_id, WEEK_STARTS.twoWeeksAgo]
   )
-  await insertEntries(client, c2.timesheet_id, weekEntries(WEEK_STARTS.twoWeeksAgo, c2Hours))
+  await insertEntries(client, c2.timesheet_id, weekEntries(WEEK_STARTS.twoWeeksAgo, c2Hours), charlieAssign.assignment_id)
   await client.query(
     `INSERT INTO reviews (timesheet_id, reviewer_id, decision) VALUES ($1,$2,'APPROVED')`,
     [c2.timesheet_id, alice.user_id]
@@ -261,6 +294,7 @@ try {
     weekEnd: weekEnd(WEEK_STARTS.twoWeeksAgo),
     status: 'APPROVED',
     hours: formatHours(totalHours(c2Hours)),
+    notes: 'Uses the active replacement assignment.',
   })
 
   const c1Hours = [8, 8, 8, 8, 8]
@@ -269,7 +303,7 @@ try {
      VALUES ($1,$2,$3,'PENDING') RETURNING timesheet_id`,
     [charlie.user_id, charlieAssign.assignment_id, WEEK_STARTS.lastWeek]
   )
-  await insertEntries(client, c1.timesheet_id, weekEntries(WEEK_STARTS.lastWeek, c1Hours))
+  await insertEntries(client, c1.timesheet_id, weekEntries(WEEK_STARTS.lastWeek, c1Hours), charlieAssign.assignment_id)
   await logAudit(client, 'SUBMISSION', charlie.user_id, c1.timesheet_id, { previousStatus: 'DRAFT' })
   seededTimesheets.push({
     consultant: DEMO_USERS.charlie.name,
@@ -287,7 +321,7 @@ try {
      VALUES ($1,$2,$3,'DRAFT') RETURNING timesheet_id`,
     [charlie.user_id, charlieAssign.assignment_id, WEEK_STARTS.thisWeek]
   )
-  await insertEntries(client, c0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, c0Hours))
+  await insertEntries(client, c0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, c0Hours), charlieAssign.assignment_id)
   seededTimesheets.push({
     consultant: DEMO_USERS.charlie.name,
     manager: DEMO_USERS.alice.name,
@@ -305,7 +339,7 @@ try {
      VALUES ($1,$2,$3,'APPROVED') RETURNING timesheet_id`,
     [diana.user_id, dianaAssign.assignment_id, WEEK_STARTS.lastWeek]
   )
-  await insertEntries(client, d1.timesheet_id, weekEntries(WEEK_STARTS.lastWeek, d1Hours))
+  await insertEntries(client, d1.timesheet_id, weekEntries(WEEK_STARTS.lastWeek, d1Hours), dianaAssign.assignment_id)
   await client.query(
     `INSERT INTO reviews (timesheet_id, reviewer_id, decision) VALUES ($1,$2,'APPROVED')`,
     [d1.timesheet_id, alice.user_id]
@@ -328,7 +362,7 @@ try {
      VALUES ($1,$2,$3,'DRAFT') RETURNING timesheet_id`,
     [diana.user_id, dianaAssign.assignment_id, WEEK_STARTS.thisWeek]
   )
-  await insertEntries(client, d0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, d0Hours))
+  await insertEntries(client, d0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, d0Hours), dianaAssign.assignment_id)
   seededTimesheets.push({
     consultant: DEMO_USERS.diana.name,
     manager: DEMO_USERS.alice.name,
@@ -346,7 +380,7 @@ try {
      VALUES ($1,$2,$3,'REJECTED') RETURNING timesheet_id`,
     [eve.user_id, eveAssign.assignment_id, WEEK_STARTS.lastWeek]
   )
-  await insertEntries(client, e1.timesheet_id, weekEntries(WEEK_STARTS.lastWeek, e1Hours))
+  await insertEntries(client, e1.timesheet_id, weekEntries(WEEK_STARTS.lastWeek, e1Hours), eveAssign.assignment_id)
   await client.query(
     `INSERT INTO reviews (timesheet_id, reviewer_id, decision, comment) VALUES ($1,$2,'REJECTED',$3)`,
     [e1.timesheet_id, bob.user_id, 'Wednesday hours are missing. Please correct and resubmit.']
@@ -372,7 +406,7 @@ try {
      VALUES ($1,$2,$3,'DRAFT') RETURNING timesheet_id`,
     [eve.user_id, eveAssign.assignment_id, WEEK_STARTS.thisWeek]
   )
-  await insertEntries(client, e0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, e0Hours))
+  await insertEntries(client, e0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, e0Hours), eveAssign.assignment_id)
   seededTimesheets.push({
     consultant: DEMO_USERS.eve.name,
     manager: DEMO_USERS.bob.name,
@@ -390,7 +424,7 @@ try {
      VALUES ($1,$2,$3,'PENDING') RETURNING timesheet_id`,
     [frank.user_id, frankAssign.assignment_id, WEEK_STARTS.thisWeek]
   )
-  await insertEntries(client, f0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, f0Hours))
+  await insertEntries(client, f0.timesheet_id, weekEntries(WEEK_STARTS.thisWeek, f0Hours), frankAssign.assignment_id)
   await logAudit(client, 'SUBMISSION', frank.user_id, f0.timesheet_id, { previousStatus: 'DRAFT' })
   seededTimesheets.push({
     consultant: DEMO_USERS.frank.name,

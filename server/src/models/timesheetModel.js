@@ -5,6 +5,9 @@ const TIMESHEET_SELECT = `
          t.assignment_id, assignment.client_name AS assignment_client_name,
          t.week_start, t.status,
          t.created_at, t.updated_at,
+         p.total_bill_amount,
+         p.total_pay_amount,
+         p.margin_amount,
          lr.comment AS rejection_comment,
          (SELECT COALESCE(SUM(te.hours_worked), 0)
           FROM timesheet_entries te
@@ -13,6 +16,7 @@ const TIMESHEET_SELECT = `
   FROM timesheets t
   LEFT JOIN users consultant ON consultant.user_id = t.consultant_id
   LEFT JOIN client_assignments assignment ON assignment.assignment_id = t.assignment_id
+  LEFT JOIN payments p ON p.timesheet_id = t.timesheet_id
   LEFT JOIN LATERAL (
     SELECT r.comment
     FROM reviews r
@@ -122,13 +126,22 @@ export async function reviewTimesheet(id, reviewerId, decision, comment) {
 
 export async function getPreviousWeekEntries(consultantId, weekStart) {
   const { rows } = await pool.query(
-    `SELECT te.entry_date, te.hours_worked
+    `SELECT te.entry_id,
+            te.entry_date,
+            te.entry_kind,
+            te.assignment_id,
+            te.hours_worked,
+            CASE
+              WHEN te.entry_kind = 'INTERNAL' THEN 'Internal'
+              ELSE COALESCE(ca.client_name, 'Unknown client assignment')
+            END AS bucket_label
      FROM timesheet_entries te
      JOIN timesheets t ON t.timesheet_id = te.timesheet_id
+     LEFT JOIN client_assignments ca ON ca.assignment_id = te.assignment_id
      WHERE t.consultant_id = $1
        AND t.week_start = $2::date - INTERVAL '7 days'
        AND te.entry_date BETWEEN t.week_start AND t.week_start + 6
-     ORDER BY te.entry_date`,
+     ORDER BY te.entry_date, bucket_label`,
     [consultantId, weekStart]
   )
   return rows

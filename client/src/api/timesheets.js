@@ -6,7 +6,7 @@ function normalizeTimesheet(timesheet) {
     ...timesheet,
     entries: timesheet.entries.map((entry) => ({
       ...entry,
-      id: entry.id ?? entry.date,
+      id: entry.id ?? `${entry.date}-${entry.entryKind}-${entry.assignmentId ?? 'INTERNAL'}`,
     })),
   }
 }

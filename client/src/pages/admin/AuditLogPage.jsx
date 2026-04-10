@@ -39,6 +39,34 @@ function formatDetail(action, detail) {
     case 'REJECTION':
       return detail.comment ? `Rejected: ${detail.comment}` : 'Rejected'
     case 'PROCESSING': {
+      if (Array.isArray(detail.breakdowns) && detail.breakdowns.length > 0) {
+        const incoming = detail.totalBillAmount != null
+          ? `In \u00A3${Number(detail.totalBillAmount).toFixed(2)}`
+          : null
+        const outgoing = detail.totalPayAmount != null
+          ? `Out \u00A3${Number(detail.totalPayAmount).toFixed(2)}`
+          : null
+        const margin = detail.marginAmount != null
+          ? `Net \u00A3${Number(detail.marginAmount).toFixed(2)}`
+          : null
+        return [
+          `${detail.breakdowns.length} categories`,
+          detail.totalHours != null ? `${detail.totalHours}h` : null,
+          incoming,
+          outgoing,
+          margin,
+        ].filter(Boolean).join(' · ')
+      }
+
+      if (detail.totalBillAmount != null || detail.totalPayAmount != null) {
+        return [
+          detail.totalHours != null ? `${detail.totalHours}h` : null,
+          detail.totalBillAmount != null ? `In \u00A3${Number(detail.totalBillAmount).toFixed(2)}` : null,
+          detail.totalPayAmount != null ? `Out \u00A3${Number(detail.totalPayAmount).toFixed(2)}` : null,
+          detail.marginAmount != null ? `Net \u00A3${Number(detail.marginAmount).toFixed(2)}` : null,
+        ].filter(Boolean).join(' · ')
+      }
+
       const rateValue = detail.hourlyRate ?? detail.dailyRate
       const rate = rateValue != null ? `\u00A3${Number(rateValue).toFixed(2)}/hr` : ''
       const hours = detail.totalHours != null ? `${detail.totalHours}h` : ''

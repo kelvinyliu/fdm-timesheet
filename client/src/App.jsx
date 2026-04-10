@@ -27,6 +27,7 @@ import TimesheetReviewPage from './pages/lineManager/TimesheetReviewPage.jsx'
 
 import FinanceTimesheetListPage from './pages/financeStaff/FinanceTimesheetListPage.jsx'
 import FinancePaymentPage from './pages/financeStaff/FinancePaymentPage.jsx'
+import FinancePayRatesPage from './pages/financeStaff/FinancePayRatesPage.jsx'
 
 import UserManagementPage from './pages/admin/UserManagementPage.jsx'
 import AssignmentsPage from './pages/admin/AssignmentsPage.jsx'
@@ -97,6 +98,10 @@ export default function App() {
               <Route
                 path="/finance/timesheets/:id"
                 element={<FinancePaymentPage />}
+              />
+              <Route
+                path="/finance/pay-rates"
+                element={<FinancePayRatesPage />}
               />
             </Route>
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, Fragment } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -14,6 +14,7 @@ import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
+import InputAdornment from '@mui/material/InputAdornment'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -50,18 +51,45 @@ function buildCompletedSummaryItems(timesheet) {
   return [
     {
       key: 'received',
-      label: 'Money Received',
-      value: timesheet.totalBillAmount != null ? formatCurrency(timesheet.totalBillAmount) : '-',
+      label: 'Money In',
+      value: (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          sx={{ color: palette.success, fontFamily: '"JetBrains Mono", monospace' }}
+        >
+          {timesheet.totalBillAmount != null ? formatCurrency(timesheet.totalBillAmount) : '-'}
+        </Typography>
+      ),
     },
     {
       key: 'paidOut',
-      label: 'Paid Out',
-      value: timesheet.totalPayAmount != null ? formatCurrency(timesheet.totalPayAmount) : '-',
+      label: 'Money Out',
+      value: (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          sx={{ color: palette.error, fontFamily: '"JetBrains Mono", monospace' }}
+        >
+          {timesheet.totalPayAmount != null ? formatCurrency(timesheet.totalPayAmount) : '-'}
+        </Typography>
+      ),
     },
     {
       key: 'net',
       label: 'Net Margin',
-      value: timesheet.marginAmount != null ? formatCurrency(timesheet.marginAmount) : '-',
+      value: (
+        <Typography
+          variant="body2"
+          fontWeight={600}
+          sx={{
+            fontFamily: '"JetBrains Mono", monospace',
+            color: (timesheet.marginAmount ?? 0) >= 0 ? palette.success : palette.error,
+          }}
+        >
+          {timesheet.marginAmount != null ? formatCurrency(timesheet.marginAmount) : '-'}
+        </Typography>
+      ),
     },
   ]
 }
@@ -346,31 +374,55 @@ export default function FinancePaymentPage() {
               <Typography variant="h6" gutterBottom>
                 Payment Details
               </Typography>
-              <Stack spacing={3}>
+              <Alert severity="info" sx={{ mb: 4 }}>
+                Rates are pre-filled from client assignments and consultant defaults.
+                Overrides only affect this payment processing.
+              </Alert>
+
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: '1fr 160px 160px',
+                  },
+                  columnGap: 2,
+                  rowGap: { xs: 4, sm: 3 },
+                  alignItems: 'start',
+                }}
+              >
+                {!isMobile && (
+                  <>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Work Category
+                    </Typography>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Client Bill Rate
+                    </Typography>
+                    <Typography variant="caption" fontWeight={700} sx={{ color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Consultant Pay Rate
+                    </Typography>
+                    <Box sx={{ gridColumn: '1 / -1', mt: -1 }}>
+                      <Divider />
+                    </Box>
+                  </>
+                )}
+
                 {computedBuckets.map((item) => (
-                  <Box
-                    key={bucketKey(item)}
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: {
-                        xs: '1fr',
-                        md: 'minmax(220px, 1fr) minmax(160px, 180px) minmax(160px, 180px)',
-                      },
-                      gap: 1.5,
-                      alignItems: 'center',
-                    }}
-                  >
-                    <Box>
+                  <Fragment key={bucketKey(item)}>
+                    <Box sx={{ pt: { sm: 1 } }}>
                       <Typography variant="body2" fontWeight={600}>
                         {getWorkBucketDisplayLabel(item.bucketLabel)}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {item.totalHours}h
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                        {item.totalHours} hours recorded
                       </Typography>
                     </Box>
+
                     <TextField
-                      label="Client Bill Rate (&pound;/hr)"
+                      label={isMobile ? "Client Bill Rate (£/hr)" : ""}
                       type="number"
+                      size="small"
                       required={item.entryKind === 'CLIENT'}
                       value={bucketRates[bucketKey(item)]?.billRate ?? ''}
                       onChange={(event) => setBucketRates((prev) => ({
@@ -380,15 +432,21 @@ export default function FinancePaymentPage() {
                           billRate: event.target.value,
                         },
                       }))}
-                      helperText={item.entryKind === 'CLIENT'
-                        ? 'Prefilled from the client assignment and can be overridden for this payment.'
-                        : 'Internal work does not generate incoming client revenue.'}
-                      slotProps={{ htmlInput: { min: 0, step: '0.01', readOnly: item.entryKind === 'INTERNAL' } }}
+                      slotProps={{
+                        input: {
+                          startAdornment: <InputAdornment position="start">£</InputAdornment>,
+                          readOnly: item.entryKind === 'INTERNAL'
+                        },
+                        htmlInput: { min: 0, step: '0.01' }
+                      }}
                       disabled={item.entryKind === 'INTERNAL'}
+                      fullWidth
                     />
+
                     <TextField
-                      label="Consultant Pay Rate (&pound;/hr)"
+                      label={isMobile ? "Consultant Pay Rate (£/hr)" : ""}
                       type="number"
+                      size="small"
                       required
                       value={bucketRates[bucketKey(item)]?.payRate ?? ''}
                       onChange={(event) => setBucketRates((prev) => ({
@@ -398,126 +456,165 @@ export default function FinancePaymentPage() {
                           payRate: event.target.value,
                         },
                       }))}
-                      helperText={item.suggestedPayRate != null
-                        ? 'Prefilled from the consultant default pay rate.'
-                        : 'No consultant default pay rate is set yet.'}
-                      slotProps={{ htmlInput: { min: 0.01, step: '0.01' } }}
+                      slotProps={{
+                        input: {
+                          startAdornment: <InputAdornment position="start">£</InputAdornment>,
+                        },
+                        htmlInput: { min: 0.01, step: '0.01' }
+                      }}
+                      fullWidth
                     />
-                  </Box>
+                  </Fragment>
                 ))}
+              </Box>
 
+              <Box
+                sx={{
+                  p: 3,
+                  mt: 5,
+                  borderRadius: 2,
+                  border: `1px solid ${palette.border}`,
+                  backgroundColor: palette.surfaceMuted,
+                }}
+              >
+                <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 2, fontWeight: 700, textTransform: 'uppercase' }}>
+                  Finance Totals
+                </Typography>
                 <Box
                   sx={{
-                    p: 2.5,
-                    borderRadius: 2,
-                    border: `1px solid ${palette.border}`,
-                    backgroundColor: palette.surfaceMuted,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                    gap: 3,
+                    mb: computedBuckets.length > 0 ? 4 : 0,
                   }}
                 >
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Finance Totals
-                  </Typography>
-                  <Stack
-                    direction={{ xs: 'column', sm: 'row' }}
-                    spacing={2}
-                    sx={{ mb: computedBuckets.length > 0 ? 1.5 : 0 }}
-                  >
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block' }}>
-                        Total Incoming
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '1.35rem',
-                          fontWeight: 600,
-                          color: palette.textPrimary,
-                        }}
-                      >
-                        {isPaymentReady ? formatCurrency(totals.incoming) : '-'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block' }}>
-                        Total Outgoing
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '1.35rem',
-                          fontWeight: 600,
-                          color: palette.textPrimary,
-                        }}
-                      >
-                        {isPaymentReady ? formatCurrency(totals.outgoing) : '-'}
-                      </Typography>
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block' }}>
-                        Net Margin
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '1.35rem',
-                          fontWeight: 600,
-                          color: palette.textPrimary,
-                        }}
-                      >
-                        {isPaymentReady ? formatCurrency(netMargin) : '-'}
-                      </Typography>
-                    </Box>
-                  </Stack>
-                  <Stack spacing={0.5}>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
+                      Money In
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '1.5rem',
+                        fontWeight: 600,
+                        color: isPaymentReady ? palette.success : palette.textPrimary,
+                      }}
+                    >
+                      {isPaymentReady ? formatCurrency(totals.incoming) : '-'}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
+                      Money Out
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '1.5rem',
+                        fontWeight: 600,
+                        color: isPaymentReady ? palette.error : palette.textPrimary,
+                      }}
+                    >
+                      {isPaymentReady ? formatCurrency(totals.outgoing) : '-'}
+                    </Typography>
+                  </Box>
+                  <Box>
+                    <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5 }}>
+                      Net Margin
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '1.5rem',
+                        fontWeight: 600,
+                        color: isPaymentReady
+                          ? netMargin >= 0
+                            ? palette.success
+                            : palette.error
+                          : palette.textPrimary,
+                      }}
+                    >
+                      {isPaymentReady ? formatCurrency(netMargin) : '-'}
+                    </Typography>
+                  </Box>
+                </Box>
+
+                {computedBuckets.length > 0 && (
+                  <Stack spacing={1} sx={{ pt: 2, borderTop: `1px solid ${palette.border}` }}>
                     {computedBuckets.map((item) => {
+                      const itemMargin = (item.billAmount ?? 0) - (item.payAmount ?? 0)
                       return (
-                        <Typography
+                        <Box
                           key={`working-${bucketKey(item)}`}
-                          variant="caption"
                           sx={{
-                            display: 'block',
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            gap: 1,
                             fontFamily: '"JetBrains Mono", monospace',
-                            color: palette.textMuted,
+                            fontSize: '0.725rem',
                           }}
                         >
-                          {`${getWorkBucketDisplayLabel(item.bucketLabel)}: ${item.hours}h · In ${
-                            item.hasValidBillRate ? formatCurrency(item.billAmount ?? 0) : '-'
-                          } · Out ${
-                            item.hasValidPayRate ? formatCurrency(item.payAmount ?? 0) : '-'
-                          }${
-                            item.hasValidBillRate && item.hasValidPayRate
-                              ? ` · Net ${formatCurrency((item.billAmount ?? 0) - (item.payAmount ?? 0))}`
-                              : ''
-                          }`}
-                        </Typography>
+                          <Typography variant="inherit" sx={{ fontWeight: 600, color: palette.textSecondary, minWidth: 120 }}>
+                            {getWorkBucketDisplayLabel(item.bucketLabel)}:
+                          </Typography>
+                          <Typography variant="inherit" sx={{ color: palette.textMuted }}>
+                            {item.hours}h
+                          </Typography>
+                          <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                          <Typography variant="inherit" sx={{ color: palette.success, fontWeight: 500 }}>
+                            In {item.hasValidBillRate ? formatCurrency(item.billAmount ?? 0) : '-'}
+                          </Typography>
+                          <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                          <Typography variant="inherit" sx={{ color: palette.error, fontWeight: 500 }}>
+                            Out {item.hasValidPayRate ? formatCurrency(item.payAmount ?? 0) : '-'}
+                          </Typography>
+                          {item.hasValidBillRate && item.hasValidPayRate && (
+                            <>
+                              <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                              <Typography
+                                variant="inherit"
+                                sx={{
+                                  fontWeight: 700,
+                                  color: itemMargin >= 0 ? palette.success : palette.error,
+                                }}
+                              >
+                                Net {formatCurrency(itemMargin)}
+                              </Typography>
+                            </>
+                          )}
+                        </Box>
                       )
                     })}
                   </Stack>
-                </Box>
+                )}
+              </Box>
 
+              <Box sx={{ mt: 4 }}>
                 <TextField
-                  label="Notes"
+                  label="Payment Notes"
                   multiline
                   minRows={3}
                   fullWidth
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Optional notes for this payment"
+                  placeholder="Optional notes for this payment (e.g. processing references)"
                 />
+              </Box>
 
-                <Box>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<PaymentIcon />}
-                    onClick={handleProcessPayment}
-                    disabled={submitting || !isPaymentReady}
-                    fullWidth={isMobile}
-                  >
-                    Process Payment
-                  </Button>
-                </Box>
-              </Stack>
+              <Box sx={{ mt: 3 }}>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  size="large"
+                  startIcon={<PaymentIcon />}
+                  onClick={handleProcessPayment}
+                  disabled={submitting || !isPaymentReady}
+                  fullWidth={isMobile}
+                >
+                  Process Payment
+                </Button>
+              </Box>
             </Paper>
           )}
 

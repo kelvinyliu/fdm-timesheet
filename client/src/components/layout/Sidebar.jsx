@@ -20,8 +20,9 @@ const NAV_LINKS = {
     { label: 'Timesheets', path: '/manager/timesheets', icon: AccessTimeIcon },
   ],
   FINANCE_MANAGER: [
-    { label: 'Timesheets', path: '/finance/timesheets', icon: AccessTimeIcon },
-  ],
+  { label: 'Dashboard', path: '/finance/dashboard', icon: DashboardIcon },
+  { label: 'Timesheets', path: '/finance/timesheets', icon: AccessTimeIcon },
+],
   SYSTEM_ADMIN: [
     { label: 'Users', path: '/admin/users', icon: PeopleIcon },
     { label: 'Assignments', path: '/admin/assignments', icon: AssignmentIndIcon },

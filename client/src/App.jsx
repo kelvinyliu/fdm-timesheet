@@ -34,6 +34,7 @@ import AuditLogPage from './pages/admin/AuditLogPage.jsx'
 
 import ConsultantDashboard from './pages/consultant/ConsultantDashboard.jsx'
 import ManagerDashboard from './pages/lineManager/ManagerDashboard.jsx'
+import FinanceDashboard from './pages/financeStaff/FinanceDashboard.jsx'
 
 export default function App() {
   return (
@@ -109,6 +110,10 @@ export default function App() {
                 path="/finance/timesheets/:id"
                 element={<FinancePaymentPage />}
               />
+
+              <Route 
+                path="/finance/dashboard" 
+                element={<FinanceDashboard />} />
             </Route>
 
             {/* Admin routes */}

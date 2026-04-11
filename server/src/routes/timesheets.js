@@ -4,6 +4,7 @@ import requireRole from '../middleware/requireRole.js'
 import { Role } from '../constants/roles.js'
 import {
   listTimesheets,
+  listEligibleWeeks,
   createTimesheetHandler,
   getTimesheet,
   updateEntries,
@@ -19,6 +20,7 @@ const router = Router()
 router.use(auth)
 
 router.get('/', requireRole(Role.CONSULTANT, Role.LINE_MANAGER, Role.FINANCE_MANAGER), listTimesheets)
+router.get('/eligible-weeks', requireRole(Role.CONSULTANT), listEligibleWeeks)
 router.post('/', requireRole(Role.CONSULTANT), createTimesheetHandler)
 router.get('/:id', requireRole(Role.CONSULTANT, Role.LINE_MANAGER, Role.FINANCE_MANAGER), getTimesheet)
 router.put('/:id/entries', requireRole(Role.CONSULTANT), updateEntries)

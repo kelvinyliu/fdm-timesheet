@@ -31,6 +31,8 @@ export function timesheetDto(row, workSummary = []) {
     assignmentClientName: row.assignment_client_name ?? null,
     weekStart: formatDateOnly(row.week_start),
     status: row.status,
+    submittedAt: row.submitted_at ?? null,
+    submittedLate: Boolean(row.submitted_late),
     rejectionComment: row.rejection_comment ?? null,
     totalHours: row.total_hours !== undefined ? parseFloat(row.total_hours) : null,
     workSummary,

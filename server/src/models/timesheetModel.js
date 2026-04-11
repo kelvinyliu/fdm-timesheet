@@ -3,7 +3,7 @@ import pool from '../db.js'
 const TIMESHEET_SELECT = `
   SELECT t.timesheet_id, t.consultant_id, consultant.name AS consultant_name,
          t.assignment_id, assignment.client_name AS assignment_client_name,
-         t.week_start, t.status,
+         t.week_start, t.status, t.submitted_at, t.submitted_late,
          t.created_at, t.updated_at,
          p.total_bill_amount,
          p.total_pay_amount,
@@ -79,12 +79,18 @@ export async function createTimesheet({ consultantId, assignmentId, weekStart })
   return getTimesheetById(rows[0].timesheet_id)
 }
 
-export async function updateTimesheetStatus(id, status) {
+export async function updateTimesheetStatus(id, status, options = {}) {
+  const submittedAt = options.submittedAt ?? null
+  const submittedLate = options.submittedLate ?? null
   const { rows } = await pool.query(
-    `UPDATE timesheets SET status = $1, updated_at = NOW()
+    `UPDATE timesheets
+     SET status = $1,
+         submitted_at = COALESCE($3, submitted_at),
+         submitted_late = COALESCE($4, submitted_late),
+         updated_at = NOW()
      WHERE timesheet_id = $2
      RETURNING timesheet_id`,
-    [status, id]
+    [status, id, submittedAt, submittedLate]
   )
   if (rows.length === 0) return null
   return getTimesheetById(rows[0].timesheet_id)

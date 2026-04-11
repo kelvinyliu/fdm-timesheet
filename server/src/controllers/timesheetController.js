@@ -22,6 +22,10 @@ import { financialNoteDto } from '../dtos/financialNoteDto.js'
 import logger from '../logger.js'
 import { formatDateOnly } from '../utils/dateOnly.js'
 import { isUuid, isIsoDate, toUtcDate } from '../utils/validation.js'
+import {
+  getCreatableTimesheetWeeks,
+  getCurrentUtcMonday,
+} from '../utils/timesheetEligibility.js'
 
 function requireUuid(res, value, fieldName) {
   if (!isUuid(value)) {
@@ -33,6 +37,25 @@ function requireUuid(res, value, fieldName) {
 
 function formatDateValue(value) {
   return formatDateOnly(value)
+}
+
+async function getConsultantWeekEligibility(consultantId, now = new Date()) {
+  const [consultant, timesheets] = await Promise.all([
+    findUserById(consultantId),
+    getTimesheetsByConsultant(consultantId),
+  ])
+
+  if (!consultant) {
+    const err = new Error('Consultant not found')
+    err.status = 404
+    throw err
+  }
+
+  return getCreatableTimesheetWeeks({
+    now,
+    userCreatedAt: consultant.created_at,
+    existingWeekStarts: timesheets.map((timesheet) => timesheet.week_start),
+  })
 }
 
 function entryKey({ date, entryKind, assignmentId }) {
@@ -157,6 +180,18 @@ export async function listTimesheets(req, res, next) {
   }
 }
 
+export async function listEligibleWeeks(req, res, next) {
+  try {
+    const eligibility = await getConsultantWeekEligibility(req.user.userId)
+    res.json({
+      currentWeekStart: eligibility.currentWeekStart,
+      missingPastWeekStarts: eligibility.missingPastWeekStarts,
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
 export async function createTimesheetHandler(req, res, next) {
   try {
     const { weekStart, assignmentId } = req.body
@@ -171,6 +206,30 @@ export async function createTimesheetHandler(req, res, next) {
 
     if (assignmentId !== undefined && assignmentId !== null) {
       return res.status(400).json({ error: 'assignmentId is no longer set during timesheet creation' })
+    }
+
+    const eligibility = await getConsultantWeekEligibility(req.user.userId)
+    const currentWeekStart = eligibility.currentWeekStart
+    const accountCreatedWeekStart = eligibility.accountCreatedWeekStart
+
+    if (eligibility.existingWeekStartSet.has(weekStart)) {
+      return res.status(409).json({ error: 'A timesheet for this week already exists' })
+    }
+
+    if (weekStart > currentWeekStart) {
+      return res.status(400).json({ error: 'Timesheets cannot be created for future weeks' })
+    }
+
+    if (weekStart < accountCreatedWeekStart) {
+      return res.status(400).json({ error: 'Timesheets cannot be created for weeks before your account existed' })
+    }
+
+    if (weekStart < eligibility.earliestWindowWeekStart) {
+      return res.status(400).json({ error: 'Timesheets can only be created for the current week or the previous 4 weeks' })
+    }
+
+    if (!eligibility.creatableWeekStarts.includes(weekStart)) {
+      return res.status(400).json({ error: 'This week is not currently eligible for timesheet creation' })
     }
 
     const timesheet = await createTimesheet({
@@ -365,13 +424,27 @@ export async function submitTimesheet(req, res, next) {
       return res.status(400).json({ error: 'Timesheet must include at least one entry before submission' })
     }
 
-    const updated = await updateTimesheetStatus(req.params.id, TimesheetStatus.PENDING)
+    const currentMonday = getCurrentUtcMonday()
+    const weekStart = formatDateValue(timesheet.week_start)
+    const isFirstSubmission = !timesheet.submitted_at
+    const submittedLate = isFirstSubmission
+      ? weekStart < currentMonday
+      : Boolean(timesheet.submitted_late)
+    const submittedAt = isFirstSubmission ? new Date().toISOString() : timesheet.submitted_at ?? null
+    const updated = await updateTimesheetStatus(req.params.id, TimesheetStatus.PENDING, {
+      submittedAt: isFirstSubmission ? submittedAt : null,
+      submittedLate,
+    })
 
     await tryLogAction({
       action: 'SUBMISSION',
       performedBy: req.user.userId,
       timesheetId: req.params.id,
-      detail: { previousStatus: timesheet.status },
+      detail: {
+        previousStatus: timesheet.status,
+        submittedLate,
+        submittedAt,
+      },
     }, req)
 
     res.json(timesheetDto(updated))

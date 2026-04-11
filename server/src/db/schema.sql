@@ -32,6 +32,8 @@ CREATE TABLE timesheets (
   assignment_id UUID REFERENCES client_assignments(assignment_id) ON DELETE SET NULL,
   week_start    DATE NOT NULL,
   status        timesheet_status NOT NULL DEFAULT 'DRAFT',
+  submitted_at  TIMESTAMPTZ,
+  submitted_late BOOLEAN NOT NULL DEFAULT FALSE,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
 
@@ -70,6 +70,8 @@ const fakeTimesheet = {
   assignment_client_name: null,
   week_start:    '2025-03-24',
   status:        'DRAFT',
+  submitted_at: null,
+  submitted_late: false,
   rejection_comment: null,
   created_at:    '2025-03-24T00:00:00Z',
   updated_at:    '2025-03-24T00:00:00Z',
@@ -83,13 +85,19 @@ const assignedTimesheet = {
 
 const rejectedTimesheet = {
   ...fakeTimesheet,
+  week_start: '2025-03-17',
   status: 'REJECTED',
+  submitted_at: '2025-03-24T09:15:00Z',
+  submitted_late: true,
   rejection_comment: 'Please correct Monday hours',
 }
 
 const pendingTimesheetWithFeedback = {
   ...fakeTimesheet,
+  week_start: '2025-03-17',
   status: 'PENDING',
+  submitted_at: '2025-03-24T09:15:00Z',
+  submitted_late: true,
   rejection_comment: 'Please correct Monday hours',
 }
 
@@ -112,7 +120,23 @@ const internalEntry = {
 }
 
 beforeEach(() => {
+  vi.useFakeTimers()
+  vi.setSystemTime(new Date('2025-03-27T12:00:00Z'))
   vi.clearAllMocks()
+  userModel.findUserById.mockResolvedValue({
+    user_id: 'consultant-1',
+    name: 'Alex Consultant',
+    email: 'alex@example.com',
+    role: 'CONSULTANT',
+    default_pay_rate: '35.00',
+    created_at: '2025-02-03T09:00:00Z',
+  })
+  timesheetModel.getTimesheetsByConsultant.mockResolvedValue([])
+  entryModel.getWorkSummariesByTimesheetIds.mockResolvedValue([])
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 // ---------------------------------------------------------------------------
@@ -155,6 +179,46 @@ describe('GET /api/timesheets', () => {
 })
 
 // ---------------------------------------------------------------------------
+// GET /api/timesheets/eligible-weeks
+// ---------------------------------------------------------------------------
+describe('GET /api/timesheets/eligible-weeks', () => {
+  it('returns only missing past weeks within the 4 week window', async () => {
+    timesheetModel.getTimesheetsByConsultant.mockResolvedValue([
+      { ...fakeTimesheet, week_start: '2025-03-24' },
+      { ...fakeTimesheet, week_start: '2025-03-10' },
+    ])
+
+    const res = await request(app)
+      .get('/api/timesheets/eligible-weeks')
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      currentWeekStart: '2025-03-24',
+      missingPastWeekStarts: ['2025-03-17', '2025-03-03', '2025-02-24'],
+    })
+  })
+
+  it('does not return weeks before the consultant account existed', async () => {
+    userModel.findUserById.mockResolvedValue({
+      user_id: 'consultant-1',
+      role: 'CONSULTANT',
+      created_at: '2025-03-25T09:00:00Z',
+    })
+
+    const res = await request(app)
+      .get('/api/timesheets/eligible-weeks')
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      currentWeekStart: '2025-03-24',
+      missingPastWeekStarts: [],
+    })
+  })
+})
+
+// ---------------------------------------------------------------------------
 // POST /api/timesheets
 // ---------------------------------------------------------------------------
 describe('POST /api/timesheets', () => {
@@ -191,10 +255,46 @@ describe('POST /api/timesheets', () => {
     expect(res.body.error).toMatch(/Monday/)
   })
 
+  it('returns 400 when weekStart is in the future', async () => {
+    const res = await request(app)
+      .post('/api/timesheets')
+      .set('Authorization', consultantToken)
+      .send({ weekStart: '2025-03-31' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/future/i)
+  })
+
+  it('returns 400 when weekStart is older than the 4 week window', async () => {
+    const res = await request(app)
+      .post('/api/timesheets')
+      .set('Authorization', consultantToken)
+      .send({ weekStart: '2025-02-17' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/previous 4 weeks/i)
+  })
+
+  it('returns 400 when weekStart is before the consultant account existed', async () => {
+    userModel.findUserById.mockResolvedValue({
+      user_id: 'consultant-1',
+      role: 'CONSULTANT',
+      created_at: '2025-03-25T09:00:00Z',
+    })
+
+    const res = await request(app)
+      .post('/api/timesheets')
+      .set('Authorization', consultantToken)
+      .send({ weekStart: '2025-03-17' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/account existed/i)
+  })
+
   it('returns 409 when a timesheet for that week already exists', async () => {
-    const err = new Error('duplicate')
-    err.code = '23505'
-    timesheetModel.createTimesheet.mockRejectedValue(err)
+    timesheetModel.getTimesheetsByConsultant.mockResolvedValue([
+      { ...fakeTimesheet, week_start: '2025-03-24' },
+    ])
 
     const res = await request(app)
       .post('/api/timesheets')
@@ -342,9 +442,15 @@ describe('PUT /api/timesheets/:id/entries', () => {
     hoursWorked: 7.5,
   }]
   const archivedClientEntries = [{
-    date: '2025-03-24',
+    date: '2025-03-17',
     entryKind: 'CLIENT',
     assignmentId: '44444444-4444-4444-8444-444444444444',
+    hoursWorked: 7.5,
+  }]
+  const rejectedWeekClientEntries = [{
+    date: '2025-03-17',
+    entryKind: 'CLIENT',
+    assignmentId: '33333333-3333-4333-8333-333333333333',
     hoursWorked: 7.5,
   }]
 
@@ -376,7 +482,7 @@ describe('PUT /api/timesheets/:id/entries', () => {
     const res = await request(app)
       .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
       .set('Authorization', consultantToken)
-      .send({ entries: validClientEntries })
+      .send({ entries: rejectedWeekClientEntries })
 
     expect(res.status).toBe(200)
     expect(res.body[0].entryKind).toBe('CLIENT')
@@ -525,7 +631,12 @@ describe('POST /api/timesheets/:id/submit', () => {
   it('submits a DRAFT timesheet and logs an audit event', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
     entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
-    timesheetModel.updateTimesheetStatus.mockResolvedValue({ ...fakeTimesheet, status: 'PENDING' })
+    timesheetModel.updateTimesheetStatus.mockResolvedValue({
+      ...fakeTimesheet,
+      status: 'PENDING',
+      submitted_at: '2025-03-27T12:00:00.000Z',
+      submitted_late: false,
+    })
     auditModel.logAction.mockResolvedValue({})
 
     const res = await request(app)
@@ -535,15 +646,27 @@ describe('POST /api/timesheets/:id/submit', () => {
     expect(res.status).toBe(200)
     expect(res.body.status).toBe('PENDING')
     expect(res.body.consultantName).toBe('Alex Consultant')
+    expect(timesheetModel.updateTimesheetStatus).toHaveBeenCalledWith(
+      TIMESHEET_ID,
+      'PENDING',
+      expect.objectContaining({ submittedLate: false })
+    )
     expect(auditModel.logAction).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'SUBMISSION', timesheetId: TIMESHEET_ID })
+      expect.objectContaining({
+        action: 'SUBMISSION',
+        timesheetId: TIMESHEET_ID,
+        detail: expect.objectContaining({ submittedLate: false }),
+      })
     )
   })
 
   it('submits a REJECTED timesheet and logs a submission event', async () => {
     timesheetModel.getTimesheetById.mockResolvedValue(rejectedTimesheet)
     entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
-    timesheetModel.updateTimesheetStatus.mockResolvedValue({ ...rejectedTimesheet, status: 'PENDING' })
+    timesheetModel.updateTimesheetStatus.mockResolvedValue({
+      ...rejectedTimesheet,
+      status: 'PENDING',
+    })
     auditModel.logAction.mockResolvedValue({})
 
     const res = await request(app)
@@ -555,7 +678,44 @@ describe('POST /api/timesheets/:id/submit', () => {
     expect(res.body.consultantName).toBe('Alex Consultant')
     expect(res.body.rejectionComment).toBe('Please correct Monday hours')
     expect(auditModel.logAction).toHaveBeenCalledWith(
-      expect.objectContaining({ action: 'SUBMISSION', timesheetId: TIMESHEET_ID })
+      expect.objectContaining({
+        action: 'SUBMISSION',
+        timesheetId: TIMESHEET_ID,
+        detail: expect.objectContaining({ submittedLate: true }),
+      })
+    )
+  })
+
+  it('marks a first submission for a past week as late', async () => {
+    const lateDraftTimesheet = {
+      ...fakeTimesheet,
+      week_start: '2025-03-17',
+    }
+
+    timesheetModel.getTimesheetById.mockResolvedValue(lateDraftTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
+    timesheetModel.updateTimesheetStatus.mockResolvedValue({
+      ...lateDraftTimesheet,
+      status: 'PENDING',
+      submitted_at: '2025-03-27T12:00:00.000Z',
+      submitted_late: true,
+    })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(timesheetModel.updateTimesheetStatus).toHaveBeenCalledWith(
+      TIMESHEET_ID,
+      'PENDING',
+      expect.objectContaining({ submittedLate: true })
+    )
+    expect(auditModel.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({ submittedLate: true }),
+      })
     )
   })
 

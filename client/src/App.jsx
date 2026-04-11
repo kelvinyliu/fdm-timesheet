@@ -24,7 +24,6 @@ import TimesheetEditPage from './pages/consultant/TimesheetEditPage.jsx'
 
 import ManagerTimesheetListPage from './pages/lineManager/ManagerTimesheetListPage.jsx'
 import TimesheetReviewPage from './pages/lineManager/TimesheetReviewPage.jsx'
-import ManagerDashboard from "./pages/lineManager/ManagerDashboard"
 
 import FinanceTimesheetListPage from './pages/financeStaff/FinanceTimesheetListPage.jsx'
 import FinancePaymentPage from './pages/financeStaff/FinancePaymentPage.jsx'
@@ -32,6 +31,9 @@ import FinancePaymentPage from './pages/financeStaff/FinancePaymentPage.jsx'
 import UserManagementPage from './pages/admin/UserManagementPage.jsx'
 import AssignmentsPage from './pages/admin/AssignmentsPage.jsx'
 import AuditLogPage from './pages/admin/AuditLogPage.jsx'
+
+import ConsultantDashboard from './pages/consultant/ConsultantDashboard.jsx'
+import ManagerDashboard from './pages/lineManager/ManagerDashboard.jsx'
 
 export default function App() {
   return (
@@ -66,6 +68,10 @@ export default function App() {
               <Route
                 path="/consultant/timesheets/:id/edit"
                 element={<TimesheetEditPage />}
+              />
+              <Route
+                path="/consultant/dashboard"
+                element={<ConsultantDashboard />}
               />
             </Route>
 

@@ -12,8 +12,9 @@ import { palette } from '../../theme.js'
 
 const NAV_LINKS = {
   CONSULTANT: [
-    { label: 'Timesheets', path: '/consultant/timesheets', icon: AccessTimeIcon },
-  ],
+  { label: 'Dashboard', path: '/consultant/dashboard', icon: DashboardIcon },
+  { label: 'Timesheets', path: '/consultant/timesheets', icon: AccessTimeIcon },
+],
   LINE_MANAGER: [
     { label: 'Dashboard', path: '/manager/dashboard', icon: DashboardIcon },
     { label: 'Timesheets', path: '/manager/timesheets', icon: AccessTimeIcon },

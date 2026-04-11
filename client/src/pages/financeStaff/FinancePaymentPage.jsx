@@ -20,10 +20,15 @@ import { useTheme } from '@mui/material/styles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import PaymentIcon from '@mui/icons-material/Payment'
 import FastForwardIcon from '@mui/icons-material/FastForward'
-import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import { useConfirmation } from '../../context/useConfirmation.js'
+import {
+  useGuardedNavigate,
+  useUnsavedChangesGuard,
+} from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes, getTimesheets } from '../../api/timesheets'
 import { formatDayName, buildWeekDates, formatWeekStart, formatTimestamp } from '../../utils/dateFormatters'
@@ -117,12 +122,27 @@ function entriesToMatrixRows(entries) {
   return Array.from(rowMap.values())
 }
 
+function serializePaymentDraft(bucketRates, notes) {
+  return JSON.stringify({
+    notes,
+    rates: Object.entries(bucketRates)
+      .map(([key, value]) => ({
+        key,
+        billRate: value?.billRate ?? '',
+        payRate: value?.payRate ?? '',
+      }))
+      .sort((a, b) => a.key.localeCompare(b.key)),
+  })
+}
+
 export default function FinancePaymentPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const location = useLocation()
   const navigate = useNavigate()
+  const guardedNavigate = useGuardedNavigate()
   const { id } = useParams()
+  const { confirm } = useConfirmation()
 
   const [timesheet, setTimesheet] = useState(null)
   const [approvedQueue, setApprovedQueue] = useState([])
@@ -134,6 +154,7 @@ export default function FinancePaymentPage() {
   const [feedback, setFeedback] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
   const [fetchedNotes, setFetchedNotes] = useState([])
+  const [savedDraftSnapshot, setSavedDraftSnapshot] = useState('{"notes":"","rates":[]}')
 
   useEffect(() => {
     setLoading(true)
@@ -153,6 +174,21 @@ export default function FinancePaymentPage() {
             ])
           )
         )
+        setSavedDraftSnapshot(
+          serializePaymentDraft(
+            Object.fromEntries(
+              (ts.workSummary ?? []).map((item) => [
+                bucketKey(item),
+                {
+                  billRate: item.suggestedBillRate != null ? String(item.suggestedBillRate) : '',
+                  payRate: item.suggestedPayRate != null ? String(item.suggestedPayRate) : '',
+                },
+              ])
+            ),
+            ''
+          )
+        )
+        setNotes('')
         if (ts.status === 'COMPLETED') {
           getTimesheetNotes(id).then(setFetchedNotes).catch(() => {})
         }
@@ -207,9 +243,40 @@ export default function FinancePaymentPage() {
   }
 
   const nextId = getNextApprovedId()
+  const isDirty = serializePaymentDraft(bucketRates, notes) !== savedDraftSnapshot
+
+  useUnsavedChangesGuard({
+    isDirty,
+    title: 'Leave with unsaved payment changes?',
+    message: 'You have adjusted rates or notes on this payment screen. Leaving now will discard those local changes.',
+    variant: 'warning',
+    discardLabel: 'Discard changes',
+    stayLabel: 'Keep editing',
+  })
 
   async function handleProcessPayment(goNext = false) {
     if (!isPaymentReady) return
+
+    const result = await confirm({
+      variant: 'danger',
+      title: goNext ? 'Process payment and move to the next sheet?' : 'Process payment?',
+      message: goNext
+        ? 'This will mark the current timesheet as paid using the values below and then open the next approved timesheet.'
+        : 'This will mark the current timesheet as paid using the values below.',
+      confirmLabel: goNext ? 'Process and continue' : 'Process payment',
+      cancelLabel: 'Review again',
+      summaryItems: [
+        { key: 'consultant', label: 'Consultant', value: getConsultantDisplayLabel(timesheet.consultantName) },
+        { key: 'week', label: 'Week of', value: formatWeekStart(timesheet.weekStart) },
+        { key: 'hours', label: 'Total hours', value: `${timesheet.totalHours ?? 0}h` },
+        { key: 'incoming', label: 'Money in', value: formatCurrency(totals.incoming) },
+        { key: 'outgoing', label: 'Money out', value: formatCurrency(totals.outgoing) },
+        { key: 'margin', label: 'Net margin', value: formatCurrency(netMargin) },
+      ],
+    })
+
+    if (result !== 'confirm') return
+
     setSubmitting(true)
     setFeedback(null)
     try {
@@ -254,7 +321,7 @@ export default function FinancePaymentPage() {
         {
           key: 'status',
           label: 'Status',
-          value: <StatusBadge status={timesheet.status} />,
+          value: <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />,
         },
         {
           key: 'hours',
@@ -287,7 +354,7 @@ export default function FinancePaymentPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(backDestination)}
+          onClick={() => guardedNavigate(backDestination)}
         >
           Back
         </Button>

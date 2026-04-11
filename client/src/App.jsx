@@ -1,5 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router'
 import { AuthProvider } from './context/AuthContext.jsx'
+import { ConfirmationProvider } from './context/ConfirmationProvider.jsx'
+import { UnsavedChangesProvider } from './context/UnsavedChangesProvider.jsx'
 import { useAuth } from './context/useAuth.js'
 import PrivateRoute from './components/guards/PrivateRoute.jsx'
 import RoleGuard from './components/guards/RoleGuard.jsx'
@@ -36,97 +38,101 @@ import AuditLogPage from './pages/admin/AuditLogPage.jsx'
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/403" element={<ForbiddenPage />} />
-        <Route index element={<RootRedirect />} />
+      <ConfirmationProvider>
+        <UnsavedChangesProvider>
+          <Routes>
+            {/* Public routes */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/403" element={<ForbiddenPage />} />
+            <Route index element={<RootRedirect />} />
 
-        {/* Protected routes */}
-        <Route element={<PrivateRoute />}>
-          <Route element={<AppLayout />}>
-            {/* Consultant routes */}
-            <Route
-              element={
-                <RoleGuard roles={['CONSULTANT']} />
-              }
-            >
-              <Route
-                path="/consultant/timesheets"
-                element={<TimesheetListPage />}
-              />
-              <Route
-                path="/consultant/timesheets/new"
-                element={<TimesheetCreatePage />}
-              />
-              <Route
-                path="/consultant/timesheets/:id"
-                element={<TimesheetDetailPage />}
-              />
-              <Route
-                path="/consultant/timesheets/:id/edit"
-                element={<TimesheetEditPage />}
-              />
-            </Route>
+            {/* Protected routes */}
+            <Route element={<PrivateRoute />}>
+              <Route element={<AppLayout />}>
+                {/* Consultant routes */}
+                <Route
+                  element={
+                    <RoleGuard roles={['CONSULTANT']} />
+                  }
+                >
+                  <Route
+                    path="/consultant/timesheets"
+                    element={<TimesheetListPage />}
+                  />
+                  <Route
+                    path="/consultant/timesheets/new"
+                    element={<TimesheetCreatePage />}
+                  />
+                  <Route
+                    path="/consultant/timesheets/:id"
+                    element={<TimesheetDetailPage />}
+                  />
+                  <Route
+                    path="/consultant/timesheets/:id/edit"
+                    element={<TimesheetEditPage />}
+                  />
+                </Route>
 
-            {/* Line manager routes */}
-            <Route
-              element={
-                <RoleGuard roles={['LINE_MANAGER']} />
-              }
-            >
-              <Route
-                path="/manager/timesheets"
-                element={<ManagerTimesheetListPage />}
-              />
-              <Route
-                path="/manager/timesheets/:id"
-                element={<TimesheetReviewPage />}
-              />
-            </Route>
+                {/* Line manager routes */}
+                <Route
+                  element={
+                    <RoleGuard roles={['LINE_MANAGER']} />
+                  }
+                >
+                  <Route
+                    path="/manager/timesheets"
+                    element={<ManagerTimesheetListPage />}
+                  />
+                  <Route
+                    path="/manager/timesheets/:id"
+                    element={<TimesheetReviewPage />}
+                  />
+                </Route>
 
-            {/* Finance routes */}
-            <Route
-              element={
-                <RoleGuard roles={['FINANCE_MANAGER']} />
-              }
-            >
-              <Route
-                path="/finance/timesheets"
-                element={<FinanceTimesheetListPage />}
-              />
-              <Route
-                path="/finance/timesheets/:id"
-                element={<FinancePaymentPage />}
-              />
-              <Route
-                path="/finance/pay-rates"
-                element={<FinancePayRatesPage />}
-              />
-            </Route>
+                {/* Finance routes */}
+                <Route
+                  element={
+                    <RoleGuard roles={['FINANCE_MANAGER']} />
+                  }
+                >
+                  <Route
+                    path="/finance/timesheets"
+                    element={<FinanceTimesheetListPage />}
+                  />
+                  <Route
+                    path="/finance/timesheets/:id"
+                    element={<FinancePaymentPage />}
+                  />
+                  <Route
+                    path="/finance/pay-rates"
+                    element={<FinancePayRatesPage />}
+                  />
+                </Route>
 
-            {/* Admin routes */}
-            <Route
-              element={
-                <RoleGuard roles={['SYSTEM_ADMIN']} />
-              }
-            >
-              <Route
-                path="/admin/users"
-                element={<UserManagementPage />}
-              />
-              <Route
-                path="/admin/assignments"
-                element={<AssignmentsPage />}
-              />
-              <Route
-                path="/admin/audit"
-                element={<AuditLogPage />}
-              />
+                {/* Admin routes */}
+                <Route
+                  element={
+                    <RoleGuard roles={['SYSTEM_ADMIN']} />
+                  }
+                >
+                  <Route
+                    path="/admin/users"
+                    element={<UserManagementPage />}
+                  />
+                  <Route
+                    path="/admin/assignments"
+                    element={<AssignmentsPage />}
+                  />
+                  <Route
+                    path="/admin/audit"
+                    element={<AuditLogPage />}
+                  />
+                </Route>
+              </Route>
             </Route>
-          </Route>
-        </Route>
-      </Routes>
+          </Routes>
+        </UnsavedChangesProvider>
+      </ConfirmationProvider>
     </AuthProvider>
   )
 }

@@ -21,6 +21,11 @@ import MenuIcon from '@mui/icons-material/Menu'
 import { Outlet, useLocation } from 'react-router'
 import Sidebar from './Sidebar.jsx'
 import { useAuth } from '../../context/useAuth.js'
+import { useConfirmation } from '../../context/useConfirmation.js'
+import {
+  useUnsavedChangesController,
+  useUnsavedChangesGuard,
+} from '../../context/useUnsavedChanges.js'
 import { changePassword } from '../../api/auth.js'
 import { palette } from '../../theme.js'
 
@@ -266,6 +271,8 @@ export default function AppLayout() {
   const theme = useTheme()
   const location = useLocation()
   const { logout, user } = useAuth()
+  const { confirm } = useConfirmation()
+  const { runWithGuard } = useUnsavedChangesController()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'))
 
@@ -276,6 +283,20 @@ export default function AppLayout() {
   const [pwLoading, setPwLoading] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const crumbs = getBreadcrumbs(location.pathname)
+  const isPasswordDialogDirty = pwOpen && (
+    Boolean(pwForm.current) ||
+    Boolean(pwForm.next) ||
+    Boolean(pwForm.confirm)
+  )
+
+  useUnsavedChangesGuard({
+    isDirty: isPasswordDialogDirty,
+    title: 'Discard password changes?',
+    message: 'You have started editing the password form. Leaving now will discard those values.',
+    variant: 'warning',
+    discardLabel: 'Discard password changes',
+    stayLabel: 'Keep editing',
+  })
 
   useEffect(() => {
     setMobileNavOpen(false)
@@ -286,6 +307,25 @@ export default function AppLayout() {
     setPwError('')
     setPwSuccess(false)
     setPwForm({ current: '', next: '', confirm: '' })
+  }
+
+  async function attemptCloseDialog() {
+    if (!isPasswordDialogDirty || pwLoading) {
+      closeDialog()
+      return
+    }
+
+    const result = await confirm({
+      variant: 'warning',
+      title: 'Discard password changes?',
+      message: 'The password form has unsaved values. Closing it now will discard them.',
+      confirmLabel: 'Discard changes',
+      cancelLabel: 'Keep editing',
+    })
+
+    if (result === 'confirm') {
+      closeDialog()
+    }
   }
 
   async function handleChangePassword() {
@@ -371,7 +411,7 @@ export default function AppLayout() {
             user={user}
             pinned
             onChangePassword={() => setPwOpen(true)}
-            onLogout={logout}
+            onLogout={() => runWithGuard(logout)}
           />
         </Box>
       )}
@@ -494,7 +534,7 @@ export default function AppLayout() {
                 setMobileNavOpen(false)
                 setPwOpen(true)
               }}
-              onLogout={logout}
+              onLogout={() => runWithGuard(logout)}
             />
           </Drawer>
         </>
@@ -603,7 +643,9 @@ export default function AppLayout() {
       {/* Change Password Dialog */}
       <Dialog
         open={pwOpen}
-        onClose={closeDialog}
+        onClose={pwLoading ? undefined : () => {
+          void attemptCloseDialog()
+        }}
         maxWidth="xs"
         fullWidth
         fullScreen={isSmallScreen}
@@ -645,7 +687,9 @@ export default function AppLayout() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog} disabled={pwLoading}>
+          <Button onClick={() => {
+            void attemptCloseDialog()
+          }} disabled={pwLoading}>
             Cancel
           </Button>
           <Button variant="contained" onClick={handleChangePassword} disabled={pwLoading}>

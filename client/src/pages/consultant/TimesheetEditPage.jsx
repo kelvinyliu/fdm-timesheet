@@ -9,11 +9,6 @@ import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
 import MenuItem from '@mui/material/MenuItem'
-import Dialog from '@mui/material/Dialog'
-import DialogActions from '@mui/material/DialogActions'
-import DialogContent from '@mui/material/DialogContent'
-import DialogContentText from '@mui/material/DialogContentText'
-import DialogTitle from '@mui/material/DialogTitle'
 import IconButton from '@mui/material/IconButton'
 import SaveIcon from '@mui/icons-material/Save'
 import SendIcon from '@mui/icons-material/Send'
@@ -29,6 +24,11 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { useConfirmation } from '../../context/useConfirmation.js'
+import {
+  useGuardedNavigate,
+  useUnsavedChangesGuard,
+} from '../../context/useUnsavedChanges.js'
 import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet, getTimesheets } from '../../api/timesheets'
 import { getAssignments } from '../../api/assignments'
 import { buildWeekDates, formatWeekStart, formatDayName } from '../../utils/dateFormatters'
@@ -96,12 +96,38 @@ function getAssignmentOptionLabel(assignment) {
   return assignment.archived ? `${assignment.clientName} (Archived)` : assignment.clientName
 }
 
+function serializeEntries(entries) {
+  return JSON.stringify(
+    [...entries]
+      .map((entry) => ({
+        date: entry.date,
+        entryKind: entry.entryKind,
+        assignmentId: entry.assignmentId ?? null,
+        hoursWorked: Number(entry.hoursWorked),
+      }))
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date.localeCompare(b.date)
+        if (a.entryKind !== b.entryKind) return a.entryKind.localeCompare(b.entryKind)
+        if ((a.assignmentId ?? '') !== (b.assignmentId ?? '')) {
+          return (a.assignmentId ?? '').localeCompare(b.assignmentId ?? '')
+        }
+        return a.hoursWorked - b.hoursWorked
+      })
+  )
+}
+
+function rowHasValues(row) {
+  return Object.values(row.hours ?? {}).some((value) => String(value ?? '').trim() !== '')
+}
+
 export default function TimesheetEditPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const guardedNavigate = useGuardedNavigate()
   const location = useLocation()
   const localIdRef = useRef(0)
   const autofillWarningShown = useRef(false)
+  const { confirm } = useConfirmation()
 
   const [timesheet, setTimesheet] = useState(null)
   const [matrixRows, setMatrixRows] = useState([])
@@ -113,7 +139,7 @@ export default function TimesheetEditPage() {
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [autofilling, setAutofilling] = useState(false)
-  const [submitConfirmOpen, setSubmitConfirmOpen] = useState(false)
+  const [savedEntriesSnapshot, setSavedEntriesSnapshot] = useState('[]')
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   function nextLocalId() {
@@ -152,6 +178,7 @@ export default function TimesheetEditPage() {
         setArchivedAssignments(buildArchivedAssignments(ts, fetchedAssignments))
         setPreferredAssignmentId(getMostRecentClientAssignmentId(allTimesheets, id))
         setMatrixRows(entriesToMatrixRows(ts.entries ?? [], nextLocalId))
+        setSavedEntriesSnapshot(serializeEntries(ts.entries ?? []))
       })
       .catch((err) => setFetchError(err.message ?? 'Failed to load timesheet'))
       .finally(() => setLoading(false))
@@ -192,8 +219,22 @@ export default function TimesheetEditPage() {
     }])
   }
 
-  function handleRemoveRow(rowId) {
+  async function handleRemoveRow(rowId) {
     if (!canChangeBuckets) return
+    const row = matrixRows.find((item) => item.id === rowId)
+
+    if (row && rowHasValues(row)) {
+      const result = await confirm({
+        variant: 'warning',
+        title: 'Remove this work category row?',
+        message: 'This row contains entered hours. Removing it now will discard those values from the draft.',
+        confirmLabel: 'Remove row',
+        cancelLabel: 'Keep row',
+      })
+
+      if (result !== 'confirm') return
+    }
+
     setMatrixRows(prev => prev.filter(r => r.id !== rowId))
   }
 
@@ -215,24 +256,54 @@ export default function TimesheetEditPage() {
     return entries
   }
 
+  const currentEntriesPayload = getEntriesPayload()
+  const isDirty = serializeEntries(currentEntriesPayload) !== savedEntriesSnapshot
+
+  useUnsavedChangesGuard({
+    isDirty,
+    title: 'Leave with unsaved timesheet changes?',
+    message: 'This draft has local edits that have not been saved yet. You can save now or discard them.',
+    variant: 'warning',
+    discardLabel: 'Discard changes',
+    stayLabel: 'Keep editing',
+    saveLabel: 'Save and leave',
+    onSave: saveDraft,
+  })
+
   async function saveDraft() {
     setSaving(true)
     try {
-      await updateEntries(id, getEntriesPayload())
+      await updateEntries(id, currentEntriesPayload)
+      setSavedEntriesSnapshot(serializeEntries(currentEntriesPayload))
       showSnackbar('Draft saved successfully.')
+      return true
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to save draft.', 'error')
+      return false
     } finally {
       setSaving(false)
     }
   }
 
   async function handleSubmit() {
+    const result = await confirm({
+      variant: 'info',
+      title: 'Submit timesheet for review?',
+      message: 'This will send the current draft to your manager for review and lock editing until the sheet is returned.',
+      confirmLabel: 'Submit for review',
+      cancelLabel: 'Keep editing',
+      summaryItems: [
+        { key: 'week', label: 'Week of', value: formatWeekStart(timesheet.weekStart) },
+        { key: 'hours', label: 'Total hours', value: `${totalHours.toFixed(2)}h` },
+      ],
+    })
+
+    if (result !== 'confirm') return
+
     setSubmitting(true)
     try {
-      await updateEntries(id, getEntriesPayload())
+      await updateEntries(id, currentEntriesPayload)
       await submitTimesheet(id)
-      setSubmitConfirmOpen(false)
       navigate(`/consultant/timesheets/${id}`)
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to submit timesheet.', 'error')
@@ -241,6 +312,22 @@ export default function TimesheetEditPage() {
   }
 
   async function handleAutofill() {
+    if (isDirty) {
+      const result = await confirm({
+        variant: 'warning',
+        title: 'Replace current draft with last week\'s hours?',
+        message: 'Autofill will overwrite the current in-progress matrix with the previous week\'s pattern where possible.',
+        confirmLabel: 'Overwrite with autofill',
+        cancelLabel: 'Keep current draft',
+        summaryItems: [
+          { key: 'hours', label: 'Current draft', value: `${totalHours.toFixed(2)}h entered` },
+          { key: 'rows', label: 'Work categories', value: `${matrixRows.length} row${matrixRows.length === 1 ? '' : 's'}` },
+        ],
+      })
+
+      if (result !== 'confirm') return
+    }
+
     setAutofilling(true)
     try {
       const previousEntries = await autofillTimesheet(id)
@@ -282,7 +369,7 @@ export default function TimesheetEditPage() {
         <Alert severity="error" sx={{ mb: 3 }}>
           {fetchError}
         </Alert>
-        <Button variant="outlined" onClick={() => navigate('/consultant/timesheets')}>
+        <Button variant="outlined" onClick={() => guardedNavigate('/consultant/timesheets')}>
           Back to Timesheets
         </Button>
       </Box>
@@ -298,7 +385,7 @@ export default function TimesheetEditPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/consultant/timesheets')}
+          onClick={() => guardedNavigate('/consultant/timesheets')}
         >
           Back
         </Button>
@@ -408,8 +495,10 @@ export default function TimesheetEditPage() {
                       </TableCell>
                       <TableCell align="center">
                          {canChangeBuckets && (
-                          <IconButton
-                            onClick={() => handleRemoveRow(row.id)}
+                         <IconButton
+                            onClick={() => {
+                              void handleRemoveRow(row.id)
+                            }}
                             disabled={isBusy}
                             color="error"
                             size="small"
@@ -454,7 +543,9 @@ export default function TimesheetEditPage() {
             variant="contained"
             color="primary"
             startIcon={<SendIcon />}
-            onClick={() => setSubmitConfirmOpen(true)}
+            onClick={() => {
+              void handleSubmit()
+            }}
             disabled={isBusy}
             size="large"
           >
@@ -462,35 +553,6 @@ export default function TimesheetEditPage() {
           </Button>
         </Stack>
       </Paper>
-
-      <Dialog
-        open={submitConfirmOpen}
-        onClose={submitting ? undefined : () => setSubmitConfirmOpen(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Submit Timesheet</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Submit this timesheet for manager review?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setSubmitConfirmOpen(false)}
-            disabled={submitting}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmit}
-            disabled={submitting}
-          >
-            {submitting ? 'Submitting...' : 'Submit'}
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar
         open={snackbar.open}

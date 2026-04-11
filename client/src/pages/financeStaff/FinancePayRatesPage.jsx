@@ -19,6 +19,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import InputAdornment from '@mui/material/InputAdornment'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { getConsultantPayRates, updateDefaultPayRate } from '../../api/users'
 import { formatDate } from '../../utils/dateFormatters'
 
@@ -83,6 +84,20 @@ export default function FinancePayRatesPage() {
       setSavingById((prev) => ({ ...prev, [consultantId]: false }))
     }
   }
+
+  const hasUnsavedRateChanges = consultants.some((consultant) => (
+    (pendingRates[consultant.id] ?? '') !==
+    (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
+  ))
+
+  useUnsavedChangesGuard({
+    isDirty: hasUnsavedRateChanges,
+    title: 'Leave with unsaved pay-rate edits?',
+    message: 'Some consultant pay-rate fields have been edited locally but not saved yet.',
+    variant: 'warning',
+    discardLabel: 'Discard edits',
+    stayLabel: 'Keep editing',
+  })
 
   if (loading) return <LoadingSpinner />
 

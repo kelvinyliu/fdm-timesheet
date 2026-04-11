@@ -6,8 +6,9 @@ import PeopleIcon from '@mui/icons-material/People'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import HistoryIcon from '@mui/icons-material/History'
 import PaymentsIcon from '@mui/icons-material/Payments'
-import { useNavigate, useLocation } from 'react-router'
+import { useLocation } from 'react-router'
 import { useAuth } from '../../context/useAuth.js'
+import { useGuardedNavigate } from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
 
 const NAV_LINKS = {
@@ -30,7 +31,7 @@ const NAV_LINKS = {
 
 export default function Sidebar({ onNavigate }) {
   const { user } = useAuth()
-  const navigate = useNavigate()
+  const guardedNavigate = useGuardedNavigate()
   const location = useLocation()
 
   const links = (user && NAV_LINKS[user.role]) || []
@@ -55,9 +56,11 @@ export default function Sidebar({ onNavigate }) {
         return (
           <ButtonBase
             key={path}
-            onClick={() => {
-              navigate(path)
-              onNavigate?.()
+            onClick={async () => {
+              const didNavigate = await guardedNavigate(path)
+              if (didNavigate) {
+                onNavigate?.()
+              }
             }}
             sx={{
               width: '100%',

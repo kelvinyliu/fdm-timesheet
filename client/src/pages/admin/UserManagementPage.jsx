@@ -29,9 +29,12 @@ import SearchIcon from '@mui/icons-material/Search'
 import InputAdornment from '@mui/material/InputAdornment'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { useConfirmation } from '../../context/useConfirmation.js'
+import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { getUsers, createUser, updateUserRole, deleteUser } from '../../api/users'
 
 const ROLES = ['CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN']
+const SENSITIVE_ROLES = new Set(['FINANCE_MANAGER', 'SYSTEM_ADMIN'])
 
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'CONSULTANT' }
 
@@ -49,8 +52,22 @@ export default function UserManagementPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState({ id: null, name: '' })
+  const { confirm } = useConfirmation()
+  const isCreateDialogDirty = dialogOpen && (
+    Boolean(form.name) ||
+    Boolean(form.email) ||
+    Boolean(form.password) ||
+    form.role !== EMPTY_FORM.role
+  )
+
+  useUnsavedChangesGuard({
+    isDirty: isCreateDialogDirty,
+    title: 'Discard this new user draft?',
+    message: 'The create-user form has unsaved values. Leaving now will discard them.',
+    variant: 'warning',
+    discardLabel: 'Discard user draft',
+    stayLabel: 'Keep editing',
+  })
 
   async function fetchUsers() {
     setLoading(true)
@@ -76,6 +93,30 @@ export default function UserManagementPage() {
   async function handleSaveRole(userId) {
     const role = pendingRoles[userId]
     if (!role) return
+
+    const user = users.find((item) => item.id === userId)
+    const currentRole = user?.role ?? null
+    const needsConfirmation = currentRole !== role && (
+      SENSITIVE_ROLES.has(currentRole) || SENSITIVE_ROLES.has(role)
+    )
+
+    if (needsConfirmation) {
+      const result = await confirm({
+        variant: 'warning',
+        title: 'Confirm sensitive role change',
+        message: 'This role change affects elevated access in the system.',
+        confirmLabel: 'Save role change',
+        cancelLabel: 'Keep current role',
+        summaryItems: [
+          { key: 'user', label: 'User', value: user?.name ?? 'Unknown user' },
+          { key: 'from', label: 'Current role', value: currentRole?.replace(/_/g, ' ') ?? '-' },
+          { key: 'to', label: 'New role', value: role.replace(/_/g, ' ') },
+        ],
+      })
+
+      if (result !== 'confirm') return
+    }
+
     try {
       await updateUserRole(userId, role)
       setPendingRoles((prev) => {
@@ -89,21 +130,22 @@ export default function UserManagementPage() {
     }
   }
 
-  function openDeleteDialog(userId, userName) {
-    setDeleteTarget({ id: userId, name: userName })
-    setDeleteDialogOpen(true)
-  }
+  async function handleDeleteUser(userId, userName) {
+    const result = await confirm({
+      variant: 'danger',
+      title: 'Delete this user?',
+      message: 'This action cannot be undone.',
+      confirmLabel: 'Delete user',
+      cancelLabel: 'Keep user',
+      summaryItems: [
+        { key: 'user', label: 'User', value: userName ? `"${userName}"` : 'Selected user' },
+      ],
+    })
 
-  function closeDeleteDialog() {
-    setDeleteDialogOpen(false)
-    setDeleteTarget({ id: null, name: '' })
-  }
+    if (result !== 'confirm') return
 
-  async function confirmDelete() {
-    if (!deleteTarget.id) return
     try {
-      await deleteUser(deleteTarget.id)
-      closeDeleteDialog()
+      await deleteUser(userId)
       await fetchUsers()
     } catch (err) {
       setError(err.message || 'Failed to delete user.')
@@ -118,6 +160,25 @@ export default function UserManagementPage() {
 
   function closeDialog() {
     setDialogOpen(false)
+  }
+
+  async function attemptCloseDialog() {
+    if (!isCreateDialogDirty || formLoading) {
+      closeDialog()
+      return
+    }
+
+    const result = await confirm({
+      variant: 'warning',
+      title: 'Discard this new user draft?',
+      message: 'The create-user form has unsaved values. Closing it now will discard them.',
+      confirmLabel: 'Discard draft',
+      cancelLabel: 'Keep editing',
+    })
+
+    if (result === 'confirm') {
+      closeDialog()
+    }
   }
 
   function handleFormChange(field, value) {
@@ -243,7 +304,9 @@ export default function UserManagementPage() {
                         variant="outlined"
                         color="error"
                         startIcon={<DeleteIcon />}
-                        onClick={() => openDeleteDialog(u.id, u.name)}
+                        onClick={() => {
+                          void handleDeleteUser(u.id, u.name)
+                        }}
                       >
                         Delete
                       </Button>
@@ -320,7 +383,9 @@ export default function UserManagementPage() {
                         <IconButton
                           size="small"
                           color="error"
-                          onClick={() => openDeleteDialog(u.id, u.name)}
+                          onClick={() => {
+                            void handleDeleteUser(u.id, u.name)
+                          }}
                         >
                           <DeleteIcon fontSize="small" />
                         </IconButton>
@@ -341,26 +406,12 @@ export default function UserManagementPage() {
         </TableContainer>
       )}
 
-      <Dialog open={deleteDialogOpen} onClose={closeDeleteDialog}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to delete {deleteTarget.name ? `"${deleteTarget.name}"` : 'this user'}?
-            This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDeleteDialog}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={confirmDelete}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Create User Dialog */}
       <Dialog
         open={dialogOpen}
-        onClose={closeDialog}
+        onClose={formLoading ? undefined : () => {
+          void attemptCloseDialog()
+        }}
         maxWidth="xs"
         fullWidth
         fullScreen={isMobile}
@@ -413,7 +464,9 @@ export default function UserManagementPage() {
           </Select>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeDialog} disabled={formLoading}>
+          <Button onClick={() => {
+            void attemptCloseDialog()
+          }} disabled={formLoading}>
             Cancel
           </Button>
           <Button

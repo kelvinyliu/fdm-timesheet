@@ -30,6 +30,8 @@ import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { useConfirmation } from '../../context/useConfirmation.js'
+import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import {
   getAllAssignments,
   createAssignment,
@@ -63,9 +65,6 @@ export default function AssignmentsPage() {
   const [activeTab, setActiveTab] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState({ id: null, type: null })
-
   const [clientAssignments, setClientAssignments] = useState([])
   const [clientLoading, setClientLoading] = useState(true)
   const [clientError, setClientError] = useState('')
@@ -83,8 +82,39 @@ export default function AssignmentsPage() {
   const [managerDialogMode, setManagerDialogMode] = useState('create')
   const [managerEditingId, setManagerEditingId] = useState(null)
   const [managerForm, setManagerForm] = useState(EMPTY_MANAGER_FORM)
+  const [managerInitialForm, setManagerInitialForm] = useState(EMPTY_MANAGER_FORM)
   const [managerFormError, setManagerFormError] = useState('')
   const [managerFormLoading, setManagerFormLoading] = useState(false)
+  const { confirm } = useConfirmation()
+  const isClientDialogDirty = clientDialogOpen && (
+    Boolean(clientForm.consultantId) ||
+    Boolean(clientForm.clientName) ||
+    Boolean(clientForm.clientBillRate)
+  )
+  const isManagerDialogDirty = managerDialogOpen && (
+    managerForm.managerId !== managerInitialForm.managerId ||
+    managerForm.consultantId !== managerInitialForm.consultantId
+  )
+
+  useUnsavedChangesGuard({
+    isDirty: isClientDialogDirty,
+    title: 'Discard this client assignment draft?',
+    message: 'The client assignment form has unsaved values.',
+    variant: 'warning',
+    discardLabel: 'Discard draft',
+    stayLabel: 'Keep editing',
+  })
+
+  useUnsavedChangesGuard({
+    isDirty: isManagerDialogDirty,
+    title: managerDialogMode === 'edit' ? 'Discard manager assignment changes?' : 'Discard this manager assignment draft?',
+    message: managerDialogMode === 'edit'
+      ? 'The manager assignment changes have not been saved yet.'
+      : 'The manager assignment form has unsaved values.',
+    variant: 'warning',
+    discardLabel: managerDialogMode === 'edit' ? 'Discard changes' : 'Discard draft',
+    stayLabel: 'Keep editing',
+  })
 
   const consultants = users.filter((u) => u.role === 'CONSULTANT')
   const managers = users.filter((u) => u.role === 'LINE_MANAGER')
@@ -141,35 +171,47 @@ export default function AssignmentsPage() {
     })
   }, [managerAssignments, searchQuery])
 
-  function handleDeleteClientAssignment(id) {
-    setDeleteTarget({ id, type: 'client' })
-    setDeleteDialogOpen(true)
-  }
+  async function handleDeleteClientAssignment(id, assignmentLabel) {
+    const result = await confirm({
+      variant: 'danger',
+      title: 'Remove this client assignment?',
+      message: 'This action cannot be undone.',
+      confirmLabel: 'Delete assignment',
+      cancelLabel: 'Keep assignment',
+      summaryItems: assignmentLabel
+        ? [{ key: 'assignment', label: 'Assignment', value: assignmentLabel }]
+        : [],
+    })
 
-  function handleDeleteManagerAssignment(id) {
-    setDeleteTarget({ id, type: 'manager' })
-    setDeleteDialogOpen(true)
-  }
-
-  async function confirmDeletion() {
-    if (!deleteTarget.id || !deleteTarget.type) return
+    if (result !== 'confirm') return
 
     try {
-      if (deleteTarget.type === 'client') {
-        await deleteAssignment(deleteTarget.id)
-        await fetchClientAssignments()
-      } else {
-        await deleteManagerAssignment(deleteTarget.id)
-        await fetchManagerAssignments()
-      }
-      setDeleteDialogOpen(false)
+      await deleteAssignment(id)
+      await fetchClientAssignments()
     } catch (err) {
-      if (deleteTarget.type === 'client') {
-        setClientError(err.message || 'Failed to delete assignment.')
-      } else {
-        setManagerError(err.message || 'Failed to delete assignment.')
-      }
-      setDeleteDialogOpen(false)
+      setClientError(err.message || 'Failed to delete assignment.')
+    }
+  }
+
+  async function handleDeleteManagerAssignment(id, assignmentLabel) {
+    const result = await confirm({
+      variant: 'danger',
+      title: 'Remove this manager assignment?',
+      message: 'This action cannot be undone.',
+      confirmLabel: 'Delete assignment',
+      cancelLabel: 'Keep assignment',
+      summaryItems: assignmentLabel
+        ? [{ key: 'assignment', label: 'Assignment', value: assignmentLabel }]
+        : [],
+    })
+
+    if (result !== 'confirm') return
+
+    try {
+      await deleteManagerAssignment(id)
+      await fetchManagerAssignments()
+    } catch (err) {
+      setManagerError(err.message || 'Failed to delete assignment.')
     }
   }
 
@@ -210,6 +252,7 @@ export default function AssignmentsPage() {
     setManagerDialogMode('create')
     setManagerEditingId(null)
     setManagerForm(EMPTY_MANAGER_FORM)
+    setManagerInitialForm(EMPTY_MANAGER_FORM)
     setManagerFormError('')
     setManagerDialogOpen(true)
   }
@@ -221,6 +264,10 @@ export default function AssignmentsPage() {
       managerId: assignment.managerId ?? '',
       consultantId: assignment.consultantId ?? '',
     })
+    setManagerInitialForm({
+      managerId: assignment.managerId ?? '',
+      consultantId: assignment.consultantId ?? '',
+    })
     setManagerFormError('')
     setManagerDialogOpen(true)
   }
@@ -228,6 +275,44 @@ export default function AssignmentsPage() {
   function closeManagerDialog() {
     setManagerDialogOpen(false)
     setManagerFormError('')
+  }
+
+  async function attemptCloseClientDialog() {
+    if (!isClientDialogDirty || clientFormLoading) {
+      setClientDialogOpen(false)
+      return
+    }
+
+    const result = await confirm({
+      variant: 'warning',
+      title: 'Discard this client assignment draft?',
+      message: 'Closing now will discard the values you have entered.',
+      confirmLabel: 'Discard draft',
+      cancelLabel: 'Keep editing',
+    })
+
+    if (result === 'confirm') {
+      setClientDialogOpen(false)
+    }
+  }
+
+  async function attemptCloseManagerDialog() {
+    if (!isManagerDialogDirty || managerFormLoading) {
+      closeManagerDialog()
+      return
+    }
+
+    const result = await confirm({
+      variant: 'warning',
+      title: managerDialogMode === 'edit' ? 'Discard manager assignment changes?' : 'Discard this manager assignment draft?',
+      message: 'Closing now will discard the current values in this form.',
+      confirmLabel: managerDialogMode === 'edit' ? 'Discard changes' : 'Discard draft',
+      cancelLabel: 'Keep editing',
+    })
+
+    if (result === 'confirm') {
+      closeManagerDialog()
+    }
   }
 
   async function handleSubmitManagerAssignment() {
@@ -378,14 +463,21 @@ export default function AssignmentsPage() {
                         </Typography>
                       </Box>
 
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => handleDeleteClientAssignment(a.id)}
-                      >
-                        Remove Assignment
-                      </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => {
+                            void handleDeleteClientAssignment(
+                              a.id,
+                              `${a.clientName} for ${getConsultantDisplayLabel(
+                                users.find((u) => u.id === a.consultantId)?.name ?? null
+                              )}`
+                            )
+                          }}
+                        >
+                          Remove Assignment
+                        </Button>
                     </Stack>
                   </Paper>
                 ))}
@@ -437,7 +529,14 @@ export default function AssignmentsPage() {
                           <IconButton
                             size="small"
                             color="error"
-                            onClick={() => handleDeleteClientAssignment(a.id)}
+                            onClick={() => {
+                              void handleDeleteClientAssignment(
+                                a.id,
+                                `${a.clientName} for ${getConsultantDisplayLabel(
+                                  users.find((u) => u.id === a.consultantId)?.name ?? null
+                                )}`
+                              )
+                            }}
                           >
                             <DeleteIcon fontSize="small" />
                           </IconButton>
@@ -515,7 +614,9 @@ export default function AssignmentsPage() {
                           variant="outlined"
                           color="error"
                           startIcon={<DeleteIcon />}
-                          onClick={() => handleDeleteManagerAssignment(a.id)}
+                          onClick={() => {
+                            void handleDeleteManagerAssignment(a.id, `${a.managerName} -> ${a.consultantName}`)
+                          }}
                           fullWidth
                         >
                           Remove Assignment
@@ -560,7 +661,9 @@ export default function AssignmentsPage() {
                             <IconButton
                               size="small"
                               color="error"
-                              onClick={() => handleDeleteManagerAssignment(a.id)}
+                              onClick={() => {
+                                void handleDeleteManagerAssignment(a.id, `${a.managerName} -> ${a.consultantName}`)
+                              }}
                             >
                               <DeleteIcon fontSize="small" />
                             </IconButton>
@@ -587,26 +690,12 @@ export default function AssignmentsPage() {
         </Box>
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to remove this assignment? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={confirmDeletion}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Add Client Assignment Dialog */}
       <Dialog
         open={clientDialogOpen}
-        onClose={() => setClientDialogOpen(false)}
+        onClose={clientFormLoading ? undefined : () => {
+          void attemptCloseClientDialog()
+        }}
         maxWidth="xs"
         fullWidth
         fullScreen={isMobile}
@@ -651,7 +740,9 @@ export default function AssignmentsPage() {
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setClientDialogOpen(false)} disabled={clientFormLoading}>
+          <Button onClick={() => {
+            void attemptCloseClientDialog()
+          }} disabled={clientFormLoading}>
             Cancel
           </Button>
           <Button
@@ -667,7 +758,9 @@ export default function AssignmentsPage() {
       {/* Add Manager Assignment Dialog */}
       <Dialog
         open={managerDialogOpen}
-        onClose={closeManagerDialog}
+        onClose={managerFormLoading ? undefined : () => {
+          void attemptCloseManagerDialog()
+        }}
         maxWidth="xs"
         fullWidth
         fullScreen={isMobile}
@@ -709,7 +802,9 @@ export default function AssignmentsPage() {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeManagerDialog} disabled={managerFormLoading}>
+          <Button onClick={() => {
+            void attemptCloseManagerDialog()
+          }} disabled={managerFormLoading}>
             Cancel
           </Button>
           <Button

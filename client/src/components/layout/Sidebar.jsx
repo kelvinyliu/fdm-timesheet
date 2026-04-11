@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
+import DashboardIcon from '@mui/icons-material/Dashboard'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import PeopleIcon from '@mui/icons-material/People'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
@@ -14,6 +15,7 @@ const NAV_LINKS = {
     { label: 'Timesheets', path: '/consultant/timesheets', icon: AccessTimeIcon },
   ],
   LINE_MANAGER: [
+    { label: 'Dashboard', path: '/manager/dashboard', icon: DashboardIcon },
     { label: 'Timesheets', path: '/manager/timesheets', icon: AccessTimeIcon },
   ],
   FINANCE_MANAGER: [
@@ -48,8 +50,10 @@ export default function Sidebar({ onNavigate }) {
       >
         Navigation
       </Typography>
+
       {links.map(({ label, path, icon: Icon }) => {
         const isActive = location.pathname.startsWith(path)
+
         return (
           <ButtonBase
             key={path}

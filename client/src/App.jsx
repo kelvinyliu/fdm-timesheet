@@ -24,6 +24,7 @@ import TimesheetEditPage from './pages/consultant/TimesheetEditPage.jsx'
 
 import ManagerTimesheetListPage from './pages/lineManager/ManagerTimesheetListPage.jsx'
 import TimesheetReviewPage from './pages/lineManager/TimesheetReviewPage.jsx'
+import ManagerDashboard from "./pages/lineManager/ManagerDashboard"
 
 import FinanceTimesheetListPage from './pages/financeStaff/FinanceTimesheetListPage.jsx'
 import FinancePaymentPage from './pages/financeStaff/FinancePaymentPage.jsx'
@@ -82,7 +83,11 @@ export default function App() {
                 path="/manager/timesheets/:id"
                 element={<TimesheetReviewPage />}
               />
+              <Route 
+                path="/manager/dashboard" 
+                element={<ManagerDashboard />} />
             </Route>
+            
 
             {/* Finance routes */}
             <Route

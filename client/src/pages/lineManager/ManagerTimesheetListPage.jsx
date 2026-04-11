@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useNavigate, useSearchParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -32,15 +32,16 @@ import {
   getTimesheetStatusDisplayLabel,
 } from '../../utils/displayLabels'
 
-
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+
   const [timesheets, setTimesheets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || 'ALL')
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
@@ -49,6 +50,10 @@ export default function ManagerTimesheetListPage() {
       .catch((err) => setError(err.message ?? 'Failed to load timesheets'))
       .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    setStatusFilter(searchParams.get('status') || 'ALL')
+  }, [searchParams])
 
   if (loading) return <LoadingSpinner />
 
@@ -71,9 +76,18 @@ export default function ManagerTimesheetListPage() {
     emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}".`
   }
 
+  const pageTitle =
+    statusFilter === 'PENDING'
+      ? 'Pending Timesheets'
+      : statusFilter === 'APPROVED'
+      ? 'Approved Timesheets'
+      : statusFilter === 'REJECTED'
+      ? 'Rejected Timesheets'
+      : 'Team Timesheets'
+
   return (
     <Box>
-      <PageHeader title="Team Timesheets" subtitle="View and manage your team's submissions">
+      <PageHeader title={pageTitle} subtitle="View and manage your team's submissions">
         <TextField
           placeholder="Search consultants..."
           size="small"
@@ -164,13 +178,7 @@ export default function ManagerTimesheetListPage() {
                       <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
                         Total Hours
                       </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.95rem',
-                          fontWeight: 600,
-                        }}
-                      >
+                      <Typography variant="body2" fontWeight={600}>
                         {ts.totalHours ?? '-'}
                       </Typography>
                     </Box>
@@ -191,12 +199,7 @@ export default function ManagerTimesheetListPage() {
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
             <Table>
               <TableHead>
-                <TableRow     sx={{
-      '& .MuiTableCell-root': {
-        fontSize: '1.8 em',
-        fontWeight: 800,
-      },
-    }}>
+                <TableRow>
                   <TableCell>Consultant</TableCell>
                   <TableCell>Week of</TableCell>
                   <TableCell>Status</TableCell>
@@ -221,12 +224,7 @@ export default function ManagerTimesheetListPage() {
                       <StatusBadge status={ts.status} />
                     </TableCell>
                     <TableCell align="right">
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.85rem',
-                        }}
-                      >
+                      <Typography variant="body2" fontWeight={500}>
                         {ts.totalHours ?? '-'}
                       </Typography>
                     </TableCell>

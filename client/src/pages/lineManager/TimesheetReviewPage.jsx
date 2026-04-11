@@ -74,8 +74,10 @@ export default function TimesheetReviewPage() {
 
   async function handleReject() {
     if (!rejectionComment.trim()) return
+
     setSubmitting(true)
     setFeedback(null)
+
     try {
       await reviewTimesheet(id, { action: 'REJECT', comment: rejectionComment.trim() })
       setFeedback({
@@ -115,10 +117,7 @@ export default function TimesheetReviewPage() {
           key: 'hours',
           label: 'Total Hours',
           value: (
-            <Typography
-              variant="body2"
-              sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 500 }}
-            >
+            <Typography variant="body2" fontWeight={500}>
               {timesheet.totalHours ?? '-'}
             </Typography>
           ),
@@ -160,7 +159,6 @@ export default function TimesheetReviewPage() {
 
       {timesheet && (
         <>
-          {/* Summary */}
           <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Summary
@@ -168,12 +166,12 @@ export default function TimesheetReviewPage() {
             <DetailList items={summaryItems} />
           </Paper>
 
-          {/* Entries */}
           {timesheet.entries && timesheet.entries.length > 0 && (
             <Paper sx={{ mb: 3 }}>
               <Box sx={{ p: 2, pb: 1 }}>
                 <Typography variant="h6">Daily Entries</Typography>
               </Box>
+
               {isMobile ? (
                 <Stack divider={<Divider flexItem />}>
                   {timesheet.entries.map((entry) => (
@@ -190,16 +188,11 @@ export default function TimesheetReviewPage() {
                         <Typography variant="body2" fontWeight={600}>
                           {formatDayName(entry.date)}
                         </Typography>
-                        <Typography
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.85rem',
-                            fontWeight: 600,
-                          }}
-                        >
+                        <Typography variant="body2" fontWeight={600}>
                           {entry.hoursWorked}
                         </Typography>
                       </Box>
+
                       <Typography variant="body2" color="text.secondary">
                         {formatLongDate(entry.date)}
                       </Typography>
@@ -222,12 +215,7 @@ export default function TimesheetReviewPage() {
                           <TableCell>{formatDayName(entry.date)}</TableCell>
                           <TableCell>{formatLongDate(entry.date)}</TableCell>
                           <TableCell align="right">
-                            <Typography
-                              sx={{
-                                fontFamily: '"JetBrains Mono", monospace',
-                                fontSize: '0.85rem',
-                              }}
-                            >
+                            <Typography variant="body2" fontWeight={500}>
                               {entry.hoursWorked}
                             </Typography>
                           </TableCell>
@@ -240,12 +228,12 @@ export default function TimesheetReviewPage() {
             </Paper>
           )}
 
-          {/* Actions */}
           {timesheet.status === 'PENDING' && (
             <Paper sx={{ p: { xs: 2.5, sm: 3 } }}>
               <Typography variant="h6" gutterBottom>
                 Actions
               </Typography>
+
               <Stack spacing={3}>
                 <Box>
                   <Button
@@ -263,9 +251,15 @@ export default function TimesheetReviewPage() {
                 <Divider />
 
                 <Box>
-                  <Typography variant="subtitle1" gutterBottom fontWeight={600} sx={{ fontSize: '0.85rem' }}>
+                  <Typography
+                    variant="subtitle1"
+                    gutterBottom
+                    fontWeight={600}
+                    sx={{ fontSize: '0.85rem' }}
+                  >
                     Reject Timesheet
                   </Typography>
+
                   <Stack spacing={2}>
                     <TextField
                       label="Rejection Comment"
@@ -277,6 +271,7 @@ export default function TimesheetReviewPage() {
                       required
                       placeholder="Provide a reason for rejection (required)"
                     />
+
                     <Box>
                       <Button
                         variant="contained"
@@ -365,18 +360,16 @@ export default function TimesheetReviewPage() {
               severity={timesheet.status === 'APPROVED' ? 'success' : 'info'}
               sx={{ mt: 2 }}
             >
-              {timesheet.status === 'APPROVED'
-                ? (
-                    <>
-                      This timesheet has been <strong>approved</strong>.
-                    </>
-                  )
-                : (
-                    <>
-                      This timesheet has been <strong>rejected</strong> and returned to the
-                      consultant for changes.
-                    </>
-                  )}
+              {timesheet.status === 'APPROVED' ? (
+                <>
+                  This timesheet has been <strong>approved</strong>.
+                </>
+              ) : (
+                <>
+                  This timesheet has been <strong>rejected</strong> and returned to the consultant
+                  for changes.
+                </>
+              )}
               {timesheet.status === 'REJECTED' && timesheet.rejectionComment && (
                 <> Reason: {timesheet.rejectionComment}</>
               )}

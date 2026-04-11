@@ -13,16 +13,25 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogTitle from '@mui/material/DialogTitle'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
+import HistoryIcon from '@mui/icons-material/History'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
-import { getTimesheets } from '../../api/timesheets'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import {
+  createTimesheet,
+  getEligibleWeeks,
+  getTimesheets,
+} from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
 import {
@@ -30,31 +39,82 @@ import {
   isConsultantEditableStatus,
 } from '../../utils/timesheetWorkflow.js'
 
+const EMPTY_ELIGIBILITY = {
+  currentWeekStart: getCurrentMonday(),
+  missingPastWeekStarts: [],
+}
+
 export default function TimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
   const [timesheets, setTimesheets] = useState([])
+  const [eligibility, setEligibility] = useState(EMPTY_ELIGIBILITY)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [eligibilityError, setEligibilityError] = useState(null)
+  const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
+  const [creatingWeekStart, setCreatingWeekStart] = useState(null)
 
   useEffect(() => {
-    getTimesheets()
-      .then(setTimesheets)
-      .catch((err) => setError(err.message ?? 'Failed to load timesheets'))
-      .finally(() => setLoading(false))
+    let active = true
+
+    Promise.allSettled([getTimesheets(), getEligibleWeeks()])
+      .then(([timesheetResult, eligibilityResult]) => {
+        if (!active) return
+
+        if (timesheetResult.status === 'fulfilled') {
+          setTimesheets(timesheetResult.value)
+        } else {
+          setError(timesheetResult.reason?.message ?? 'Failed to load timesheets')
+        }
+
+        if (eligibilityResult.status === 'fulfilled') {
+          setEligibility(eligibilityResult.value)
+        } else {
+          setEligibilityError('Missing-week creation is temporarily unavailable.')
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false)
+      })
+
+    return () => {
+      active = false
+    }
   }, [])
 
   if (loading) return <LoadingSpinner />
 
-  const currentMonday = getCurrentMonday()
+  const currentMonday = eligibility.currentWeekStart || getCurrentMonday()
+  const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []
   const currentWeekTimesheet = getTimesheetForWeek(timesheets, currentMonday)
-  const canCreate = !currentWeekTimesheet
+  const canCreateCurrentWeek = !currentWeekTimesheet
+  const missingWeekButtonTooltip = eligibilityError
+    ?? (missingPastWeekStarts.length > 0
+      ? ''
+      : 'No missing weeks are available in the last 4 weeks.')
 
-  function renderActionButton() {
+  async function handleCreateForWeek(weekStart) {
+    setError(null)
+    setCreatingWeekStart(weekStart)
+
+    try {
+      const newTimesheet = await createTimesheet({ weekStart })
+      setMissingWeekDialogOpen(false)
+      navigate(`/consultant/timesheets/${newTimesheet.id}/edit`, { replace: true })
+    } catch (err) {
+      setError(err.message ?? 'Failed to create timesheet.')
+    } finally {
+      setCreatingWeekStart(null)
+    }
+  }
+
+  function renderPrimaryActionButton() {
     if (currentWeekTimesheet) {
       const isEditable = isConsultantEditableStatus(currentWeekTimesheet.status)
       const ActionIcon = isEditable ? ArrowForwardIcon : VisibilityIcon
+
       return (
         <Button
           variant="contained"
@@ -71,7 +131,8 @@ export default function TimesheetListPage() {
         </Button>
       )
     }
-    if (canCreate) {
+
+    if (canCreateCurrentWeek) {
       return (
         <Button
           variant="contained"
@@ -82,6 +143,7 @@ export default function TimesheetListPage() {
         </Button>
       )
     }
+
     return (
       <Tooltip title="A new timesheet will be available on Monday">
         <span>
@@ -93,15 +155,41 @@ export default function TimesheetListPage() {
     )
   }
 
+  function renderMissingWeekButton() {
+    const disabled = Boolean(missingWeekButtonTooltip) || creatingWeekStart !== null
+
+    return (
+      <Tooltip title={missingWeekButtonTooltip || 'Create a missing timesheet from the last 4 weeks'}>
+        <span>
+          <Button
+            variant="outlined"
+            startIcon={<HistoryIcon />}
+            disabled={disabled}
+            onClick={() => setMissingWeekDialogOpen(true)}
+          >
+            Create Missing Week
+          </Button>
+        </span>
+      </Tooltip>
+    )
+  }
+
   return (
     <Box>
       <PageHeader title="My Timesheets" subtitle="View and manage your weekly timesheets">
-        {renderActionButton()}
+        {renderPrimaryActionButton()}
+        {renderMissingWeekButton()}
       </PageHeader>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
+        </Alert>
+      )}
+
+      {eligibilityError && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          {eligibilityError}
         </Alert>
       )}
 
@@ -159,7 +247,7 @@ export default function TimesheetListPage() {
                           {formatWeekStart(ts.weekStart)}
                         </Typography>
                       </Box>
-                      <StatusBadge status={ts.status} />
+                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                     </Box>
 
                     <Box>
@@ -220,7 +308,7 @@ export default function TimesheetListPage() {
                     </TableCell>
                     <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
                     <TableCell>
-                      <StatusBadge status={ts.status} />
+                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                     </TableCell>
                     <TableCell align="right">
                       <Typography
@@ -260,6 +348,51 @@ export default function TimesheetListPage() {
           </TableContainer>
         )
       )}
+
+      <Dialog
+        open={missingWeekDialogOpen}
+        onClose={creatingWeekStart ? undefined : () => setMissingWeekDialogOpen(false)}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Create Missing Week</DialogTitle>
+        <DialogContent dividers>
+          {missingPastWeekStarts.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              No eligible missing weeks are available right now.
+            </Typography>
+          ) : (
+            <Stack spacing={1.25}>
+              <Typography variant="body2" color="text.secondary">
+                Select a missing week from the last 4 weeks.
+              </Typography>
+              {missingPastWeekStarts.map((weekStart) => {
+                const isCreating = creatingWeekStart === weekStart
+                return (
+                  <Button
+                    key={weekStart}
+                    variant="outlined"
+                    onClick={() => handleCreateForWeek(weekStart)}
+                    disabled={creatingWeekStart !== null}
+                    sx={{ justifyContent: 'space-between' }}
+                  >
+                    <span>{formatWeekStart(weekStart)}</span>
+                    <span>{isCreating ? 'Creating...' : 'Create'}</span>
+                  </Button>
+                )
+              })}
+            </Stack>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setMissingWeekDialogOpen(false)}
+            disabled={creatingWeekStart !== null}
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

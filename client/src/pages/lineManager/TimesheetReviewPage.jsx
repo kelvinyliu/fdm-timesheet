@@ -25,10 +25,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
 import FastForwardIcon from '@mui/icons-material/FastForward'
-import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { getTimesheet, reviewTimesheet, getTimesheets } from '../../api/timesheets'
 import { formatDayName, buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import { palette } from '../../theme.js'
@@ -174,7 +174,7 @@ export default function TimesheetReviewPage() {
         {
           key: 'status',
           label: 'Status',
-          value: <StatusBadge status={timesheet.status} />,
+          value: <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />,
         },
         {
           key: 'hours',
@@ -460,4 +460,3 @@ export default function TimesheetReviewPage() {
     </Box>
   )
 }
-

@@ -15,10 +15,10 @@ import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
 import EditIcon from '@mui/icons-material/Edit'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { getTimesheet } from '../../api/timesheets'
 import { buildWeekDates, formatDayName, formatWeekStart } from '../../utils/dateFormatters'
 import { palette } from '../../theme.js'
@@ -99,7 +99,7 @@ export default function TimesheetDetailPage() {
     {
       key: 'status',
       label: 'Status',
-      value: <StatusBadge status={timesheet.status} />,
+      value: <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />,
     },
     {
       key: 'hours',
@@ -259,4 +259,3 @@ export default function TimesheetDetailPage() {
     </Box>
   )
 }
-

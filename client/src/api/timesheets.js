@@ -15,6 +15,10 @@ export async function getTimesheets() {
   return apiClient('/api/timesheets')
 }
 
+export async function getEligibleWeeks() {
+  return apiClient('/api/timesheets/eligible-weeks')
+}
+
 export async function getTimesheet(id) {
   const timesheet = await apiClient(`/api/timesheets/${id}`)
   return normalizeTimesheet(timesheet)

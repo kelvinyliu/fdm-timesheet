@@ -22,9 +22,9 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import RateReviewIcon from '@mui/icons-material/RateReview'
 import SearchIcon from '@mui/icons-material/Search'
-import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import {
@@ -142,7 +142,7 @@ export default function ManagerTimesheetListPage() {
                         {getConsultantDisplayLabel(ts.consultantName)}
                       </Typography>
                     </Box>
-                    <StatusBadge status={ts.status} />
+                    <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                   </Box>
 
                   <Box
@@ -213,7 +213,7 @@ export default function ManagerTimesheetListPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={ts.status} />
+                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                     </TableCell>
                     <TableCell align="right">
                       <Typography

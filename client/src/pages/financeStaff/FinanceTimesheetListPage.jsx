@@ -18,9 +18,9 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import PaymentIcon from '@mui/icons-material/Payment'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import StatusBadge from '../../components/shared/StatusBadge'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
@@ -162,7 +162,7 @@ export default function FinanceTimesheetListPage() {
                           {getConsultantDisplayLabel(ts.consultantName)}
                         </Typography>
                       </Box>
-                      <StatusBadge status={ts.status} />
+                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                     </Box>
 
                     <Box
@@ -276,7 +276,7 @@ export default function FinanceTimesheetListPage() {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={ts.status} />
+                        <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                       </TableCell>
                       <TableCell align="right">
                         <Typography

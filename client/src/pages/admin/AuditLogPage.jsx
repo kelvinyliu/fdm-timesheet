@@ -33,7 +33,7 @@ function formatDetail(action, detail) {
   if (detail === null || detail === undefined) return '-'
   switch (action) {
     case 'SUBMISSION':
-      return 'Submitted from draft'
+      return detail.submittedLate ? 'Submitted from draft · Late' : 'Submitted from draft'
     case 'APPROVAL':
       return 'Approved'
     case 'REJECTION':

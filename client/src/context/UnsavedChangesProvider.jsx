@@ -1,5 +1,5 @@
-import { useCallback, useRef } from 'react'
-import { useBeforeUnload } from 'react-router'
+import { useCallback, useEffect, useRef } from 'react'
+import { useBeforeUnload, useBlocker } from 'react-router'
 import { useConfirmation } from './useConfirmation.js'
 import { UnsavedChangesContext } from './UnsavedChangesContext.jsx'
 
@@ -10,9 +10,33 @@ function getLastGuard(guards) {
   return activeGuards.at(-1) ?? null
 }
 
+function getGuardDialogOptions(guard) {
+  return {
+    variant: guard.variant ?? 'warning',
+    title: guard.title ?? 'Discard unsaved changes?',
+    message:
+      guard.message ??
+      'You have unsaved changes on this screen. Leaving now will discard them.',
+    confirmLabel: guard.discardLabel ?? 'Discard changes',
+    cancelLabel: guard.stayLabel ?? 'Stay here',
+    secondaryLabel: guard.onSave ? guard.saveLabel ?? 'Save and leave' : '',
+    summaryItems: guard.summaryItems ?? [],
+  }
+}
+
+function hasLocationChanged(currentLocation, nextLocation) {
+  return (
+    currentLocation.pathname !== nextLocation.pathname ||
+    currentLocation.search !== nextLocation.search ||
+    currentLocation.hash !== nextLocation.hash
+  )
+}
+
 export function UnsavedChangesProvider({ children }) {
   const { confirm } = useConfirmation()
   const guardsRef = useRef(new Map())
+  const allowNavigationRef = useRef(false)
+  const handlingBlockedNavigationRef = useRef('')
 
   const registerGuard = useCallback((id, guardRef) => {
     guardsRef.current.set(id, guardRef)
@@ -20,6 +44,34 @@ export function UnsavedChangesProvider({ children }) {
 
   const unregisterGuard = useCallback((id) => {
     guardsRef.current.delete(id)
+  }, [])
+
+  const resolveGuardDecision = useCallback(async (guard) => {
+    if (!guard?.isDirty) return true
+
+    const result = await confirm(getGuardDialogOptions(guard))
+
+    if (result === 'confirm') {
+      return true
+    }
+
+    if (result === 'secondary' && guard.onSave) {
+      const didSave = await guard.onSave()
+      return didSave !== false
+    }
+
+    return false
+  }, [confirm])
+
+  const runWithoutBlocking = useCallback(async (action) => {
+    const wasNavigationAllowed = allowNavigationRef.current
+    allowNavigationRef.current = true
+
+    try {
+      await action?.()
+    } finally {
+      allowNavigationRef.current = wasNavigationAllowed
+    }
   }, [])
 
   const runWithGuard = useCallback(async (action) => {
@@ -30,33 +82,59 @@ export function UnsavedChangesProvider({ children }) {
       return true
     }
 
-    const result = await confirm({
-      variant: guard.variant ?? 'warning',
-      title: guard.title ?? 'Discard unsaved changes?',
-      message:
-        guard.message ??
-        'You have unsaved changes on this screen. Leaving now will discard them.',
-      confirmLabel: guard.discardLabel ?? 'Discard changes',
-      cancelLabel: guard.stayLabel ?? 'Stay here',
-      secondaryLabel: guard.onSave ? guard.saveLabel ?? 'Save and leave' : '',
-      summaryItems: guard.summaryItems ?? [],
-    })
+    const shouldProceed = await resolveGuardDecision(guard)
+    if (!shouldProceed) return false
 
-    if (result === 'confirm') {
-      await action?.()
-      return true
+    await runWithoutBlocking(action)
+    return true
+  }, [resolveGuardDecision, runWithoutBlocking])
+
+  const blocker = useBlocker(useCallback(({ currentLocation, nextLocation }) => {
+    if (allowNavigationRef.current) return false
+
+    const guard = getLastGuard(guardsRef.current)
+    if (!guard?.isDirty) return false
+
+    return hasLocationChanged(currentLocation, nextLocation)
+  }, []))
+
+  useEffect(() => {
+    if (blocker.state !== 'blocked') {
+      handlingBlockedNavigationRef.current = ''
+      return
     }
 
-    if (result === 'secondary' && guard.onSave) {
-      const didSave = await guard.onSave()
-      if (didSave !== false) {
-        await action?.()
-        return true
+    const blockedNavigationId = [
+      blocker.location.pathname,
+      blocker.location.search,
+      blocker.location.hash,
+      blocker.location.key ?? '',
+    ].join('|')
+
+    if (handlingBlockedNavigationRef.current === blockedNavigationId) return
+    handlingBlockedNavigationRef.current = blockedNavigationId
+
+    let isCurrentAttempt = true
+
+    ;(async () => {
+      const guard = getLastGuard(guardsRef.current)
+      const shouldProceed = await resolveGuardDecision(guard)
+
+      if (!isCurrentAttempt) return
+
+      handlingBlockedNavigationRef.current = ''
+      if (shouldProceed) {
+        blocker.proceed()
+        return
       }
-    }
 
-    return false
-  }, [confirm])
+      blocker.reset()
+    })()
+
+    return () => {
+      isCurrentAttempt = false
+    }
+  }, [blocker, resolveGuardDecision])
 
   useBeforeUnload((event) => {
     if (!getLastGuard(guardsRef.current)) return

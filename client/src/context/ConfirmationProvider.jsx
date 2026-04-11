@@ -5,12 +5,17 @@ import { ConfirmationContext } from './ConfirmationContext.jsx'
 export function ConfirmationProvider({ children }) {
   const resolverRef = useRef(null)
   const [request, setRequest] = useState(null)
+  const [open, setOpen] = useState(false)
 
   function close(result) {
     const resolve = resolverRef.current
     resolverRef.current = null
-    setRequest(null)
+    setOpen(false)
     resolve?.(result)
+  }
+
+  function handleExited() {
+    setRequest(null)
   }
 
   function confirm(options) {
@@ -30,6 +35,7 @@ export function ConfirmationProvider({ children }) {
         loading: false,
         ...options,
       })
+      setOpen(true)
     })
   }
 
@@ -37,7 +43,7 @@ export function ConfirmationProvider({ children }) {
     <ConfirmationContext.Provider value={{ confirm }}>
       {children}
       <ConfirmActionDialog
-        open={Boolean(request)}
+        open={open}
         title={request?.title ?? ''}
         message={request?.message ?? ''}
         confirmLabel={request?.confirmLabel}
@@ -46,6 +52,7 @@ export function ConfirmationProvider({ children }) {
         summaryItems={request?.summaryItems}
         variant={request?.variant}
         loading={request?.loading}
+        onExited={handleExited}
         onConfirm={() => close('confirm')}
         onCancel={() => close('cancel')}
         onSecondary={() => close('secondary')}

@@ -29,7 +29,9 @@ charlie@demo.test     | CONSULTANT       | charlie1234
 diana@demo.test       | CONSULTANT       | diana1234
 eve@demo.test         | CONSULTANT       | eve1234
 frank@demo.test       | CONSULTANT       | frank1234
-
+grace@demo.test       | CONSULTANT       | grace1234
+holly@demo.test       | CONSULTANT       | holly1234
+ian@demo.test         | LINE_MANAGER     | ian12345
 
 ## Backend Communication
 

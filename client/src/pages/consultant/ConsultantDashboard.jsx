@@ -101,7 +101,7 @@ export default function ConsultantDashboard() {
                 mb: 1.2,
               }}
             >
-              Welcome back, {firstName}
+              Welcome back, {firstName}...
             </Typography>
 
             <Typography variant="body1" color="text.secondary" sx={{ mb: 2, maxWidth: 720 }}>
@@ -295,22 +295,16 @@ export default function ConsultantDashboard() {
                       <Typography variant="body2" fontWeight={600} sx={{ mb: 0.4 }}>
                         {formatWeekStart(ts.weekStart)}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {isEditable ? "Editable" : "Read-only"}
-                        {ts.totalHours != null ? ` · ${ts.totalHours} hrs` : ""}
-                      </Typography>
+
+                    <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.85 }}>                        {ts.totalHours != null
+                            ? `${ts.totalHours} hrs (${isEditable ? "Editable" : "Read-only"})`
+                            : isEditable
+                                ? "Editable"
+                                : "Read-only"}
+                    </Typography>
                     </Box>
 
-                    <Stack direction="row" spacing={1.5} alignItems="center">
-                      <StatusBadge status={ts.status} />
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ display: { xs: "none", sm: "block" } }}
-                      >
-                        {isEditable ? "Edit" : "Open"}
-                      </Typography>
-                    </Stack>
+                    <StatusBadge status={ts.status} />
                   </Stack>
                 </Box>
               )

@@ -263,10 +263,10 @@ export default function ManagerDashboard() {
                     <Typography variant="body2" fontWeight={600} sx={{ mb: 0.4 }}>
                       {getConsultantDisplayLabel(ts.consultantName)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatWeekStart(ts.weekStart)}
-                      {ts.totalHours != null ? ` · ${ts.totalHours} hrs` : ""}
-                    </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            {formatWeekStart(ts.weekStart)}
+                            {ts.totalHours != null && ` (${ts.totalHours} hrs)`}
+                        </Typography>
                   </Box>
 
                     <Stack direction="row" spacing={1.5} alignItems="center">

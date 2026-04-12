@@ -1,0 +1,263 @@
+import { useEffect, useState } from "react"
+import Box from "@mui/material/Box"
+import Grid from "@mui/material/Grid"
+import Paper from "@mui/material/Paper"
+import Typography from "@mui/material/Typography"
+import Stack from "@mui/material/Stack"
+import Alert from "@mui/material/Alert"
+import Chip from "@mui/material/Chip"
+import Divider from "@mui/material/Divider"
+import PeopleIcon from "@mui/icons-material/People"
+import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount"
+import ManageAccountsIcon from "@mui/icons-material/ManageAccounts"
+import HistoryIcon from "@mui/icons-material/History"
+import LoadingSpinner from "../../components/shared/LoadingSpinner"
+import DashboardCard from "../../components/shared/DashboardCard"
+import { getUsers } from "../../api/users"
+import { getAuditLog } from "../../api/audit"
+
+function getAuditActionLabel(action) {
+  switch (action) {
+    case "SUBMISSION":
+      return "Submitted"
+    case "APPROVAL":
+      return "Approved"
+    case "REJECTION":
+      return "Rejected"
+    case "PROCESSING":
+      return "Processed payment"
+    default:
+      return action
+  }
+}
+
+export default function AdminDashboard() {
+  const [users, setUsers] = useState([])
+  const [auditLog, setAuditLog] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    Promise.all([getUsers(), getAuditLog()])
+      .then(([usersData, auditData]) => {
+        setUsers(usersData)
+        setAuditLog(auditData)
+      })
+      .catch((err) => setError(err.message ?? "Failed to load admin overview"))
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <LoadingSpinner />
+
+  const consultants = users.filter((u) => u.role === "CONSULTANT").length
+  const managers = users.filter((u) => u.role === "LINE_MANAGER").length
+  const financeManagers = users.filter((u) => u.role === "FINANCE_MANAGER").length
+  const admins = users.filter((u) => u.role === "SYSTEM_ADMIN").length
+
+  const recentActivity = auditLog.slice(0, 5)
+
+  const systemMessage =
+    recentActivity.length > 0
+      ? `${recentActivity.length} recent audit event${recentActivity.length > 1 ? "s" : ""} recorded.`
+      : "No recent system activity recorded."
+
+  return (
+    <Box sx={{ maxWidth: 1200, width: "100%" }}>
+      <Paper
+        sx={{
+          p: { xs: 3, md: 4 },
+          borderRadius: 3,
+          mb: 4,
+          border: "1px solid",
+          borderColor: "divider",
+          animation: "dashboardHeroIn 0.45s ease both",
+          "@keyframes dashboardHeroIn": {
+            from: { opacity: 0, transform: "translateY(10px)" },
+            to: { opacity: 1, transform: "translateY(0)" },
+          },
+        }}
+      >
+        <Box>
+          <Typography
+            sx={{
+              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontSize: { xs: "2.4rem", sm: "2.8rem", md: "3.1rem" },
+              lineHeight: 1.15,
+              letterSpacing: "-0.01em",
+              mb: 1.2,
+            }}
+          >
+            Admin overview
+          </Typography>
+
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ mb: 2, maxWidth: 760 }}
+          >
+            Monitor account distribution and recent system activity across the platform.
+          </Typography>
+
+          <Chip
+            label={systemMessage}
+            color={recentActivity.length > 0 ? "warning" : "success"}
+            variant="outlined"
+          />
+        </Box>
+      </Paper>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={3}>
+          <DashboardCard
+            icon={PeopleIcon}
+            label="Total Users"
+            value={users.length}
+            subtitle="All active accounts"
+            color="#1976D2"
+            delay={80}
+          />
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <DashboardCard
+            icon={ManageAccountsIcon}
+            label="Consultants"
+            value={consultants}
+            subtitle="Submitting timesheets"
+            color="#2E7D32"
+            delay={160}
+          />
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <DashboardCard
+            icon={SupervisorAccountIcon}
+            label="Managers"
+            value={managers}
+            subtitle="Reviewing submissions"
+            color="#C58A00"
+            delay={240}
+          />
+        </Grid>
+
+        <Grid item xs={12} md={3}>
+          <DashboardCard
+            icon={HistoryIcon}
+            label="Audit Events"
+            value={auditLog.length}
+            subtitle="Tracked system actions"
+            color="#6A1B9A"
+            delay={320}
+          />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={5}>
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: "divider",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 1.5 }}>
+              Role distribution
+            </Typography>
+
+            <Stack spacing={1.25}>
+              <Typography variant="body2" color="text.secondary">
+                Consultants: <strong>{consultants}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Line managers: <strong>{managers}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Finance managers: <strong>{financeManagers}</strong>
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                System admins: <strong>{admins}</strong>
+              </Typography>
+            </Stack>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={7}>
+          <Paper
+            sx={{
+              p: 3,
+              borderRadius: 3,
+              border: "1px solid",
+              borderColor: "divider",
+              height: "100%",
+            }}
+          >
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Recent activity
+            </Typography>
+
+            {recentActivity.length === 0 ? (
+              <Box
+                sx={{
+                  py: 4,
+                  textAlign: "center",
+                  borderRadius: 2,
+                  border: "1px dashed",
+                  borderColor: "divider",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  No recent activity to show.
+                </Typography>
+              </Box>
+            ) : (
+              <Stack divider={<Divider flexItem />} spacing={0}>
+                {recentActivity.map((item) => (
+                  <Box key={item.id} sx={{ py: 1.75 }}>
+                    <Stack
+                      direction={{ xs: "column", sm: "row" }}
+                      spacing={1.5}
+                      justifyContent="space-between"
+                      alignItems={{ xs: "flex-start", sm: "center" }}
+                    >
+                      <Box>
+                        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.35 }}>
+                          {getAuditActionLabel(item.action)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {item.createdAt
+                            ? new Date(item.createdAt).toLocaleString([], {
+                                year: "numeric",
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : "Unknown time"}
+                        </Typography>
+                      </Box>
+
+                      <Chip
+                        label={item.action}
+                        size="small"
+                        variant="outlined"
+                      />
+                    </Stack>
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </Paper>
+        </Grid>
+      </Grid>
+    </Box>
+  )
+}

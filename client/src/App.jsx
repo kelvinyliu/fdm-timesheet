@@ -35,6 +35,7 @@ import AuditLogPage from './pages/admin/AuditLogPage.jsx'
 import ConsultantDashboard from './pages/consultant/ConsultantDashboard.jsx'
 import ManagerDashboard from './pages/lineManager/ManagerDashboard.jsx'
 import FinanceDashboard from './pages/financeStaff/FinanceDashboard.jsx'
+import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 
 export default function App() {
   return (
@@ -134,6 +135,7 @@ export default function App() {
                 path="/admin/audit"
                 element={<AuditLogPage />}
               />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Route>
           </Route>
         </Route>

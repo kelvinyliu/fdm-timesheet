@@ -25,28 +25,36 @@ export default function LoginPage() {
     return <Navigate to={ROLE_ROUTES[user.role] ?? '/'} replace />
   }
 
-  async function handleSubmit(e) {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const data = await loginRequest(email, password)
-      const tokenPayload = decodeJwtPayload(data.token)
-      if (!tokenPayload) {
-        throw new Error('Invalid login response.')
-      }
+async function handleSubmit(e) {
+  e.preventDefault()
+  setError('')
+  setLoading(true)
 
-      const nextUser = data.user ?? tokenPayload
-      login(data.token, nextUser)
-      const role = nextUser?.role ?? tokenPayload.role
-      const destination = ROLE_ROUTES[role] ?? '/'
-      navigate(destination, { replace: true })
-    } catch (err) {
-      setError(err.message || 'Invalid email or password.')
-    } finally {
-      setLoading(false)
+  try {
+    const data = await loginRequest(email, password)
+    const tokenPayload = decodeJwtPayload(data.token)
+
+    if (!tokenPayload) {
+      throw new Error('Invalid login response.')
     }
+
+    const nextUser = data.user ?? tokenPayload
+    const role = nextUser?.role || tokenPayload?.role
+
+    if (!role) {
+      throw new Error('Unable to determine user role.')
+    }
+
+    login(data.token, nextUser)
+
+    const destination = ROLE_ROUTES[role] ?? '/login'
+    navigate(destination, { replace: true })
+  } catch (err) {
+    setError(err.message || 'Invalid email or password.')
+  } finally {
+    setLoading(false)
   }
+}
 
   return (
     <Box

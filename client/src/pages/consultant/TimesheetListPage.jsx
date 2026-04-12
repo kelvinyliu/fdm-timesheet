@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useState } from 'react'
+import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -24,14 +24,9 @@ import EditIcon from '@mui/icons-material/Edit'
 import HistoryIcon from '@mui/icons-material/History'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
-import {
-  createTimesheet,
-  getEligibleWeeks,
-  getTimesheets,
-} from '../../api/timesheets'
+import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
 import {
@@ -39,57 +34,23 @@ import {
   isConsultantEditableStatus,
 } from '../../utils/timesheetWorkflow.js'
 
-const EMPTY_ELIGIBILITY = {
-  currentWeekStart: getCurrentMonday(),
-  missingPastWeekStarts: [],
-}
-
 export default function TimesheetListPage({
   basePath = '/consultant/timesheets',
   title = 'My Timesheets',
   subtitle = 'View and manage your weekly timesheets',
-  timesheetScope,
 }) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
-  const [timesheets, setTimesheets] = useState([])
-  const [eligibility, setEligibility] = useState(EMPTY_ELIGIBILITY)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [eligibilityError, setEligibilityError] = useState(null)
+  const {
+    timesheets,
+    eligibility,
+    error: loadError,
+    eligibilityError,
+  } = useLoaderData()
+  const [error, setError] = useState(loadError)
   const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
   const [creatingWeekStart, setCreatingWeekStart] = useState(null)
-
-  useEffect(() => {
-    let active = true
-
-    Promise.allSettled([getTimesheets({ scope: timesheetScope }), getEligibleWeeks()])
-      .then(([timesheetResult, eligibilityResult]) => {
-        if (!active) return
-
-        if (timesheetResult.status === 'fulfilled') {
-          setTimesheets(timesheetResult.value)
-        } else {
-          setError(timesheetResult.reason?.message ?? 'Failed to load timesheets')
-        }
-
-        if (eligibilityResult.status === 'fulfilled') {
-          setEligibility(eligibilityResult.value)
-        } else {
-          setEligibilityError('Missing-week creation is temporarily unavailable.')
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [timesheetScope])
-
-  if (loading) return <LoadingSpinner />
 
   const currentMonday = eligibility.currentWeekStart || getCurrentMonday()
   const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []

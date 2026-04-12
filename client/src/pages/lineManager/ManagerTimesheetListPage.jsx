@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useState } from 'react'
+import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -22,10 +22,8 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import RateReviewIcon from '@mui/icons-material/RateReview'
 import SearchIcon from '@mui/icons-material/Search'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
-import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import {
   getSubmitterDisplayLabel,
@@ -37,20 +35,9 @@ export default function ManagerTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
-  const [timesheets, setTimesheets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { timesheets, error } = useLoaderData()
   const [statusFilter, setStatusFilter] = useState('ALL')
   const [searchQuery, setSearchQuery] = useState('')
-
-  useEffect(() => {
-    getTimesheets()
-      .then(setTimesheets)
-      .catch((err) => setError(err.message ?? 'Failed to load timesheets'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <LoadingSpinner />
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
   const filtered = timesheets.filter((ts) => {

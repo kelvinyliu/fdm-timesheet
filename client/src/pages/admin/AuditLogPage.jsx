@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLoaderData } from 'react-router'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -16,10 +17,8 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { palette } from '../../theme.js'
-import { getAuditLog } from '../../api/audit'
 import {
   getAuditActorDisplayLabel,
   getAuditTimesheetDisplayLabel,
@@ -79,32 +78,16 @@ function formatDetail(action, detail) {
 }
 
 export default function AuditLogPage() {
-  const [entries, setEntries] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const { entries, error: loadError } = useLoaderData()
+  const [error, setError] = useState(loadError)
   const [actionFilter, setActionFilter] = useState(null)
   const [authorFilter, setAuthorFilter] = useState(null)
   const [dateFrom, setDateFrom] = useState(null)
   const [dateTo, setDateTo] = useState(null)
 
   useEffect(() => {
-    async function fetchLog() {
-      setLoading(true)
-      setError('')
-      try {
-        const data = await getAuditLog()
-        const sorted = [...data].sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        )
-        setEntries(sorted)
-      } catch (err) {
-        setError(err.message || 'Failed to load audit log.')
-      } finally {
-        setLoading(false)
-      }
-    }
-    fetchLog()
-  }, [])
+    setError(loadError)
+  }, [loadError])
 
   const authorOptions = [...new Set(entries.map((e) => getAuditActorDisplayLabel(e.performedByName)))].sort()
 
@@ -169,10 +152,7 @@ export default function AuditLogPage() {
           </Stack>
         </Paper>
 
-        {loading ? (
-          <LoadingSpinner />
-        ) : (
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
             <Table size="small" sx={{ minWidth: 900 }}>
               <TableHead>
                 <TableRow>
@@ -253,10 +233,9 @@ export default function AuditLogPage() {
                 )}
               </TableBody>
             </Table>
-          </TableContainer>
-        )}
+        </TableContainer>
 
-        {!loading && filtered.length > 0 && (
+        {filtered.length > 0 && (
           <Typography
             sx={{
               mt: 1.5,

@@ -1,68 +1,36 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, useParams, useLocation } from 'react-router'
+import { useLoaderData, useNavigate, useParams, useLocation } from 'react-router'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import TextField from '@mui/material/TextField'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
-import MenuItem from '@mui/material/MenuItem'
-import IconButton from '@mui/material/IconButton'
 import SaveIcon from '@mui/icons-material/Save'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
-import AddIcon from '@mui/icons-material/Add'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
+import EditableWeeklyMatrix from '../../components/shared/EditableWeeklyMatrix.jsx'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import {
   useGuardedNavigate,
   useUnsavedChangesGuard,
 } from '../../context/useUnsavedChanges.js'
-import { getTimesheet, updateEntries, submitTimesheet, autofillTimesheet, getTimesheets } from '../../api/timesheets'
-import { getAssignments } from '../../api/assignments'
-import { buildWeekDates, formatWeekStart, formatDayName } from '../../utils/dateFormatters'
+import { updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
+import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import { palette } from '../../theme.js'
 import {
   buildAutofillEntries,
-  getMostRecentClientAssignmentId,
   isConsultantEditableStatus,
 } from '../../utils/timesheetWorkflow.js'
-
-function getBucketValue(entryKind, assignmentId) {
-  return entryKind === 'CLIENT' ? assignmentId || '' : 'INTERNAL'
-}
-
-function parseBucketValue(value) {
-  if (value === 'INTERNAL') return { entryKind: 'INTERNAL', assignmentId: null }
-  return { entryKind: 'CLIENT', assignmentId: value }
-}
-
-function entriesToMatrixRows(entries, nextLocalId) {
-  const rowMap = new Map() // key: bucketValue
-  entries.forEach(entry => {
-    const key = getBucketValue(entry.entryKind, entry.assignmentId)
-    if (!rowMap.has(key)) {
-      rowMap.set(key, {
-        id: `row-${nextLocalId()}`,
-        ...parseBucketValue(key),
-        hours: {}
-      })
-    }
-    rowMap.get(key).hours[entry.date] = String(entry.hoursWorked ?? '0')
-  })
-  return Array.from(rowMap.values())
-}
+import {
+  entriesToEditableMatrixRows,
+  getMatrixTotalHours,
+  parseBucketValue,
+  rowHasValues,
+  serializeEntries,
+} from '../../utils/timesheetMatrix.js'
 
 function buildArchivedAssignments(timesheet, activeAssignments = []) {
   const activeAssignmentIds = new Set(activeAssignments.map((assignment) => assignment.id))
@@ -91,58 +59,28 @@ function buildArchivedAssignments(timesheet, activeAssignments = []) {
   return [...archivedAssignments.values()]
 }
 
-function getAssignmentOptionLabel(assignment) {
-  if (!assignment) return 'Unknown client assignment'
-  return assignment.archived ? `${assignment.clientName} (Archived)` : assignment.clientName
-}
-
-function serializeEntries(entries) {
-  return JSON.stringify(
-    [...entries]
-      .map((entry) => ({
-        date: entry.date,
-        entryKind: entry.entryKind,
-        assignmentId: entry.assignmentId ?? null,
-        hoursWorked: Number(entry.hoursWorked),
-      }))
-      .sort((a, b) => {
-        if (a.date !== b.date) return a.date.localeCompare(b.date)
-        if (a.entryKind !== b.entryKind) return a.entryKind.localeCompare(b.entryKind)
-        if ((a.assignmentId ?? '') !== (b.assignmentId ?? '')) {
-          return (a.assignmentId ?? '').localeCompare(b.assignmentId ?? '')
-        }
-        return a.hoursWorked - b.hoursWorked
-      })
-  )
-}
-
-function rowHasValues(row) {
-  return Object.values(row.hours ?? {}).some((value) => String(value ?? '').trim() !== '')
-}
-
 export default function TimesheetEditPage({
   basePath = '/consultant/timesheets',
-  timesheetScope,
 }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const guardedNavigate = useGuardedNavigate()
   const location = useLocation()
+  const {
+    timesheet,
+    assignments,
+    preferredAssignmentId,
+    error: fetchError,
+  } = useLoaderData()
   const localIdRef = useRef(0)
   const autofillWarningShown = useRef(false)
   const { confirm } = useConfirmation()
 
-  const [timesheet, setTimesheet] = useState(null)
-  const [matrixRows, setMatrixRows] = useState([])
-  const [assignments, setAssignments] = useState([])
-  const [archivedAssignments, setArchivedAssignments] = useState([])
-  const [preferredAssignmentId, setPreferredAssignmentId] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [fetchError, setFetchError] = useState(null)
+  const [matrixRows, setMatrixRows] = useState(() => entriesToEditableMatrixRows(timesheet?.entries ?? [], nextLocalId))
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [autofilling, setAutofilling] = useState(false)
-  const [savedEntriesSnapshot, setSavedEntriesSnapshot] = useState('[]')
+  const [savedEntriesSnapshot, setSavedEntriesSnapshot] = useState(() => serializeEntries(timesheet?.entries ?? []))
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   function nextLocalId() {
@@ -169,33 +107,19 @@ export default function TimesheetEditPage({
   }, [location.pathname, location.state, navigate])
 
   useEffect(() => {
-    Promise.all([getTimesheet(id), getAssignments(), getTimesheets({ scope: timesheetScope })])
-      .then(([ts, fetchedAssignments, allTimesheets]) => {
-        if (!isConsultantEditableStatus(ts.status)) {
-          navigate(`${basePath}/${id}`, { replace: true })
-          return
-        }
-
-        setTimesheet(ts)
-        setAssignments(fetchedAssignments)
-        setArchivedAssignments(buildArchivedAssignments(ts, fetchedAssignments))
-        setPreferredAssignmentId(getMostRecentClientAssignmentId(allTimesheets, id))
-        setMatrixRows(entriesToMatrixRows(ts.entries ?? [], nextLocalId))
-        setSavedEntriesSnapshot(serializeEntries(ts.entries ?? []))
-      })
-      .catch((err) => setFetchError(err.message ?? 'Failed to load timesheet'))
-      .finally(() => setLoading(false))
-  }, [basePath, id, navigate, timesheetScope])
+    localIdRef.current = 0
+    setMatrixRows(entriesToEditableMatrixRows(timesheet?.entries ?? [], nextLocalId))
+    setSavedEntriesSnapshot(serializeEntries(timesheet?.entries ?? []))
+  }, [timesheet])
 
   const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
+  const archivedAssignments = buildArchivedAssignments(timesheet, assignments)
   const availableAssignments = [...assignments, ...archivedAssignments]
   const allowedAutofillAssignmentIds = new Set(availableAssignments.map((assignment) => assignment.id))
   const isBusy = saving || submitting || autofilling
   const canChangeBuckets = isConsultantEditableStatus(timesheet?.status)
 
-  const totalHours = matrixRows.reduce((sum, row) => {
-    return sum + weekDates.reduce((daySum, date) => daySum + (parseFloat(row.hours[date]) || 0), 0)
-  }, 0)
+  const totalHours = getMatrixTotalHours(matrixRows, weekDates)
 
   function showSnackbar(message, severity = 'success') {
     setSnackbar({ open: true, message, severity })
@@ -351,7 +275,7 @@ export default function TimesheetEditPage({
         return
       }
 
-      setMatrixRows(entriesToMatrixRows(nextEntries, nextLocalId))
+      setMatrixRows(entriesToEditableMatrixRows(nextEntries, nextLocalId))
 
       if (skippedBucketLabels.length > 0) {
         showSnackbar('Hours copied, but some archived client categories were skipped.', 'warning')
@@ -365,8 +289,6 @@ export default function TimesheetEditPage({
       setAutofilling(false)
     }
   }
-
-  if (loading) return <LoadingSpinner />
 
   if (fetchError) {
     return (
@@ -422,116 +344,18 @@ export default function TimesheetEditPage({
         </Alert>
       )}
 
-      <Paper sx={{ mb: 3, p: { xs: 0, sm: 0 }, overflow: 'hidden' }}>
-        <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
-           <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
-           <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}>
-             {totalHours.toFixed(2)}h Total
-           </Typography>
-        </Box>
-        <TableContainer sx={{ borderTop: `2px solid ${palette.borderStrong}` }}>
-          <Table size="small" sx={{ minWidth: 800 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ width: 250, borderRight: `2px solid ${palette.border}` }}>Work Category</TableCell>
-                {weekDates.map(date => (
-                  <TableCell key={date} align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>
-                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: palette.textPrimary }}>
-                      {formatDayName(date).slice(0, 3)}
-                    </Typography>
-                    <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}>
-                      {date.slice(5)}
-                    </Typography>
-                  </TableCell>
-                ))}
-                <TableCell align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>Total</TableCell>
-                <TableCell align="center" sx={{ width: 60 }}>Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {matrixRows.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={10} align="center" sx={{ py: 6, color: palette.textSecondary }}>
-                    No rows added. Click "Add Row" below.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                matrixRows.map(row => {
-                  const rowTotal = weekDates.reduce((sum, date) => sum + (parseFloat(row.hours[date]) || 0), 0)
-                  return (
-                    <TableRow key={row.id}>
-                      <TableCell sx={{ borderRight: `2px solid ${palette.border}` }}>
-                        <TextField
-                          select
-                          variant="outlined"
-                          size="small"
-                          value={getBucketValue(row.entryKind, row.assignmentId)}
-                          onChange={(e) => handleRowCategoryChange(row.id, e.target.value)}
-                          disabled={isBusy || !canChangeBuckets}
-                          fullWidth
-                          sx={{ '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
-                        >
-                          {availableAssignments.map((assignment) => (
-                            <MenuItem key={assignment.id} value={assignment.id}>
-                              {getAssignmentOptionLabel(assignment)}
-                            </MenuItem>
-                          ))}
-                          <MenuItem value="INTERNAL">Internal</MenuItem>
-                        </TextField>
-                      </TableCell>
-                      {weekDates.map(date => (
-                        <TableCell key={date} align="center" sx={{ p: 1, borderRight: `2px solid ${palette.border}` }}>
-                          <TextField
-                            variant="outlined"
-                            size="small"
-                            type="number"
-                            value={row.hours[date] ?? ''}
-                            onChange={(e) => handleRowHoursChange(row.id, date, e.target.value)}
-                            disabled={isBusy}
-                            slotProps={{ htmlInput: { min: 0, max: 24, step: '0.25', style: { textAlign: 'center', padding: '8px 4px' } } }}
-                            sx={{ width: '100%', '& .MuiOutlinedInput-root': { borderRadius: 0 } }}
-                          />
-                        </TableCell>
-                      ))}
-                      <TableCell align="center" sx={{ borderRight: `2px solid ${palette.border}` }}>
-                        <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
-                          {rowTotal.toFixed(2)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                         {canChangeBuckets && (
-                         <IconButton
-                            onClick={() => {
-                              void handleRemoveRow(row.id)
-                            }}
-                            disabled={isBusy}
-                            color="error"
-                            size="small"
-                          >
-                            <DeleteOutlineIcon />
-                          </IconButton>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        {canChangeBuckets && (
-          <Box sx={{ p: 2, borderTop: `2px solid ${palette.border}` }}>
-            <Button
-              variant="outlined"
-              startIcon={<AddIcon />}
-              onClick={handleAddRow}
-              disabled={isBusy}
-            >
-              Add Row
-            </Button>
-          </Box>
-        )}
-      </Paper>
+      <EditableWeeklyMatrix
+        rows={matrixRows}
+        weekDates={weekDates}
+        totalHours={totalHours}
+        availableAssignments={availableAssignments}
+        canChangeBuckets={canChangeBuckets}
+        isBusy={isBusy}
+        onAddRow={handleAddRow}
+        onRemoveRow={handleRemoveRow}
+        onRowCategoryChange={handleRowCategoryChange}
+        onRowHoursChange={handleRowHoursChange}
+      />
 
       <Paper sx={{ p: { xs: 2.5, sm: 3 }, mt: 3, backgroundColor: palette.surfaceRaised }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">

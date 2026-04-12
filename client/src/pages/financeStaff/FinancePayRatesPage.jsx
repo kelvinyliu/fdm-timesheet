@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLoaderData } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -17,47 +18,41 @@ import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
 import SearchIcon from '@mui/icons-material/Search'
 import InputAdornment from '@mui/material/InputAdornment'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
-import { getSubmitterPayRates, updateDefaultPayRate } from '../../api/users'
+import { updateDefaultPayRate } from '../../api/users'
 import { formatDate } from '../../utils/dateFormatters'
 
 export default function FinancePayRatesPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const [consultants, setConsultants] = useState([])
+  const { consultants: loadedConsultants, error: loadError } = useLoaderData()
+  const [consultants, setConsultants] = useState(loadedConsultants)
   const [searchQuery, setSearchQuery] = useState('')
-  const [pendingRates, setPendingRates] = useState({})
+  const [pendingRates, setPendingRates] = useState(() => (
+    Object.fromEntries(
+      loadedConsultants.map((consultant) => [
+        consultant.id,
+        consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
+      ])
+    )
+  ))
   const [savingById, setSavingById] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(loadError)
   const [feedback, setFeedback] = useState('')
 
-  async function fetchConsultants() {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await getSubmitterPayRates()
-      setConsultants(data)
-      setPendingRates(
-        Object.fromEntries(
-          data.map((consultant) => [
-            consultant.id,
-            consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
-          ])
-        )
-      )
-    } catch (err) {
-      setError(err.message || 'Failed to load submitter pay rates.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchConsultants()
-  }, [])
+    setConsultants(loadedConsultants)
+    setPendingRates(
+      Object.fromEntries(
+        loadedConsultants.map((consultant) => [
+          consultant.id,
+          consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
+        ])
+      )
+    )
+    setError(loadError)
+  }, [loadedConsultants, loadError])
 
   async function handleSave(consultantId) {
     const nextRate = pendingRates[consultantId]
@@ -98,8 +93,6 @@ export default function FinancePayRatesPage() {
     discardLabel: 'Discard edits',
     stayLabel: 'Keep editing',
   })
-
-  if (loading) return <LoadingSpinner />
 
   const filteredConsultants = consultants.filter((consultant) => {
     const q = searchQuery.toLowerCase()

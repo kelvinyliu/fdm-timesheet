@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useState } from 'react'
+import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
@@ -7,43 +7,17 @@ import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
-import { createTimesheet, getTimesheets } from '../../api/timesheets'
-import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
-import {
-  getTimesheetForWeek,
-  isConsultantEditableStatus,
-} from '../../utils/timesheetWorkflow.js'
+import { createTimesheet } from '../../api/timesheets'
+import { formatWeekStart } from '../../utils/dateFormatters'
 
 export default function TimesheetCreatePage({
   basePath = '/consultant/timesheets',
-  timesheetScope,
 }) {
   const navigate = useNavigate()
-  const [weekStart] = useState(() => getCurrentMonday())
-  const [loading, setLoading] = useState(true)
+  const { weekStart } = useLoaderData()
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
-
-  useEffect(() => {
-    getTimesheets({ scope: timesheetScope })
-      .then((all) => {
-        const currentWeekTimesheet = getTimesheetForWeek(all, weekStart)
-        if (currentWeekTimesheet) {
-          navigate(
-            isConsultantEditableStatus(currentWeekTimesheet.status)
-              ? `${basePath}/${currentWeekTimesheet.id}/edit`
-              : `${basePath}/${currentWeekTimesheet.id}`,
-            { replace: true }
-          )
-          return
-        }
-
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [basePath, navigate, timesheetScope, weekStart])
 
   async function handleCreate() {
     setSubmitError(null)
@@ -56,8 +30,6 @@ export default function TimesheetCreatePage({
       setSubmitting(false)
     }
   }
-
-  if (loading) return <LoadingSpinner />
 
   return (
     <Box>

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useLoaderData, useRevalidator } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -27,11 +28,10 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
 import InputAdornment from '@mui/material/InputAdornment'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
-import { getUsers, createUser, updateUserRole, deleteUser } from '../../api/users'
+import { createUser, updateUserRole, deleteUser } from '../../api/users'
 
 const ROLES = ['CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN']
 const SENSITIVE_ROLES = new Set(['FINANCE_MANAGER', 'SYSTEM_ADMIN'])
@@ -41,10 +41,11 @@ const EMPTY_FORM = { name: '', email: '', password: '', role: 'CONSULTANT' }
 export default function UserManagementPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const [users, setUsers] = useState([])
+  const revalidator = useRevalidator()
+  const { users: loadedUsers, error: loadError } = useLoaderData()
+  const [users, setUsers] = useState(loadedUsers)
   const [searchQuery, setSearchQuery] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(loadError)
 
   const [pendingRoles, setPendingRoles] = useState({})
 
@@ -69,22 +70,10 @@ export default function UserManagementPage() {
     stayLabel: 'Keep editing',
   })
 
-  async function fetchUsers() {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await getUsers()
-      setUsers(data)
-    } catch (err) {
-      setError(err.message || 'Failed to load users.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchUsers()
-  }, [])
+    setUsers(loadedUsers)
+    setError(loadError)
+  }, [loadedUsers, loadError])
 
   function handleRoleSelectChange(userId, role) {
     setPendingRoles((prev) => ({ ...prev, [userId]: role }))
@@ -124,7 +113,8 @@ export default function UserManagementPage() {
         delete next[userId]
         return next
       })
-      await fetchUsers()
+      setError('')
+      revalidator.revalidate()
     } catch (err) {
       setError(err.message || 'Failed to update role.')
     }
@@ -146,7 +136,8 @@ export default function UserManagementPage() {
 
     try {
       await deleteUser(userId)
-      await fetchUsers()
+      setError('')
+      revalidator.revalidate()
     } catch (err) {
       setError(err.message || 'Failed to delete user.')
     }
@@ -195,15 +186,14 @@ export default function UserManagementPage() {
     try {
       await createUser(form)
       closeDialog()
-      await fetchUsers()
+      setError('')
+      revalidator.revalidate()
     } catch (err) {
       setFormError(err.message || 'Failed to create user.')
     } finally {
       setFormLoading(false)
     }
   }
-
-  if (loading) return <LoadingSpinner />
 
   const filteredUsers = users.filter((u) => {
     const q = searchQuery.toLowerCase()

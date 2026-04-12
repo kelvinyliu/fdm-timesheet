@@ -16,18 +16,34 @@ import AppLayout from './components/layout/AppLayout.jsx'
 import { ROLE_ROUTES } from './constants/routes.js'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import ForbiddenPage from './pages/auth/ForbiddenPage.jsx'
-import TimesheetListPage from './pages/consultant/TimesheetListPage.jsx'
-import TimesheetCreatePage from './pages/consultant/TimesheetCreatePage.jsx'
-import TimesheetDetailPage from './pages/consultant/TimesheetDetailPage.jsx'
-import TimesheetEditPage from './pages/consultant/TimesheetEditPage.jsx'
-import ManagerTimesheetListPage from './pages/lineManager/ManagerTimesheetListPage.jsx'
-import TimesheetReviewPage from './pages/lineManager/TimesheetReviewPage.jsx'
-import FinanceTimesheetListPage from './pages/financeStaff/FinanceTimesheetListPage.jsx'
-import FinancePaymentPage from './pages/financeStaff/FinancePaymentPage.jsx'
-import FinancePayRatesPage from './pages/financeStaff/FinancePayRatesPage.jsx'
-import UserManagementPage from './pages/admin/UserManagementPage.jsx'
-import AssignmentsPage from './pages/admin/AssignmentsPage.jsx'
-import AuditLogPage from './pages/admin/AuditLogPage.jsx'
+import {
+  assignmentsLoader,
+  auditLogLoader,
+  createTimesheetCreateLoader,
+  createTimesheetEditLoader,
+  createTimesheetListLoader,
+  financePayRatesLoader,
+  financePaymentLoader,
+  financeTimesheetListLoader,
+  managerTimesheetListLoader,
+  timesheetDetailLoader,
+  timesheetReviewLoader,
+  userManagementLoader,
+} from './routes/loaders.js'
+
+function lazyPage(importPage, props = {}, loader) {
+  return async () => {
+    const module = await importPage()
+    const Page = module.default
+    const route = {
+      Component: () => <Page {...props} />,
+    }
+
+    if (loader) route.loader = loader
+
+    return route
+  }
+}
 
 function AppProviders() {
   return (
@@ -58,50 +74,62 @@ const router = createBrowserRouter(createRoutesFromElements(
     <Route element={<PrivateRoute />}>
       <Route element={<AppLayout />}>
         <Route element={<RoleGuard roles={['CONSULTANT']} />}>
-          <Route path="/consultant/timesheets" element={<TimesheetListPage />} />
-          <Route path="/consultant/timesheets/new" element={<TimesheetCreatePage />} />
-          <Route path="/consultant/timesheets/:id" element={<TimesheetDetailPage />} />
-          <Route path="/consultant/timesheets/:id/edit" element={<TimesheetEditPage />} />
+          <Route path="/consultant/timesheets" lazy={lazyPage(() => import('./pages/consultant/TimesheetListPage.jsx'), {}, createTimesheetListLoader())} />
+          <Route path="/consultant/timesheets/new" lazy={lazyPage(() => import('./pages/consultant/TimesheetCreatePage.jsx'), {}, createTimesheetCreateLoader())} />
+          <Route path="/consultant/timesheets/:id" lazy={lazyPage(() => import('./pages/consultant/TimesheetDetailPage.jsx'), {}, timesheetDetailLoader)} />
+          <Route path="/consultant/timesheets/:id/edit" lazy={lazyPage(() => import('./pages/consultant/TimesheetEditPage.jsx'), {}, createTimesheetEditLoader())} />
         </Route>
 
         <Route element={<RoleGuard roles={['LINE_MANAGER']} />}>
-          <Route path="/manager/timesheets" element={<ManagerTimesheetListPage />} />
-          <Route path="/manager/timesheets/:id" element={<TimesheetReviewPage />} />
+          <Route path="/manager/timesheets" lazy={lazyPage(() => import('./pages/lineManager/ManagerTimesheetListPage.jsx'), {}, managerTimesheetListLoader)} />
+          <Route path="/manager/timesheets/:id" lazy={lazyPage(() => import('./pages/lineManager/TimesheetReviewPage.jsx'), {}, timesheetReviewLoader)} />
           <Route
             path="/manager/my-timesheets"
-            element={(
-              <TimesheetListPage
-                basePath="/manager/my-timesheets"
-                title="My Timesheets"
-                subtitle="Create and track your own weekly timesheets"
-                timesheetScope="own"
-              />
-            )}
+            lazy={lazyPage(() => import('./pages/consultant/TimesheetListPage.jsx'), {
+              basePath: '/manager/my-timesheets',
+              title: 'My Timesheets',
+              subtitle: 'Create and track your own weekly timesheets',
+              timesheetScope: 'own',
+            }, createTimesheetListLoader({ timesheetScope: 'own' }))}
           />
           <Route
             path="/manager/my-timesheets/new"
-            element={<TimesheetCreatePage basePath="/manager/my-timesheets" timesheetScope="own" />}
+            lazy={lazyPage(() => import('./pages/consultant/TimesheetCreatePage.jsx'), {
+              basePath: '/manager/my-timesheets',
+              timesheetScope: 'own',
+            }, createTimesheetCreateLoader({
+              basePath: '/manager/my-timesheets',
+              timesheetScope: 'own',
+            }))}
           />
           <Route
             path="/manager/my-timesheets/:id"
-            element={<TimesheetDetailPage basePath="/manager/my-timesheets" />}
+            lazy={lazyPage(() => import('./pages/consultant/TimesheetDetailPage.jsx'), {
+              basePath: '/manager/my-timesheets',
+            }, timesheetDetailLoader)}
           />
           <Route
             path="/manager/my-timesheets/:id/edit"
-            element={<TimesheetEditPage basePath="/manager/my-timesheets" timesheetScope="own" />}
+            lazy={lazyPage(() => import('./pages/consultant/TimesheetEditPage.jsx'), {
+              basePath: '/manager/my-timesheets',
+              timesheetScope: 'own',
+            }, createTimesheetEditLoader({
+              basePath: '/manager/my-timesheets',
+              timesheetScope: 'own',
+            }))}
           />
         </Route>
 
         <Route element={<RoleGuard roles={['FINANCE_MANAGER']} />}>
-          <Route path="/finance/timesheets" element={<FinanceTimesheetListPage />} />
-          <Route path="/finance/timesheets/:id" element={<FinancePaymentPage />} />
-          <Route path="/finance/pay-rates" element={<FinancePayRatesPage />} />
+          <Route path="/finance/timesheets" lazy={lazyPage(() => import('./pages/financeStaff/FinanceTimesheetListPage.jsx'), {}, financeTimesheetListLoader)} />
+          <Route path="/finance/timesheets/:id" lazy={lazyPage(() => import('./pages/financeStaff/FinancePaymentPage.jsx'), {}, financePaymentLoader)} />
+          <Route path="/finance/pay-rates" lazy={lazyPage(() => import('./pages/financeStaff/FinancePayRatesPage.jsx'), {}, financePayRatesLoader)} />
         </Route>
 
         <Route element={<RoleGuard roles={['SYSTEM_ADMIN']} />}>
-          <Route path="/admin/users" element={<UserManagementPage />} />
-          <Route path="/admin/assignments" element={<AssignmentsPage />} />
-          <Route path="/admin/audit" element={<AuditLogPage />} />
+          <Route path="/admin/users" lazy={lazyPage(() => import('./pages/admin/UserManagementPage.jsx'), {}, userManagementLoader)} />
+          <Route path="/admin/assignments" lazy={lazyPage(() => import('./pages/admin/AssignmentsPage.jsx'), {}, assignmentsLoader)} />
+          <Route path="/admin/audit" lazy={lazyPage(() => import('./pages/admin/AuditLogPage.jsx'), {}, auditLogLoader)} />
         </Route>
       </Route>
     </Route>

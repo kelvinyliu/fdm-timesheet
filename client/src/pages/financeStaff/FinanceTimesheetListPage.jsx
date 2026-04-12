@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router'
+import { useLocation, useNavigate, useLoaderData } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -18,10 +17,8 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import PaymentIcon from '@mui/icons-material/Payment'
 import VisibilityIcon from '@mui/icons-material/Visibility'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
-import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 
@@ -74,25 +71,9 @@ export default function FinanceTimesheetListPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const location = useLocation()
   const navigate = useNavigate()
-  const [timesheets, setTimesheets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { timesheets, error } = useLoaderData()
   const activeTabKey = getActiveTabKey(location.search)
   const activeTab = activeTabKey === TAB_KEYS.PAID ? 1 : 0
-
-  useEffect(() => {
-    getTimesheets()
-      .then((data) => {
-        const filtered = data.filter(
-          (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
-        )
-        setTimesheets(filtered)
-      })
-      .catch((err) => setError(err.message ?? 'Failed to load timesheets'))
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <LoadingSpinner />
 
   const displayTimesheets = timesheets.filter((ts) =>
     activeTab === 0 ? ts.status === 'APPROVED' : ts.status === 'COMPLETED'

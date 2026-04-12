@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
+import { useLoaderData, useRevalidator } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -28,20 +29,16 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import {
-  getAllAssignments,
   createAssignment,
   deleteAssignment,
-  getManagerAssignments,
   createManagerAssignment,
   updateManagerAssignment,
   deleteManagerAssignment,
 } from '../../api/assignments'
-import { getUsers } from '../../api/users'
 import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 import { formatDate } from '../../utils/dateFormatters'
 
@@ -60,18 +57,21 @@ const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
 export default function AssignmentsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const [users, setUsers] = useState([])
+  const revalidator = useRevalidator()
+  const {
+    users,
+    clientAssignments,
+    managerAssignments,
+    clientError: loadedClientError,
+    managerError: loadedManagerError,
+  } = useLoaderData()
 
   const [activeTab, setActiveTab] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
 
-  const [clientAssignments, setClientAssignments] = useState([])
-  const [clientLoading, setClientLoading] = useState(true)
-  const [clientError, setClientError] = useState('')
+  const [clientError, setClientError] = useState(loadedClientError)
 
-  const [managerAssignments, setManagerAssignments] = useState([])
-  const [managerLoading, setManagerLoading] = useState(true)
-  const [managerError, setManagerError] = useState('')
+  const [managerError, setManagerError] = useState(loadedManagerError)
 
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
   const [clientForm, setClientForm] = useState(EMPTY_CLIENT_FORM)
@@ -116,60 +116,26 @@ export default function AssignmentsPage() {
     stayLabel: 'Keep editing',
   })
 
+  const userById = new Map(users.map((u) => [u.id, u]))
   const submitters = users.filter((u) => u.role === 'CONSULTANT' || u.role === 'LINE_MANAGER')
   const managers = users.filter((u) => u.role === 'LINE_MANAGER')
 
-  async function fetchClientAssignments() {
-    setClientLoading(true)
-    setClientError('')
-    try {
-      const data = await getAllAssignments()
-      setClientAssignments(data)
-    } catch (err) {
-      setClientError(err.message || 'Failed to load client assignments.')
-    } finally {
-      setClientLoading(false)
-    }
-  }
-
-  async function fetchManagerAssignments() {
-    setManagerLoading(true)
-    setManagerError('')
-    try {
-      const data = await getManagerAssignments()
-      setManagerAssignments(data)
-    } catch (err) {
-      setManagerError(err.message || 'Failed to load manager assignments.')
-    } finally {
-      setManagerLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchClientAssignments()
-    fetchManagerAssignments()
-    getUsers().then(setUsers).catch(() => {})
-  }, [])
+    setClientError(loadedClientError)
+    setManagerError(loadedManagerError)
+  }, [loadedClientError, loadedManagerError])
 
-  const filteredClientAssignments = useMemo(() => {
-    return clientAssignments.filter((a) => {
-      const q = searchQuery.toLowerCase()
-      const submitterName = getSubmitterDisplayLabel(
-        users.find((u) => u.id === a.consultantId)?.name ?? null
-      ).toLowerCase()
-      return a.clientName.toLowerCase().includes(q) || submitterName.includes(q)
-    })
-  }, [clientAssignments, searchQuery, users])
-
-  const filteredManagerAssignments = useMemo(() => {
-    return managerAssignments.filter((a) => {
-      const q = searchQuery.toLowerCase()
-      return (
-        a.managerName.toLowerCase().includes(q) ||
-        a.consultantName.toLowerCase().includes(q)
-      )
-    })
-  }, [managerAssignments, searchQuery])
+  const assignmentQuery = searchQuery.toLowerCase()
+  const filteredClientAssignments = clientAssignments.filter((assignment) => {
+    const submitterName = getSubmitterDisplayLabel(
+      userById.get(assignment.consultantId)?.name ?? null
+    ).toLowerCase()
+    return assignment.clientName.toLowerCase().includes(assignmentQuery) || submitterName.includes(assignmentQuery)
+  })
+  const filteredManagerAssignments = managerAssignments.filter((assignment) => (
+    assignment.managerName.toLowerCase().includes(assignmentQuery) ||
+    assignment.consultantName.toLowerCase().includes(assignmentQuery)
+  ))
 
   async function handleDeleteClientAssignment(id, assignmentLabel) {
     const result = await confirm({
@@ -187,7 +153,8 @@ export default function AssignmentsPage() {
 
     try {
       await deleteAssignment(id)
-      await fetchClientAssignments()
+      setClientError('')
+      revalidator.revalidate()
     } catch (err) {
       setClientError(err.message || 'Failed to delete assignment.')
     }
@@ -209,7 +176,8 @@ export default function AssignmentsPage() {
 
     try {
       await deleteManagerAssignment(id)
-      await fetchManagerAssignments()
+      setManagerError('')
+      revalidator.revalidate()
     } catch (err) {
       setManagerError(err.message || 'Failed to delete assignment.')
     }
@@ -240,7 +208,8 @@ export default function AssignmentsPage() {
     try {
       await createAssignment({ consultantId, clientName, clientBillRate: parsedClientBillRate })
       setClientDialogOpen(false)
-      await fetchClientAssignments()
+      setClientError('')
+      revalidator.revalidate()
     } catch (err) {
       setClientFormError(err.message || 'Failed to create assignment.')
     } finally {
@@ -330,7 +299,8 @@ export default function AssignmentsPage() {
         await createManagerAssignment({ managerId, consultantId })
       }
       closeManagerDialog()
-      await fetchManagerAssignments()
+      setManagerError('')
+      revalidator.revalidate()
     } catch (err) {
       setManagerFormError(
         err.message || `Failed to ${managerDialogMode === 'edit' ? 'update' : 'create'} assignment.`
@@ -400,9 +370,7 @@ export default function AssignmentsPage() {
             </Alert>
           )}
 
-          {clientLoading ? (
-            <LoadingSpinner />
-          ) : isMobile ? (
+          {isMobile ? (
             filteredClientAssignments.length === 0 ? (
               <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
                 <Typography variant="body2" color="text.secondary">
@@ -420,7 +388,7 @@ export default function AssignmentsPage() {
                         </Typography>
                         <Typography variant="body2" fontWeight={600}>
                           {getSubmitterDisplayLabel(
-                            users.find((u) => u.id === a.consultantId)?.name ?? null
+                            userById.get(a.consultantId)?.name ?? null
                           )}
                         </Typography>
                       </Box>
@@ -471,7 +439,7 @@ export default function AssignmentsPage() {
                             void handleDeleteClientAssignment(
                               a.id,
                               `${a.clientName} for ${getSubmitterDisplayLabel(
-                                users.find((u) => u.id === a.consultantId)?.name ?? null
+                                userById.get(a.consultantId)?.name ?? null
                               )}`
                             )
                           }}
@@ -502,7 +470,7 @@ export default function AssignmentsPage() {
                         <Box>
                           <Typography variant="body2" fontWeight={500}>
                             {getSubmitterDisplayLabel(
-                              users.find((u) => u.id === a.consultantId)?.name ?? null
+                              userById.get(a.consultantId)?.name ?? null
                             )}
                           </Typography>
                         </Box>
@@ -533,7 +501,7 @@ export default function AssignmentsPage() {
                               void handleDeleteClientAssignment(
                                 a.id,
                                 `${a.clientName} for ${getSubmitterDisplayLabel(
-                                  users.find((u) => u.id === a.consultantId)?.name ?? null
+                                  userById.get(a.consultantId)?.name ?? null
                                 )}`
                               )
                             }}
@@ -571,9 +539,7 @@ export default function AssignmentsPage() {
             </Alert>
           )}
 
-          {managerLoading ? (
-            <LoadingSpinner />
-          ) : isMobile ? (
+          {isMobile ? (
             filteredManagerAssignments.length === 0 ? (
               <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
                 <Typography variant="body2" color="text.secondary">

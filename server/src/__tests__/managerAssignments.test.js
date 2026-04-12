@@ -26,6 +26,7 @@ const ADMIN_ID = 'admin-1'
 const MANAGER_ID = '11111111-1111-4111-8111-111111111111'
 const CONSULTANT_ID = '22222222-2222-4222-8222-222222222222'
 const SECOND_CONSULTANT_ID = '33333333-3333-4333-8333-333333333333'
+const SUBMITTER_MANAGER_ID = '44444444-4444-4444-8444-444444444444'
 const ASSIGNMENT_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
 
 function token(payload) {
@@ -70,6 +71,53 @@ describe('POST /api/manager-assignments', () => {
       assignedAt: assignmentRow.assigned_at,
     })
   })
+
+  it('allows a line manager submitter to be assigned to a different manager approver', async () => {
+    userModel.findUserById
+      .mockResolvedValueOnce({ user_id: MANAGER_ID, role: 'LINE_MANAGER' })
+      .mockResolvedValueOnce({ user_id: SUBMITTER_MANAGER_ID, role: 'LINE_MANAGER' })
+    managerAssignmentModel.createManagerAssignment.mockResolvedValue({
+      ...assignmentRow,
+      consultant_id: SUBMITTER_MANAGER_ID,
+      consultant_name: 'Morgan Manager',
+    })
+
+    const res = await request(app)
+      .post('/api/manager-assignments')
+      .set('Authorization', adminToken)
+      .send({ managerId: MANAGER_ID, consultantId: SUBMITTER_MANAGER_ID })
+
+    expect(res.status).toBe(201)
+    expect(managerAssignmentModel.createManagerAssignment).toHaveBeenCalledWith({
+      managerId: MANAGER_ID,
+      consultantId: SUBMITTER_MANAGER_ID,
+    })
+    expect(res.body.consultantName).toBe('Morgan Manager')
+  })
+
+  it('rejects assigning a manager as their own approver', async () => {
+    const res = await request(app)
+      .post('/api/manager-assignments')
+      .set('Authorization', adminToken)
+      .send({ managerId: MANAGER_ID, consultantId: MANAGER_ID })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/own timesheets/)
+    expect(userModel.findUserById).not.toHaveBeenCalled()
+    expect(managerAssignmentModel.createManagerAssignment).not.toHaveBeenCalled()
+  })
+
+  it('rejects assigning a manager as their own approver with mixed-case UUIDs', async () => {
+    const res = await request(app)
+      .post('/api/manager-assignments')
+      .set('Authorization', adminToken)
+      .send({ managerId: MANAGER_ID.toUpperCase(), consultantId: MANAGER_ID })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/own timesheets/)
+    expect(userModel.findUserById).not.toHaveBeenCalled()
+    expect(managerAssignmentModel.createManagerAssignment).not.toHaveBeenCalled()
+  })
 })
 
 describe('PATCH /api/manager-assignments/:id', () => {
@@ -91,6 +139,28 @@ describe('PATCH /api/manager-assignments/:id', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/Assignment id/)
+  })
+
+  it('rejects updating an assignment to self-approval', async () => {
+    const res = await request(app)
+      .patch(`/api/manager-assignments/${ASSIGNMENT_ID}`)
+      .set('Authorization', adminToken)
+      .send({ managerId: MANAGER_ID, consultantId: MANAGER_ID })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/own timesheets/)
+    expect(managerAssignmentModel.getManagerAssignmentById).not.toHaveBeenCalled()
+  })
+
+  it('rejects updating an assignment to self-approval with mixed-case UUIDs', async () => {
+    const res = await request(app)
+      .patch(`/api/manager-assignments/${ASSIGNMENT_ID}`)
+      .set('Authorization', adminToken)
+      .send({ managerId: MANAGER_ID, consultantId: MANAGER_ID.toUpperCase() })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/own timesheets/)
+    expect(managerAssignmentModel.getManagerAssignmentById).not.toHaveBeenCalled()
   })
 
   it('returns 403 for non-admin users', async () => {

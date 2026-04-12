@@ -64,7 +64,8 @@ CREATE TABLE line_manager_consultants (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   manager_id    UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
   consultant_id UUID NOT NULL UNIQUE REFERENCES users(user_id) ON DELETE CASCADE,
-  assigned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  assigned_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (manager_id <> consultant_id)
 );
 
 -- Reviews (line manager decisions on timesheets)

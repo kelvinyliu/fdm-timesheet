@@ -1,4 +1,18 @@
+import { formatDayName } from './dateFormatters'
+
 export const INTERNAL_BUCKET_VALUE = 'INTERNAL'
+const HOURS_DECIMAL_PLACES = 2
+
+function roundHours(value) {
+  return Number(value.toFixed(HOURS_DECIMAL_PLACES))
+}
+
+function formatRoundedHoursValue(value) {
+  if (Number.isInteger(value)) return value.toFixed(1)
+
+  const fixed = value.toFixed(HOURS_DECIMAL_PLACES)
+  return fixed.replace(/\.?0+$/, '')
+}
 
 export function getBucketValue(entryKind, assignmentId) {
   return entryKind === 'CLIENT' ? assignmentId || '' : INTERNAL_BUCKET_VALUE
@@ -59,6 +73,51 @@ export function getMatrixRowTotal(row, weekDates = []) {
 
 export function getMatrixTotalHours(rows = [], weekDates = []) {
   return rows.reduce((sum, row) => sum + getMatrixRowTotal(row, weekDates), 0)
+}
+
+export function buildDayCardData(rows = [], weekDates = []) {
+  return weekDates.map((date) => ({
+    date,
+    dayLabel: formatDayName(date),
+    shortDate: date.slice(5),
+    totalHours: rows.reduce((sum, row) => sum + (parseFloat(row.hours?.[date]) || 0), 0),
+    categories: rows.map((row) => ({
+      rowId: row.id,
+      entryKind: row.entryKind,
+      assignmentId: row.assignmentId ?? null,
+      bucketLabel: row.bucketLabel ?? '',
+      value: row.hours?.[date] ?? '',
+      numericHours: parseFloat(row.hours?.[date]) || 0,
+    })),
+  }))
+}
+
+export function clampHoursValue(value, min = 0, max = 24) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return min
+  return Math.min(max, Math.max(min, roundHours(numericValue)))
+}
+
+export function normaliseHoursValue(value) {
+  const numericValue = clampHoursValue(value)
+  if (numericValue === 0) return ''
+  return String(roundHours(numericValue))
+}
+
+export function adjustHoursValue(currentValue, delta, step = 0.5) {
+  const nextValue = clampHoursValue((parseFloat(currentValue) || 0) + (delta * step))
+  return normaliseHoursValue(nextValue)
+}
+
+export function formatHoursValue(value) {
+  const numericValue = clampHoursValue(value)
+  return formatRoundedHoursValue(numericValue)
+}
+
+export function formatTotalHoursValue(value) {
+  const numericValue = Number(value)
+  if (!Number.isFinite(numericValue)) return formatRoundedHoursValue(0)
+  return formatRoundedHoursValue(roundHours(numericValue))
 }
 
 export function rowHasValues(row) {

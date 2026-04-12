@@ -1,8 +1,21 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import WeeklyMatrix from './WeeklyMatrix.jsx'
 
+const mocks = vi.hoisted(() => ({
+  useMediaQuery: vi.fn(),
+}))
+
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: mocks.useMediaQuery,
+}))
+
 describe('WeeklyMatrix', () => {
+  beforeEach(() => {
+    mocks.useMediaQuery.mockReset()
+    mocks.useMediaQuery.mockReturnValue(false)
+  })
+
   it('renders week headers, row values, and totals', () => {
     render(
       <WeeklyMatrix
@@ -40,5 +53,69 @@ describe('WeeklyMatrix', () => {
     )
 
     expect(screen.getByText('No entries recorded for this timesheet.')).toBeInTheDocument()
+  })
+
+  it('renders day cards on mobile with muted and active day totals', () => {
+    mocks.useMediaQuery.mockReturnValue(true)
+
+    render(
+      <WeeklyMatrix
+        weekDates={['2026-04-06', '2026-04-07']}
+        totalHours={8.5}
+        rows={[
+          {
+            id: 'assignment-1',
+            bucketLabel: 'Client A',
+            hours: {
+              '2026-04-06': 7.5,
+            },
+          },
+          {
+            id: 'INTERNAL',
+            bucketLabel: 'Internal',
+            hours: {
+              '2026-04-06': 1,
+            },
+          },
+        ]}
+      />
+    )
+
+    expect(screen.getByText('Monday')).toBeInTheDocument()
+    expect(screen.getByText('Tuesday')).toBeInTheDocument()
+    expect(screen.getByText('8.5h')).toBeInTheDocument()
+    expect(screen.getByText('0.0h')).toBeInTheDocument()
+    expect(screen.getAllByText('Client A')).toHaveLength(2)
+    expect(screen.getAllByText('Internal')).toHaveLength(2)
+  })
+
+  it('shows exact mobile totals when a day exceeds 24 hours', () => {
+    mocks.useMediaQuery.mockReturnValue(true)
+
+    render(
+      <WeeklyMatrix
+        weekDates={['2026-04-06']}
+        totalHours={26.5}
+        rows={[
+          {
+            id: 'assignment-1',
+            bucketLabel: 'Client A',
+            hours: {
+              '2026-04-06': 16,
+            },
+          },
+          {
+            id: 'INTERNAL',
+            bucketLabel: 'Internal',
+            hours: {
+              '2026-04-06': 10.5,
+            },
+          },
+        ]}
+      />
+    )
+
+    expect(screen.getByText('26.5h')).toBeInTheDocument()
+    expect(screen.getByText('Over daily limit')).toBeInTheDocument()
   })
 })

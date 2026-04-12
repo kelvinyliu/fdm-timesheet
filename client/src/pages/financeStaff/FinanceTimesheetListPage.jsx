@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLocation, useNavigate, useLoaderData } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -13,10 +14,17 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import PaymentIcon from '@mui/icons-material/Payment'
 import VisibilityIcon from '@mui/icons-material/Visibility'
+import SearchIcon from '@mui/icons-material/Search'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { formatWeekStart } from '../../utils/dateFormatters'
@@ -72,12 +80,33 @@ export default function FinanceTimesheetListPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { timesheets, error } = useLoaderData()
+
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('latest')
+
   const activeTabKey = getActiveTabKey(location.search)
   const activeTab = activeTabKey === TAB_KEYS.PAID ? 1 : 0
 
-  const displayTimesheets = timesheets.filter((ts) =>
-    activeTab === 0 ? ts.status === 'APPROVED' : ts.status === 'COMPLETED'
+  const displayTimesheets = timesheets.filter((timesheet) =>
+    activeTab === 0 ? timesheet.status === 'APPROVED' : timesheet.status === 'COMPLETED'
   )
+
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+
+  const filteredTimesheets = displayTimesheets.filter((timesheet) => {
+    if (normalizedQuery.length === 0) return true
+    return getSubmitterDisplayLabel(timesheet.consultantName)
+      .toLowerCase()
+      .includes(normalizedQuery)
+  })
+
+  const sortedTimesheets = [...filteredTimesheets].sort((a, b) => {
+    if (sortBy === 'latest') return new Date(b.weekStart) - new Date(a.weekStart)
+    if (sortBy === 'oldest') return new Date(a.weekStart) - new Date(b.weekStart)
+    if (sortBy === 'hoursHigh') return (b.totalHours || 0) - (a.totalHours || 0)
+    if (sortBy === 'hoursLow') return (a.totalHours || 0) - (b.totalHours || 0)
+    return 0
+  })
 
   function handleTabChange(_event, newValue) {
     const nextTabKey = newValue === 1 ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY
@@ -90,12 +119,50 @@ export default function FinanceTimesheetListPage() {
     })
   }
 
+  const pageTitle =
+    activeTabKey === TAB_KEYS.PAID ? 'Paid Timesheets' : 'Timesheets for Payment'
+
+  let emptyMessage =
+    activeTabKey === TAB_KEYS.PAID ? 'No paid timesheets found.' : 'No approved timesheets found.'
+  if (normalizedQuery) {
+    emptyMessage = `No timesheets found for "${searchQuery.trim()}".`
+  }
+
   return (
     <Box>
-      <PageHeader
-        title="Timesheets for Payment"
-        subtitle="Process approved timesheets and review paid ones"
-      />
+      <PageHeader title={pageTitle} subtitle="Process approved timesheets and review paid ones">
+        <TextField
+          placeholder="Search submitters..."
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ minWidth: { sm: 220 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+
+        <FormControl size="small" sx={{ minWidth: 160 }}>
+          <InputLabel id="finance-sort-label">Sort</InputLabel>
+          <Select
+            labelId="finance-sort-label"
+            value={sortBy}
+            label="Sort"
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <MenuItem value="latest">Latest</MenuItem>
+            <MenuItem value="oldest">Oldest</MenuItem>
+            <MenuItem value="hoursHigh">Hours (High → Low)</MenuItem>
+            <MenuItem value="hoursLow">Hours (Low → High)</MenuItem>
+          </Select>
+        </FormControl>
+      </PageHeader>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
@@ -110,22 +177,23 @@ export default function FinanceTimesheetListPage() {
         </Alert>
       )}
 
-      {!error && displayTimesheets.length === 0 && (
+      {!error && sortedTimesheets.length === 0 && (
         <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
           <Typography variant="body2" color="text.secondary">
-            {activeTab === 0 ? 'No approved timesheets found.' : 'No paid timesheets found.'}
+            {emptyMessage}
           </Typography>
         </Paper>
       )}
 
-      {!error && displayTimesheets.length > 0 && (
-        isMobile ? (
+      {!error &&
+        sortedTimesheets.length > 0 &&
+        (isMobile ? (
           <Stack spacing={1.5}>
-            {displayTimesheets.map((ts) => {
-              const ActionIcon = getActionButtonIcon(ts.status)
+            {sortedTimesheets.map((timesheet) => {
+              const ActionIcon = getActionButtonIcon(timesheet.status)
 
               return (
-                <Paper key={ts.id} sx={{ p: 2.5 }}>
+                <Paper key={timesheet.id} sx={{ p: 2.5 }}>
                   <Stack spacing={2}>
                     <Box
                       sx={{
@@ -140,10 +208,13 @@ export default function FinanceTimesheetListPage() {
                           Submitter
                         </Typography>
                         <Typography variant="body2" fontWeight={600}>
-                          {getSubmitterDisplayLabel(ts.consultantName)}
+                          {getSubmitterDisplayLabel(timesheet.consultantName)}
                         </Typography>
                       </Box>
-                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
+                      <TimesheetStatusDisplay
+                        status={timesheet.status}
+                        submittedLate={timesheet.submittedLate}
+                      />
                     </Box>
 
                     <Box
@@ -158,7 +229,7 @@ export default function FinanceTimesheetListPage() {
                           Week of
                         </Typography>
                         <Typography variant="body2" fontWeight={500}>
-                          {formatWeekStart(ts.weekStart)}
+                          {formatWeekStart(timesheet.weekStart)}
                         </Typography>
                       </Box>
                       <Box>
@@ -172,12 +243,12 @@ export default function FinanceTimesheetListPage() {
                             fontWeight: 600,
                           }}
                         >
-                          {ts.totalHours ?? '-'}
+                          {timesheet.totalHours ?? '-'}
                         </Typography>
                       </Box>
                     </Box>
 
-                    {ts.status === 'COMPLETED' && (
+                    {timesheet.status === 'COMPLETED' && (
                       <Box
                         sx={{
                           display: 'grid',
@@ -196,7 +267,9 @@ export default function FinanceTimesheetListPage() {
                               fontWeight: 600,
                             }}
                           >
-                            {ts.totalBillAmount != null ? formatCurrency(ts.totalBillAmount) : '-'}
+                            {timesheet.totalBillAmount != null
+                              ? formatCurrency(timesheet.totalBillAmount)
+                              : '-'}
                           </Typography>
                         </Box>
                         <Box>
@@ -210,7 +283,9 @@ export default function FinanceTimesheetListPage() {
                               fontWeight: 600,
                             }}
                           >
-                            {ts.totalPayAmount != null ? formatCurrency(ts.totalPayAmount) : '-'}
+                            {timesheet.totalPayAmount != null
+                              ? formatCurrency(timesheet.totalPayAmount)
+                              : '-'}
                           </Typography>
                         </Box>
                       </Box>
@@ -219,9 +294,9 @@ export default function FinanceTimesheetListPage() {
                     <Button
                       variant="outlined"
                       startIcon={<ActionIcon sx={{ fontSize: '0.95rem' }} />}
-                      onClick={() => handleOpenTimesheet(ts.id)}
+                      onClick={() => handleOpenTimesheet(timesheet.id)}
                     >
-                      {getActionButtonLabel(ts.status)}
+                      {getActionButtonLabel(timesheet.status)}
                     </Button>
                   </Stack>
                 </Paper>
@@ -241,23 +316,26 @@ export default function FinanceTimesheetListPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-              {displayTimesheets.map((ts) => {
-                  const ActionIcon = getActionButtonIcon(ts.status)
+                {sortedTimesheets.map((timesheet) => {
+                  const ActionIcon = getActionButtonIcon(timesheet.status)
 
                   return (
-                    <TableRow key={ts.id}>
+                    <TableRow key={timesheet.id}>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
-                          {getSubmitterDisplayLabel(ts.consultantName)}
+                          {getSubmitterDisplayLabel(timesheet.consultantName)}
                         </Typography>
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
-                          {formatWeekStart(ts.weekStart)}
+                          {formatWeekStart(timesheet.weekStart)}
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
+                        <TimesheetStatusDisplay
+                          status={timesheet.status}
+                          submittedLate={timesheet.submittedLate}
+                        />
                       </TableCell>
                       <TableCell align="right">
                         <Typography
@@ -266,7 +344,7 @@ export default function FinanceTimesheetListPage() {
                             fontSize: '0.85rem',
                           }}
                         >
-                          {ts.totalHours ?? '-'}
+                          {timesheet.totalHours ?? '-'}
                         </Typography>
                       </TableCell>
                       <TableCell align="right">
@@ -274,9 +352,9 @@ export default function FinanceTimesheetListPage() {
                           size="small"
                           variant="outlined"
                           startIcon={<ActionIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => handleOpenTimesheet(ts.id)}
+                          onClick={() => handleOpenTimesheet(timesheet.id)}
                         >
-                          {getActionButtonLabel(ts.status)}
+                          {getActionButtonLabel(timesheet.status)}
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -285,8 +363,7 @@ export default function FinanceTimesheetListPage() {
               </TableBody>
             </Table>
           </TableContainer>
-        )
-      )}
+        ))}
     </Box>
   )
 }

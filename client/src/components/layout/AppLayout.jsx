@@ -12,6 +12,8 @@ import { useTheme } from '@mui/material/styles'
 import LogoutIcon from '@mui/icons-material/Logout'
 import LockResetIcon from '@mui/icons-material/LockReset'
 import MenuIcon from '@mui/icons-material/Menu'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { Outlet, useLocation } from 'react-router'
 import Sidebar from './Sidebar.jsx'
 import PasswordDialog from './PasswordDialog.jsx'
@@ -20,6 +22,7 @@ import { useUnsavedChangesController } from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
 
 const SIDEBAR_WIDTH = 260
+const SIDEBAR_COLLAPSED_WIDTH = 84
 const MOBILE_DRAWER_WIDTH = 320
 
 const ROLE_SHORT = {
@@ -30,33 +33,45 @@ const ROLE_SHORT = {
 }
 
 function getBreadcrumbs(pathname) {
+  if (pathname.startsWith('/admin/dashboard')) return ['Admin', 'Dashboard']
   if (pathname.startsWith('/admin/audit')) return ['Admin', 'Audit Log']
   if (pathname.startsWith('/admin/assignments')) return ['Admin', 'Assignments']
   if (pathname.startsWith('/admin/users')) return ['Admin', 'Users']
+
+  if (pathname.startsWith('/consultant/dashboard')) return ['Dashboard']
+  if (pathname.startsWith('/manager/dashboard')) return ['Dashboard']
+  if (pathname.startsWith('/finance/dashboard')) return ['Dashboard']
+
   if (/\/timesheets\/[^/]+\/edit/.test(pathname)) return ['Timesheets', 'Edit']
   if (/\/timesheets\/[^/]+\/payment/.test(pathname)) return ['Timesheets', 'Payment']
   if (/\/timesheets\/new/.test(pathname)) return ['Timesheets', 'New']
-  if (/\/timesheets\/[^/]+/.test(pathname))
+
+  if (/\/timesheets\/[^/]+/.test(pathname)) {
     return pathname.startsWith('/manager')
       ? ['Timesheets', 'Open Timesheet']
       : ['Timesheets', 'Detail']
+  }
+
   if (pathname.includes('/timesheets')) return ['Timesheets']
   return []
 }
 
-function BrandLockup({ compact = false }) {
+function BrandLockup({ compact = false, collapsed = false }) {
   return (
     <Box
       sx={{
-        p: compact ? '18px 20px' : '28px 24px 20px',
+        p: collapsed ? '18px 12px' : compact ? '18px 20px' : '28px 24px 20px',
         position: 'relative',
         borderBottom: `1px solid ${palette.sidebarScrim}`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: collapsed ? 'center' : 'flex-start',
       }}
     >
       <Typography
         sx={{
           fontFamily: '"Instrument Serif", Georgia, serif',
-          fontSize: compact ? '2.35rem' : '5rem',
+          fontSize: collapsed ? '2.6rem' : compact ? '2.35rem' : '5rem',
           color: palette.textInverse,
           letterSpacing: '-0.01em',
           lineHeight: 1,
@@ -64,23 +79,32 @@ function BrandLockup({ compact = false }) {
       >
         FDM
       </Typography>
-      <Typography
-        sx={{
-          fontFamily: '"Outfit", sans-serif',
-          fontSize: compact ? '0.62rem' : '0.65rem',
-          letterSpacing: compact ? '0.18em' : '0.2em',
-          textTransform: 'uppercase',
-          color: palette.textInverseMuted,
-          mt: 0.5,
-        }}
-      >
-        Timesheets
-      </Typography>
+
+      {!collapsed && (
+        <Typography
+          sx={{
+            fontFamily: '"Outfit", sans-serif',
+            fontSize: compact ? '0.62rem' : '0.65rem',
+            letterSpacing: compact ? '0.18em' : '0.2em',
+            textTransform: 'uppercase',
+            color: palette.textInverseMuted,
+            mt: 0.5,
+          }}
+        >
+          Timesheets
+        </Typography>
+      )}
     </Box>
   )
 }
 
-function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned = false }) {
+function UserFooter({
+  user,
+  onChangePassword,
+  onLogout,
+  mobile = false,
+  collapsed = false,
+}) {
   if (mobile) {
     return (
       <Box
@@ -107,6 +131,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           >
             {user?.name?.[0]?.toUpperCase() ?? '?'}
           </Box>
+
           <Box sx={{ minWidth: 0 }}>
             <Typography
               sx={{
@@ -120,6 +145,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
             >
               {user?.name ?? 'User'}
             </Typography>
+
             <Typography
               sx={{
                 fontSize: '0.65rem',
@@ -156,14 +182,77 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           >
             Password
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<LogoutIcon />}
-            onClick={onLogout}
-          >
+
+          <Button variant="contained" startIcon={<LogoutIcon />} onClick={onLogout}>
             Sign out
           </Button>
         </Box>
+      </Box>
+    )
+  }
+
+  if (collapsed) {
+    return (
+      <Box
+        sx={{
+          p: '16px 10px',
+          borderTop: `1px solid ${palette.sidebarScrim}`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 1,
+          flexShrink: 0,
+        }}
+      >
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: '10px',
+            background: `linear-gradient(135deg, ${palette.primary} 0%, ${palette.primaryHover} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: palette.primaryContrast,
+            flexShrink: 0,
+          }}
+        >
+          {user?.name?.[0]?.toUpperCase() ?? '?'}
+        </Box>
+
+        <Tooltip title="Change password">
+          <IconButton
+            size="small"
+            onClick={onChangePassword}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.textInverse,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LockResetIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Sign out">
+          <IconButton
+            size="small"
+            onClick={onLogout}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.primary,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LogoutIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
     )
   }
@@ -173,15 +262,6 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
       sx={{
         p: '16px 20px',
         borderTop: `1px solid ${palette.sidebarScrim}`,
-        position: pinned ? 'fixed' : 'relative',
-        left: pinned ? 0 : 'auto',
-        right: pinned ? 'auto' : 'auto',
-        bottom: pinned ? 0 : 'auto',
-        width: pinned ? SIDEBAR_WIDTH : 'auto',
-        zIndex: pinned ? 1201 : 'auto',
-        background: pinned
-          ? `linear-gradient(180deg, ${palette.sidebarBgAlt} 0%, ${palette.sidebarBg} 100%)`
-          : 'transparent',
         display: 'flex',
         alignItems: 'center',
         gap: 1,
@@ -205,6 +285,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
       >
         {user?.name?.[0]?.toUpperCase() ?? '?'}
       </Box>
+
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography
           sx={{
@@ -218,6 +299,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
         >
           {user?.name ?? 'User'}
         </Typography>
+
         <Typography
           sx={{
             fontSize: '0.65rem',
@@ -229,25 +311,33 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           {user?.role?.replace(/_/g, ' ')}
         </Typography>
       </Box>
+
       <Tooltip title="Change password">
         <IconButton
           size="small"
           onClick={onChangePassword}
           sx={{
             color: palette.textInverseMuted,
-            '&:hover': { color: palette.textInverse, backgroundColor: palette.overlayWhiteSoft },
+            '&:hover': {
+              color: palette.textInverse,
+              backgroundColor: palette.overlayWhiteSoft,
+            },
           }}
         >
           <LockResetIcon fontSize="small" />
         </IconButton>
       </Tooltip>
+
       <Tooltip title="Sign out">
         <IconButton
           size="small"
           onClick={onLogout}
           sx={{
             color: palette.textInverseMuted,
-            '&:hover': { color: palette.primary, backgroundColor: palette.overlayWhiteSoft },
+            '&:hover': {
+              color: palette.primary,
+              backgroundColor: palette.overlayWhiteSoft,
+            },
           }}
         >
           <LogoutIcon fontSize="small" />
@@ -265,12 +355,18 @@ export default function AppLayout() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const [pwOpen, setPwOpen] = useState(false)
+  const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false)
   const [mobileNavState, setMobileNavState] = useState({
     open: false,
     pathname: location.pathname,
   })
+
   const crumbs = getBreadcrumbs(location.pathname)
-  const mobileNavOpen = mobileNavState.open && mobileNavState.pathname === location.pathname
+  const mobileNavOpen =
+    mobileNavState.open && mobileNavState.pathname === location.pathname
+  const desktopSidebarWidth = desktopNavCollapsed
+    ? SIDEBAR_COLLAPSED_WIDTH
+    : SIDEBAR_WIDTH
 
   function openMobileNav() {
     setMobileNavState({ open: true, pathname: location.pathname })
@@ -299,43 +395,59 @@ export default function AppLayout() {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+      background:
+        'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
       pointerEvents: 'none',
     },
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', alignItems: 'stretch' }}>
       {!isMobile && (
         <Box
           component="nav"
           sx={{
-            width: SIDEBAR_WIDTH,
+            width: desktopSidebarWidth,
             flexShrink: 0,
             display: 'grid',
-            gridTemplateRows: 'auto minmax(0, 1fr) auto',
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            bottom: 0,
+            gridTemplateRows: 'auto 1fr auto',
+            minHeight: '100%',
+            alignSelf: 'stretch',
             overflow: 'hidden',
-            zIndex: 1200,
+            transition: 'width 0.2s ease',
             ...navShellStyles,
           }}
         >
-          <BrandLockup />
-          <Box
-            sx={{
-              minHeight: 0,
-              overflow: 'auto',
-              position: 'relative',
-            }}
-          >
-            <Sidebar />
+          <Box sx={{ position: 'relative' }}>
+            <BrandLockup collapsed={desktopNavCollapsed} />
+
+            <IconButton
+              onClick={() => setDesktopNavCollapsed((prev) => !prev)}
+              sx={{
+                position: 'absolute',
+                top: 14,
+                right: desktopNavCollapsed ? '50%' : 14,
+                transform: desktopNavCollapsed ? 'translateX(50%)' : 'none',
+                color: palette.textInverseMuted,
+                border: `1px solid ${palette.sidebarScrim}`,
+                backgroundColor: palette.overlayWhiteSoft,
+                '&:hover': {
+                  color: palette.textInverse,
+                  backgroundColor: palette.overlayWhiteMuted,
+                },
+              }}
+            >
+              {desktopNavCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            </IconButton>
           </Box>
+
+          <Box sx={{ minHeight: 0, overflow: 'auto', position: 'relative' }}>
+            <Sidebar collapsed={desktopNavCollapsed} />
+          </Box>
+
           <UserFooter
             user={user}
-            pinned
+            collapsed={desktopNavCollapsed}
             onChangePassword={() => setPwOpen(true)}
             onLogout={() => runWithGuard(logout)}
           />
@@ -466,7 +578,6 @@ export default function AppLayout() {
         </>
       )}
 
-      {/* Main content */}
       <Box
         component="main"
         sx={{
@@ -474,7 +585,7 @@ export default function AppLayout() {
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          width: { xs: '100%', md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
+          minWidth: 0,
         }}
       >
         {isMobile && (
@@ -485,7 +596,6 @@ export default function AppLayout() {
           />
         )}
 
-        {/* Top bar */}
         <Box
           sx={{
             px: { md: 3, lg: 4 },
@@ -503,7 +613,6 @@ export default function AppLayout() {
             gap: 2,
           }}
         >
-          {/* Breadcrumb */}
           <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
             {crumbs.map((crumb, i) => (
               <Fragment key={crumb + i}>
@@ -536,7 +645,6 @@ export default function AppLayout() {
             ))}
           </Box>
 
-          {/* Right: date + divider + user pill */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
             <Typography
               sx={{
@@ -548,18 +656,65 @@ export default function AppLayout() {
             >
               {todayLabel}
             </Typography>
+
+            <Box sx={{ width: 1, height: 20, backgroundColor: palette.border, flexShrink: 0 }} />
+
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+              <Box
+                sx={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: '8px',
+                  background: `linear-gradient(135deg, ${palette.sidebarBg} 0%, #2d3224 100%)`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  color: palette.textInverse,
+                  flexShrink: 0,
+                }}
+              >
+                {user?.name?.[0]?.toUpperCase() ?? '?'}
+              </Box>
+
+              {!desktopNavCollapsed && (
+                <Box>
+                  <Typography
+                    sx={{
+                      fontSize: '0.8rem',
+                      fontWeight: 500,
+                      color: palette.textPrimary,
+                      lineHeight: 1.25,
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {user?.name ?? 'User'}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: '0.62rem',
+                      color: palette.textMuted,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                      lineHeight: 1,
+                    }}
+                  >
+                    {ROLE_SHORT[user?.role] ?? user?.role}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
           </Box>
         </Box>
 
-        {/* Page content */}
         <Box
           className="page-enter"
           sx={{
             flex: 1,
             p: { xs: 2, sm: 3, md: 4 },
-            maxWidth: 1200,
             width: '100%',
-            mx: 'auto',
+            minWidth: 0,
           }}
         >
           <Outlet />

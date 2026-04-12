@@ -39,26 +39,21 @@ export default function TimesheetReviewPage() {
   const navigate = useNavigate()
   const revalidator = useRevalidator()
   const { id } = useParams()
-  const {
-    timesheet,
-    pendingQueue,
-    error,
-  } = useLoaderData()
+  const { timesheet, pendingQueue, error } = useLoaderData()
 
   const [rejectionComment, setRejectionComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
-  
   const [approveDialogOpen, setApproveDialogOpen] = useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [isNextAction, setIsNextAction] = useState(false)
 
   function getNextPendingId() {
-    const idx = pendingQueue.findIndex(ts => ts.id === id)
+    const idx = pendingQueue.findIndex((timesheet) => timesheet.id === id)
     if (idx !== -1 && idx + 1 < pendingQueue.length) {
       return pendingQueue[idx + 1].id
     }
-    const nextUnseen = pendingQueue.find(ts => ts.id !== id)
+    const nextUnseen = pendingQueue.find((timesheet) => timesheet.id !== id)
     return nextUnseen ? nextUnseen.id : null
   }
 
@@ -67,12 +62,16 @@ export default function TimesheetReviewPage() {
   async function handleApprove() {
     setSubmitting(true)
     setFeedback(null)
+
     try {
       await reviewTimesheet(id, { action: 'APPROVE', comment: '' })
       setApproveDialogOpen(false)
-      
+
       if (isNextAction && nextId) {
-        setFeedback({ severity: 'success', message: 'Timesheet approved. Showing next pending timesheet.' })
+        setFeedback({
+          severity: 'success',
+          message: 'Timesheet approved. Showing next pending timesheet.',
+        })
         navigate(`/manager/timesheets/${nextId}`, { replace: true })
       } else {
         setFeedback({ severity: 'success', message: 'Timesheet approved successfully.' })
@@ -87,18 +86,26 @@ export default function TimesheetReviewPage() {
 
   async function handleReject() {
     if (!rejectionComment.trim()) return
+
     setSubmitting(true)
     setFeedback(null)
+
     try {
       await reviewTimesheet(id, { action: 'REJECT', comment: rejectionComment.trim() })
       setRejectDialogOpen(false)
       setRejectionComment('')
-      
+
       if (isNextAction && nextId) {
-        setFeedback({ severity: 'info', message: 'Timesheet rejected. Showing next pending timesheet.' })
+        setFeedback({
+          severity: 'info',
+          message: 'Timesheet rejected. Showing next pending timesheet.',
+        })
         navigate(`/manager/timesheets/${nextId}`, { replace: true })
       } else {
-        setFeedback({ severity: 'info', message: 'Timesheet rejected and returned to the submitter.' })
+        setFeedback({
+          severity: 'info',
+          message: 'Timesheet rejected and returned to the submitter.',
+        })
         revalidator.revalidate()
       }
     } catch (err) {
@@ -134,7 +141,12 @@ export default function TimesheetReviewPage() {
         {
           key: 'status',
           label: 'Status',
-          value: <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />,
+          value: (
+            <TimesheetStatusDisplay
+              status={timesheet.status}
+              submittedLate={timesheet.submittedLate}
+            />
+          ),
         },
         {
           key: 'hours',
@@ -193,7 +205,6 @@ export default function TimesheetReviewPage() {
 
       {timesheet && (
         <>
-          {/* Summary */}
           <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
             <Typography variant="h6" gutterBottom>
               Summary
@@ -225,7 +236,6 @@ export default function TimesheetReviewPage() {
             </Stack>
           </Paper>
 
-          {/* Entries */}
           {timesheet.entries && timesheet.entries.length > 0 && (
             <WeeklyMatrix
               rows={matrixRows}
@@ -234,7 +244,6 @@ export default function TimesheetReviewPage() {
             />
           )}
 
-          {/* Actions */}
           {timesheet.status === 'PENDING' && (
             <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>
               <Typography variant="h6" gutterBottom>
@@ -288,7 +297,11 @@ export default function TimesheetReviewPage() {
                       onClick={() => openRejectDialog(true)}
                       disabled={submitting}
                       fullWidth={isMobile}
-                      sx={{ borderColor: palette.error, color: palette.error, '&:hover': { backgroundColor: palette.errorBg } }}
+                      sx={{
+                        borderColor: palette.error,
+                        color: palette.error,
+                        '&:hover': { backgroundColor: palette.errorBg },
+                      }}
                     >
                       Reject & Next
                     </Button>
@@ -309,7 +322,7 @@ export default function TimesheetReviewPage() {
               <DialogContentText>
                 Approving this timesheet will mark it as approved and make it available to finance
                 for payment processing.
-                {isNextAction && nextId && " You will be taken to the next pending timesheet."}
+                {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
             </DialogContent>
             <DialogActions>
@@ -322,7 +335,7 @@ export default function TimesheetReviewPage() {
                 variant="contained"
                 disabled={submitting}
               >
-                {submitting ? 'Approving...' : (isNextAction ? 'Approve & Next' : 'Confirm approval')}
+                {submitting ? 'Approving...' : isNextAction ? 'Approve & Next' : 'Confirm approval'}
               </Button>
             </DialogActions>
           </Dialog>
@@ -337,7 +350,7 @@ export default function TimesheetReviewPage() {
             <DialogContent>
               <DialogContentText sx={{ mb: 2 }}>
                 Rejecting this timesheet will return it to the submitter for changes.
-                {isNextAction && nextId && " You will be taken to the next pending timesheet."}
+                {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
               <TextField
                 label="Rejection Comment"
@@ -360,11 +373,29 @@ export default function TimesheetReviewPage() {
                 variant="contained"
                 disabled={submitting || !rejectionComment.trim()}
               >
-                {submitting ? 'Rejecting...' : (isNextAction ? 'Reject & Next' : 'Confirm rejection')}
+                {submitting ? 'Rejecting...' : isNextAction ? 'Reject & Next' : 'Confirm rejection'}
               </Button>
             </DialogActions>
           </Dialog>
 
+          {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED') && (
+            <Alert
+              severity={timesheet.status === 'APPROVED' ? 'success' : 'info'}
+              sx={{ mt: 2 }}
+            >
+              {timesheet.status === 'APPROVED' ? (
+                <>This timesheet has been <strong>approved</strong>.</>
+              ) : (
+                <>
+                  This timesheet has been <strong>rejected</strong> and returned to the submitter
+                  for changes.
+                </>
+              )}
+              {timesheet.status === 'REJECTED' && timesheet.rejectionComment && (
+                <> Reason: {timesheet.rejectionComment}</>
+              )}
+            </Alert>
+          )}
         </>
       )}
     </Box>

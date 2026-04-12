@@ -30,7 +30,6 @@ import {
   getTimesheetStatusDisplayLabel,
 } from '../../utils/displayLabels'
 
-
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
@@ -40,11 +39,13 @@ export default function ManagerTimesheetListPage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
-  const filtered = timesheets.filter((ts) => {
-    const matchesStatus = statusFilter === 'ALL' || ts.status === statusFilter
+  const filtered = timesheets.filter((timesheet) => {
+    const matchesStatus = statusFilter === 'ALL' || timesheet.status === statusFilter
     const matchesConsultant =
       normalizedSearchQuery.length === 0 ||
-      getSubmitterDisplayLabel(ts.consultantName).toLowerCase().includes(normalizedSearchQuery)
+      getSubmitterDisplayLabel(timesheet.consultantName)
+        .toLowerCase()
+        .includes(normalizedSearchQuery)
 
     return matchesStatus && matchesConsultant
   })
@@ -58,9 +59,18 @@ export default function ManagerTimesheetListPage() {
     emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}".`
   }
 
+  const pageTitle =
+    statusFilter === 'PENDING'
+      ? 'Pending Timesheets'
+      : statusFilter === 'APPROVED'
+      ? 'Approved Timesheets'
+      : statusFilter === 'REJECTED'
+      ? 'Rejected Timesheets'
+      : 'Team Timesheets'
+
   return (
     <Box>
-      <PageHeader title="Team Timesheets" subtitle="View and manage your team's submissions">
+      <PageHeader title={pageTitle} subtitle="View and manage your team's submissions">
         <TextField
           placeholder="Search submitters..."
           size="small"
@@ -107,11 +117,12 @@ export default function ManagerTimesheetListPage() {
         </Paper>
       )}
 
-      {!error && filtered.length > 0 && (
-        isMobile ? (
+      {!error &&
+        filtered.length > 0 &&
+        (isMobile ? (
           <Stack spacing={1.5}>
-            {filtered.map((ts) => (
-              <Paper key={ts.id} sx={{ p: 2.5 }}>
+            {filtered.map((timesheet) => (
+              <Paper key={timesheet.id} sx={{ p: 2.5 }}>
                 <Stack spacing={2}>
                   <Box
                     sx={{
@@ -126,10 +137,13 @@ export default function ManagerTimesheetListPage() {
                         Submitter
                       </Typography>
                       <Typography variant="body2" fontWeight={600}>
-                        {getSubmitterDisplayLabel(ts.consultantName)}
+                        {getSubmitterDisplayLabel(timesheet.consultantName)}
                       </Typography>
                     </Box>
-                    <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
+                    <TimesheetStatusDisplay
+                      status={timesheet.status}
+                      submittedLate={timesheet.submittedLate}
+                    />
                   </Box>
 
                   <Box
@@ -144,7 +158,7 @@ export default function ManagerTimesheetListPage() {
                         Week of
                       </Typography>
                       <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
+                        {formatWeekStart(timesheet.weekStart)}
                       </Typography>
                     </Box>
                     <Box>
@@ -158,7 +172,7 @@ export default function ManagerTimesheetListPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {ts.totalHours ?? '-'}
+                        {timesheet.totalHours ?? '-'}
                       </Typography>
                     </Box>
                   </Box>
@@ -166,7 +180,7 @@ export default function ManagerTimesheetListPage() {
                   <Button
                     variant="outlined"
                     startIcon={<RateReviewIcon sx={{ fontSize: '0.95rem' }} />}
-                    onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
+                    onClick={() => navigate(`/manager/timesheets/${timesheet.id}`)}
                   >
                     Open Timesheet
                   </Button>
@@ -187,20 +201,23 @@ export default function ManagerTimesheetListPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.map((ts) => (
-                  <TableRow key={ts.id}>
+                {filtered.map((timesheet) => (
+                  <TableRow key={timesheet.id}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                          {getSubmitterDisplayLabel(ts.consultantName)}
+                        {getSubmitterDisplayLabel(timesheet.consultantName)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
+                        {formatWeekStart(timesheet.weekStart)}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
+                      <TimesheetStatusDisplay
+                        status={timesheet.status}
+                        submittedLate={timesheet.submittedLate}
+                      />
                     </TableCell>
                     <TableCell align="right">
                       <Typography
@@ -209,7 +226,7 @@ export default function ManagerTimesheetListPage() {
                           fontSize: '0.85rem',
                         }}
                       >
-                        {ts.totalHours ?? '-'}
+                        {timesheet.totalHours ?? '-'}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
@@ -217,7 +234,7 @@ export default function ManagerTimesheetListPage() {
                         size="small"
                         variant="outlined"
                         startIcon={<RateReviewIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
+                        onClick={() => navigate(`/manager/timesheets/${timesheet.id}`)}
                       >
                         Open Timesheet
                       </Button>
@@ -227,8 +244,7 @@ export default function ManagerTimesheetListPage() {
               </TableBody>
             </Table>
           </TableContainer>
-        )
-      )}
+        ))}
     </Box>
   )
 }

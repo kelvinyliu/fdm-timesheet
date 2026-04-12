@@ -35,8 +35,8 @@ export default function PaymentDetailsPanel({
         Payment Details
       </Typography>
       <Alert severity="info" sx={{ mb: 4 }}>
-        Rates are pre-filled from client assignments and submitter defaults.
-        Overrides only affect this payment processing.
+        Rates are pre-filled from client assignments and submitter defaults. Overrides only affect
+        this payment processing.
       </Alert>
 
       <Box
@@ -53,13 +53,37 @@ export default function PaymentDetailsPanel({
       >
         {!isMobile && (
           <>
-            <Typography variant="caption" fontWeight={700} sx={{ color: palette.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              sx={{
+                color: palette.textPrimary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Work Category
             </Typography>
-            <Typography variant="caption" fontWeight={700} sx={{ color: palette.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              sx={{
+                color: palette.textPrimary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Client Bill Rate
             </Typography>
-            <Typography variant="caption" fontWeight={700} sx={{ color: palette.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              sx={{
+                color: palette.textPrimary,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+              }}
+            >
               Submitter Pay Rate
             </Typography>
             <Box sx={{ gridColumn: '1 / -1', mt: -1 }}>
@@ -88,13 +112,15 @@ export default function PaymentDetailsPanel({
                 size="small"
                 required={item.entryKind === 'CLIENT'}
                 value={bucketRates[bucketKey]?.billRate ?? ''}
-                onChange={(event) => setBucketRates((prev) => ({
-                  ...prev,
-                  [bucketKey]: {
-                    ...(prev[bucketKey] ?? {}),
-                    billRate: event.target.value,
-                  },
-                }))}
+                onChange={(event) =>
+                  setBucketRates((prev) => ({
+                    ...prev,
+                    [bucketKey]: {
+                      ...(prev[bucketKey] ?? {}),
+                      billRate: event.target.value,
+                    },
+                  }))
+                }
                 slotProps={{
                   input: {
                     startAdornment: <InputAdornment position="start">£</InputAdornment>,
@@ -112,13 +138,15 @@ export default function PaymentDetailsPanel({
                 size="small"
                 required
                 value={bucketRates[bucketKey]?.payRate ?? ''}
-                onChange={(event) => setBucketRates((prev) => ({
-                  ...prev,
-                  [bucketKey]: {
-                    ...(prev[bucketKey] ?? {}),
-                    payRate: event.target.value,
-                  },
-                }))}
+                onChange={(event) =>
+                  setBucketRates((prev) => ({
+                    ...prev,
+                    [bucketKey]: {
+                      ...(prev[bucketKey] ?? {}),
+                      payRate: event.target.value,
+                    },
+                  }))
+                }
                 slotProps={{
                   input: {
                     startAdornment: <InputAdornment position="start">£</InputAdornment>,
@@ -141,7 +169,10 @@ export default function PaymentDetailsPanel({
           backgroundColor: palette.surface,
         }}
       >
-        <Typography variant="subtitle2" sx={{ mb: 2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+        <Typography
+          variant="subtitle2"
+          sx={{ mb: 2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}
+        >
           Finance Totals
         </Typography>
         <Box
@@ -153,7 +184,10 @@ export default function PaymentDetailsPanel({
           }}
         >
           <Box>
-            <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}
+            >
               MONEY IN
             </Typography>
             <Typography
@@ -169,7 +203,10 @@ export default function PaymentDetailsPanel({
             </Typography>
           </Box>
           <Box>
-            <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}
+            >
               MONEY OUT
             </Typography>
             <Typography
@@ -185,7 +222,10 @@ export default function PaymentDetailsPanel({
             </Typography>
           </Box>
           <Box>
-            <Typography variant="caption" sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}>
+            <Typography
+              variant="caption"
+              sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}
+            >
               NET MARGIN
             </Typography>
             <Typography
@@ -223,23 +263,32 @@ export default function PaymentDetailsPanel({
                     fontSize: '0.725rem',
                   }}
                 >
-                  <Typography variant="inherit" sx={{ fontWeight: 600, color: palette.textSecondary, minWidth: 120 }}>
+                  <Typography
+                    variant="inherit"
+                    sx={{ fontWeight: 600, color: palette.textSecondary, minWidth: 120 }}
+                  >
                     {getWorkBucketDisplayLabel(item.bucketLabel)}:
                   </Typography>
                   <Typography variant="inherit" sx={{ color: palette.textMuted }}>
                     {item.hours}h
                   </Typography>
-                  <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                  <Typography variant="inherit" sx={{ color: palette.border }}>
+                    |
+                  </Typography>
                   <Typography variant="inherit" sx={{ color: palette.success, fontWeight: 500 }}>
                     In {item.hasValidBillRate ? formatCurrency(item.billAmount ?? 0) : '-'}
                   </Typography>
-                  <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                  <Typography variant="inherit" sx={{ color: palette.border }}>
+                    |
+                  </Typography>
                   <Typography variant="inherit" sx={{ color: palette.error, fontWeight: 500 }}>
                     Out {item.hasValidPayRate ? formatCurrency(item.payAmount ?? 0) : '-'}
                   </Typography>
                   {item.hasValidBillRate && item.hasValidPayRate && (
                     <>
-                      <Typography variant="inherit" sx={{ color: palette.border }}>|</Typography>
+                      <Typography variant="inherit" sx={{ color: palette.border }}>
+                        |
+                      </Typography>
                       <Typography
                         variant="inherit"
                         sx={{

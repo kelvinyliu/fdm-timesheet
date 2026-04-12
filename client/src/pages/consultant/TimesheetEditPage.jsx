@@ -13,17 +13,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditableWeeklyMatrix from '../../components/shared/EditableWeeklyMatrix.jsx'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
-import {
-  useGuardedNavigate,
-  useUnsavedChangesGuard,
-} from '../../context/useUnsavedChanges.js'
+import { useGuardedNavigate, useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import { palette } from '../../theme.js'
-import {
-  buildAutofillEntries,
-  isConsultantEditableStatus,
-} from '../../utils/timesheetWorkflow.js'
+import { buildAutofillEntries, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import {
   entriesToEditableMatrixRows,
   getMatrixTotalHours,
@@ -37,7 +31,12 @@ function buildArchivedAssignments(timesheet, activeAssignments = []) {
   const archivedAssignments = new Map()
 
   for (const entry of timesheet?.entries ?? []) {
-    if (entry.entryKind !== 'CLIENT' || !entry.assignmentId || activeAssignmentIds.has(entry.assignmentId)) continue
+    if (
+      entry.entryKind !== 'CLIENT' ||
+      !entry.assignmentId ||
+      activeAssignmentIds.has(entry.assignmentId)
+    )
+      continue
 
     archivedAssignments.set(entry.assignmentId, {
       id: entry.assignmentId,
@@ -47,7 +46,12 @@ function buildArchivedAssignments(timesheet, activeAssignments = []) {
   }
 
   for (const item of timesheet?.workSummary ?? []) {
-    if (item.entryKind !== 'CLIENT' || !item.assignmentId || activeAssignmentIds.has(item.assignmentId)) continue
+    if (
+      item.entryKind !== 'CLIENT' ||
+      !item.assignmentId ||
+      activeAssignmentIds.has(item.assignmentId)
+    )
+      continue
 
     archivedAssignments.set(item.assignmentId, {
       id: item.assignmentId,
@@ -59,28 +63,25 @@ function buildArchivedAssignments(timesheet, activeAssignments = []) {
   return [...archivedAssignments.values()]
 }
 
-export default function TimesheetEditPage({
-  basePath = '/consultant/timesheets',
-}) {
+export default function TimesheetEditPage({ basePath = '/consultant/timesheets' }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const guardedNavigate = useGuardedNavigate()
   const location = useLocation()
-  const {
-    timesheet,
-    assignments,
-    preferredAssignmentId,
-    error: fetchError,
-  } = useLoaderData()
+  const { timesheet, assignments, preferredAssignmentId, error: fetchError } = useLoaderData()
   const localIdRef = useRef(0)
   const autofillWarningShown = useRef(false)
   const { confirm } = useConfirmation()
 
-  const [matrixRows, setMatrixRows] = useState(() => entriesToEditableMatrixRows(timesheet?.entries ?? [], nextLocalId))
+  const [matrixRows, setMatrixRows] = useState(() =>
+    entriesToEditableMatrixRows(timesheet?.entries ?? [], nextLocalId)
+  )
   const [saving, setSaving] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [autofilling, setAutofilling] = useState(false)
-  const [savedEntriesSnapshot, setSavedEntriesSnapshot] = useState(() => serializeEntries(timesheet?.entries ?? []))
+  const [savedEntriesSnapshot, setSavedEntriesSnapshot] = useState(() =>
+    serializeEntries(timesheet?.entries ?? [])
+  )
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'success' })
 
   function nextLocalId() {
@@ -115,7 +116,9 @@ export default function TimesheetEditPage({
   const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
   const archivedAssignments = buildArchivedAssignments(timesheet, assignments)
   const availableAssignments = [...assignments, ...archivedAssignments]
-  const allowedAutofillAssignmentIds = new Set(availableAssignments.map((assignment) => assignment.id))
+  const allowedAutofillAssignmentIds = new Set(
+    availableAssignments.map((assignment) => assignment.id)
+  )
   const isBusy = saving || submitting || autofilling
   const canChangeBuckets = isConsultantEditableStatus(timesheet?.status)
 
@@ -128,22 +131,32 @@ export default function TimesheetEditPage({
   function handleRowCategoryChange(rowId, value) {
     if (!canChangeBuckets) return
     const { entryKind, assignmentId } = parseBucketValue(value)
-    setMatrixRows(prev => prev.map(r => r.id === rowId ? { ...r, entryKind, assignmentId } : r))
+    setMatrixRows((prev) =>
+      prev.map((r) => (r.id === rowId ? { ...r, entryKind, assignmentId } : r))
+    )
   }
 
   function handleRowHoursChange(rowId, date, value) {
-    setMatrixRows(prev => prev.map(r => r.id === rowId ? { ...r, hours: { ...r.hours, [date]: value } } : r))
+    setMatrixRows((prev) =>
+      prev.map((r) => (r.id === rowId ? { ...r, hours: { ...r.hours, [date]: value } } : r))
+    )
   }
 
   function handleAddRow() {
     if (!canChangeBuckets) return
-    const selectedAssignment = availableAssignments.length === 1 ? availableAssignments[0] : (availableAssignments.find(a => a.id === preferredAssignmentId) || null)
-    setMatrixRows(prev => [...prev, {
-      id: `row-${nextLocalId()}`,
-      entryKind: selectedAssignment ? 'CLIENT' : 'INTERNAL',
-      assignmentId: selectedAssignment?.id ?? null,
-      hours: {}
-    }])
+    const selectedAssignment =
+      availableAssignments.length === 1
+        ? availableAssignments[0]
+        : availableAssignments.find((a) => a.id === preferredAssignmentId) || null
+    setMatrixRows((prev) => [
+      ...prev,
+      {
+        id: `row-${nextLocalId()}`,
+        entryKind: selectedAssignment ? 'CLIENT' : 'INTERNAL',
+        assignmentId: selectedAssignment?.id ?? null,
+        hours: {},
+      },
+    ])
   }
 
   async function handleRemoveRow(rowId) {
@@ -154,7 +167,8 @@ export default function TimesheetEditPage({
       const result = await confirm({
         variant: 'warning',
         title: 'Remove this work category row?',
-        message: 'This row contains entered hours. Removing it now will discard those values from the draft.',
+        message:
+          'This row contains entered hours. Removing it now will discard those values from the draft.',
         confirmLabel: 'Remove row',
         cancelLabel: 'Keep row',
       })
@@ -162,20 +176,20 @@ export default function TimesheetEditPage({
       if (result !== 'confirm') return
     }
 
-    setMatrixRows(prev => prev.filter(r => r.id !== rowId))
+    setMatrixRows((prev) => prev.filter((r) => r.id !== rowId))
   }
 
   function getEntriesPayload() {
     const entries = []
-    matrixRows.forEach(row => {
-      weekDates.forEach(date => {
+    matrixRows.forEach((row) => {
+      weekDates.forEach((date) => {
         const hw = parseFloat(row.hours[date]) || 0
         if (hw > 0) {
           entries.push({
             date,
             entryKind: row.entryKind,
             assignmentId: row.entryKind === 'CLIENT' ? row.assignmentId : null,
-            hoursWorked: hw
+            hoursWorked: hw,
           })
         }
       })
@@ -190,7 +204,8 @@ export default function TimesheetEditPage({
   useUnsavedChangesGuard({
     isDirty: shouldBlockUnsavedChanges,
     title: 'Leave with unsaved timesheet changes?',
-    message: 'This draft has local edits that have not been saved yet. You can save now or discard them.',
+    message:
+      'This draft has local edits that have not been saved yet. You can save now or discard them.',
     variant: 'warning',
     discardLabel: 'Discard changes',
     stayLabel: 'Keep editing',
@@ -217,7 +232,8 @@ export default function TimesheetEditPage({
     const result = await confirm({
       variant: 'info',
       title: 'Submit timesheet for review?',
-      message: 'This will send the current draft to your manager for review and lock editing until the sheet is returned.',
+      message:
+        'This will send the current draft to your manager for review and lock editing until the sheet is returned.',
       confirmLabel: 'Submit for review',
       cancelLabel: 'Keep editing',
       summaryItems: [
@@ -244,13 +260,18 @@ export default function TimesheetEditPage({
     if (isDirty) {
       const result = await confirm({
         variant: 'warning',
-        title: 'Replace current draft with last week\'s hours?',
-        message: 'Autofill will overwrite the current in-progress matrix with the previous week\'s pattern where possible.',
+        title: "Replace current draft with last week's hours?",
+        message:
+          "Autofill will overwrite the current in-progress matrix with the previous week's pattern where possible.",
         confirmLabel: 'Overwrite with autofill',
         cancelLabel: 'Keep current draft',
         summaryItems: [
           { key: 'hours', label: 'Current draft', value: `${totalHours.toFixed(2)}h entered` },
-          { key: 'rows', label: 'Work categories', value: `${matrixRows.length} row${matrixRows.length === 1 ? '' : 's'}` },
+          {
+            key: 'rows',
+            label: 'Work categories',
+            value: `${matrixRows.length} row${matrixRows.length === 1 ? '' : 's'}`,
+          },
         ],
       })
 
@@ -265,13 +286,17 @@ export default function TimesheetEditPage({
         return
       }
 
-      const {
-        entries: nextEntries,
-        skippedBucketLabels,
-      } = buildAutofillEntries(timesheet.weekStart, previousEntries, allowedAutofillAssignmentIds)
+      const { entries: nextEntries, skippedBucketLabels } = buildAutofillEntries(
+        timesheet.weekStart,
+        previousEntries,
+        allowedAutofillAssignmentIds
+      )
 
       if (nextEntries.length === 0 && skippedBucketLabels.length > 0) {
-        showSnackbar('Autofill skipped archived client categories that are not available on this timesheet.', 'warning')
+        showSnackbar(
+          'Autofill skipped archived client categories that are not available on this timesheet.',
+          'warning'
+        )
         return
       }
 
@@ -340,7 +365,8 @@ export default function TimesheetEditPage({
 
       {assignments.length === 0 && archivedAssignments.length > 0 && (
         <Alert severity="info" sx={{ mb: 3 }}>
-          No active client assignments are currently available. Archived work categories already on this timesheet can still be edited.
+          No active client assignments are currently available. Archived work categories already on
+          this timesheet can still be edited.
         </Alert>
       )}
 

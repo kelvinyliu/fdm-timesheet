@@ -19,10 +19,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import PageHeader from '../../components/shared/PageHeader'
 import { palette } from '../../theme.js'
-import {
-  getAuditActorDisplayLabel,
-  getAuditTimesheetDisplayLabel,
-} from '../../utils/displayLabels'
+import { getAuditActorDisplayLabel, getAuditTimesheetDisplayLabel } from '../../utils/displayLabels'
 import { formatTimestamp } from '../../utils/dateFormatters'
 import ActionBadge from '../../components/shared/ActionBadge'
 
@@ -39,31 +36,42 @@ function formatDetail(action, detail) {
       return detail.comment ? `Rejected: ${detail.comment}` : 'Rejected'
     case 'PROCESSING': {
       if (Array.isArray(detail.breakdowns) && detail.breakdowns.length > 0) {
-        const incoming = detail.totalBillAmount != null
-          ? `In \u00A3${Number(detail.totalBillAmount).toFixed(2)}`
-          : null
-        const outgoing = detail.totalPayAmount != null
-          ? `Out \u00A3${Number(detail.totalPayAmount).toFixed(2)}`
-          : null
-        const margin = detail.marginAmount != null
-          ? `Net \u00A3${Number(detail.marginAmount).toFixed(2)}`
-          : null
+        const incoming =
+          detail.totalBillAmount != null
+            ? `In \u00A3${Number(detail.totalBillAmount).toFixed(2)}`
+            : null
+        const outgoing =
+          detail.totalPayAmount != null
+            ? `Out \u00A3${Number(detail.totalPayAmount).toFixed(2)}`
+            : null
+        const margin =
+          detail.marginAmount != null ? `Net \u00A3${Number(detail.marginAmount).toFixed(2)}` : null
         return [
           `${detail.breakdowns.length} categories`,
           detail.totalHours != null ? `${detail.totalHours}h` : null,
           incoming,
           outgoing,
           margin,
-        ].filter(Boolean).join(' · ')
+        ]
+          .filter(Boolean)
+          .join(' · ')
       }
 
       if (detail.totalBillAmount != null || detail.totalPayAmount != null) {
         return [
           detail.totalHours != null ? `${detail.totalHours}h` : null,
-          detail.totalBillAmount != null ? `In \u00A3${Number(detail.totalBillAmount).toFixed(2)}` : null,
-          detail.totalPayAmount != null ? `Out \u00A3${Number(detail.totalPayAmount).toFixed(2)}` : null,
-          detail.marginAmount != null ? `Net \u00A3${Number(detail.marginAmount).toFixed(2)}` : null,
-        ].filter(Boolean).join(' · ')
+          detail.totalBillAmount != null
+            ? `In \u00A3${Number(detail.totalBillAmount).toFixed(2)}`
+            : null,
+          detail.totalPayAmount != null
+            ? `Out \u00A3${Number(detail.totalPayAmount).toFixed(2)}`
+            : null,
+          detail.marginAmount != null
+            ? `Net \u00A3${Number(detail.marginAmount).toFixed(2)}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
       }
 
       const rateValue = detail.hourlyRate ?? detail.dailyRate
@@ -89,7 +97,9 @@ export default function AuditLogPage() {
     setError(loadError)
   }, [loadError])
 
-  const authorOptions = [...new Set(entries.map((e) => getAuditActorDisplayLabel(e.performedByName)))].sort()
+  const authorOptions = [
+    ...new Set(entries.map((e) => getAuditActorDisplayLabel(e.performedByName))),
+  ].sort()
 
   const hasFilters = actionFilter || authorFilter || dateFrom || dateTo
 
@@ -113,12 +123,7 @@ export default function AuditLogPage() {
         )}
 
         <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 3 }}>
-          <Stack
-            direction={{ xs: 'column', sm: 'row' }}
-            spacing={2}
-            flexWrap="wrap"
-            useFlexGap
-          >
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" useFlexGap>
             <Autocomplete
               options={ACTION_OPTIONS}
               value={actionFilter}
@@ -139,100 +144,106 @@ export default function AuditLogPage() {
               label="From"
               value={dateFrom}
               onChange={setDateFrom}
-              slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
+              slotProps={{
+                field: { clearable: true, size: 'small' },
+                textField: { size: 'small' },
+              }}
               sx={{ width: { xs: '100%', sm: 170 } }}
             />
             <DatePicker
               label="To"
               value={dateTo}
               onChange={setDateTo}
-              slotProps={{ field: { clearable: true, size: 'small' }, textField: { size: 'small' } }}
+              slotProps={{
+                field: { clearable: true, size: 'small' },
+                textField: { size: 'small' },
+              }}
               sx={{ width: { xs: '100%', sm: 170 } }}
             />
           </Stack>
         </Paper>
 
         <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table size="small" sx={{ minWidth: 900 }}>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Timestamp</TableCell>
-                  <TableCell>Action</TableCell>
-                  <TableCell>Performed By</TableCell>
-                  <TableCell>Timesheet</TableCell>
-                  <TableCell>Detail</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filtered.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.75rem',
-                        }}
-                      >
-                        {formatTimestamp(e.createdAt)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <ActionBadge action={e.action} />
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        fontWeight={500}
-                        sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
-                      >
-                        {getAuditActorDisplayLabel(e.performedByName)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography
-                        variant="body2"
-                        fontWeight={500}
-                        sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
-                      >
-                        {getAuditTimesheetDisplayLabel({
-                          consultantName: e.timesheetConsultantName,
-                          weekStart: e.timesheetWeekStart,
-                        })}
-                      </Typography>
-                    </TableCell>
-                    <TableCell
+          <Table size="small" sx={{ minWidth: 900 }}>
+            <TableHead>
+              <TableRow>
+                <TableCell>Timestamp</TableCell>
+                <TableCell>Action</TableCell>
+                <TableCell>Performed By</TableCell>
+                <TableCell>Timesheet</TableCell>
+                <TableCell>Detail</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filtered.map((e) => (
+                <TableRow key={e.id}>
+                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                    <Typography
                       sx={{
-                        maxWidth: { xs: 220, md: 320 },
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.75rem',
+                      }}
+                    >
+                      {formatTimestamp(e.createdAt)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <ActionBadge action={e.action} />
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                    >
+                      {getAuditActorDisplayLabel(e.performedByName)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      variant="body2"
+                      fontWeight={500}
+                      sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                    >
+                      {getAuditTimesheetDisplayLabel({
+                        consultantName: e.timesheetConsultantName,
+                        weekStart: e.timesheetWeekStart,
+                      })}
+                    </Typography>
+                  </TableCell>
+                  <TableCell
+                    sx={{
+                      maxWidth: { xs: 220, md: 320 },
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                    title={formatDetail(e.action, e.detail)}
+                  >
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.72rem',
+                        color: palette.textSecondary,
                         whiteSpace: 'normal',
                         overflowWrap: 'anywhere',
                         wordBreak: 'break-word',
                       }}
-                      title={formatDetail(e.action, e.detail)}
                     >
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.72rem',
-                          color: palette.textSecondary,
-                          whiteSpace: 'normal',
-                          overflowWrap: 'anywhere',
-                          wordBreak: 'break-word',
-                        }}
-                      >
-                        {formatDetail(e.action, e.detail)}
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {filtered.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                      {hasFilters ? 'No entries match your filters.' : 'No audit log entries found.'}
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                      {formatDetail(e.action, e.detail)}
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                    {hasFilters ? 'No entries match your filters.' : 'No audit log entries found.'}
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </TableContainer>
 
         {filtered.length > 0 && (

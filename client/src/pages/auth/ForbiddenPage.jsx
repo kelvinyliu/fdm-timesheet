@@ -41,8 +41,8 @@ export default function ForbiddenPage() {
         Access Forbidden
       </Typography>
       <Typography variant="body2" color="text.secondary" maxWidth={420}>
-        You do not have permission to access this page. Please contact your
-        administrator if you believe this is an error.
+        You do not have permission to access this page. Please contact your administrator if you
+        believe this is an error.
       </Typography>
       <Button variant="contained" onClick={() => navigate(-1)} sx={{ mt: 1 }}>
         Go back

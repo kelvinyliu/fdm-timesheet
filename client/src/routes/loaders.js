@@ -24,6 +24,58 @@ function getErrorMessage(err, fallback) {
   return err?.message ?? fallback
 }
 
+async function loadTimesheetsForDashboard(request, fallback) {
+  try {
+    return {
+      timesheets: await getTimesheets({}, { signal: request.signal }),
+      error: null,
+    }
+  } catch (err) {
+    return {
+      timesheets: [],
+      error: getErrorMessage(err, fallback),
+    }
+  }
+}
+
+export async function consultantDashboardLoader({ request }) {
+  return loadTimesheetsForDashboard(request, 'Failed to load timesheet overview')
+}
+
+export async function managerDashboardLoader({ request }) {
+  return loadTimesheetsForDashboard(request, 'Failed to load timesheet overview')
+}
+
+export async function financeDashboardLoader({ request }) {
+  return loadTimesheetsForDashboard(request, 'Failed to load timesheet overview')
+}
+
+export async function adminDashboardLoader({ request }) {
+  const [usersResult, auditResult] = await Promise.allSettled([
+    getUsers({ signal: request.signal }),
+    getAuditLog({ signal: request.signal }),
+  ])
+
+  const errors = []
+  if (usersResult.status === 'rejected') {
+    errors.push(getErrorMessage(usersResult.reason, 'Failed to load users'))
+  }
+  if (auditResult.status === 'rejected') {
+    errors.push(getErrorMessage(auditResult.reason, 'Failed to load audit log'))
+  }
+
+  const auditLog =
+    auditResult.status === 'fulfilled'
+      ? [...auditResult.value].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      : []
+
+  return {
+    users: usersResult.status === 'fulfilled' ? usersResult.value : [],
+    auditLog,
+    error: errors.length > 0 ? errors.join(' ') : null,
+  }
+}
+
 export function createTimesheetListLoader({ timesheetScope } = {}) {
   return async function timesheetListLoader({ request }) {
     const [timesheetResult, eligibilityResult] = await Promise.allSettled([
@@ -33,13 +85,16 @@ export function createTimesheetListLoader({ timesheetScope } = {}) {
 
     return {
       timesheets: timesheetResult.status === 'fulfilled' ? timesheetResult.value : [],
-      eligibility: eligibilityResult.status === 'fulfilled' ? eligibilityResult.value : EMPTY_ELIGIBILITY,
-      error: timesheetResult.status === 'rejected'
-        ? getErrorMessage(timesheetResult.reason, 'Failed to load timesheets')
-        : null,
-      eligibilityError: eligibilityResult.status === 'rejected'
-        ? 'Missing-week creation is temporarily unavailable.'
-        : null,
+      eligibility:
+        eligibilityResult.status === 'fulfilled' ? eligibilityResult.value : EMPTY_ELIGIBILITY,
+      error:
+        timesheetResult.status === 'rejected'
+          ? getErrorMessage(timesheetResult.reason, 'Failed to load timesheets')
+          : null,
+      eligibilityError:
+        eligibilityResult.status === 'rejected'
+          ? 'Missing-week creation is temporarily unavailable.'
+          : null,
     }
   }
 }
@@ -52,7 +107,10 @@ export function createTimesheetCreateLoader({
     const weekStart = getCurrentMonday()
 
     try {
-      const allTimesheets = await getTimesheets({ scope: timesheetScope }, { signal: request.signal })
+      const allTimesheets = await getTimesheets(
+        { scope: timesheetScope },
+        { signal: request.signal }
+      )
       const currentWeekTimesheet = getTimesheetForWeek(allTimesheets, weekStart)
 
       if (currentWeekTimesheet) {
@@ -63,8 +121,14 @@ export function createTimesheetCreateLoader({
       }
 
       return { weekStart, error: null }
-    } catch {
-      return { weekStart, error: null }
+    } catch (err) {
+      return {
+        weekStart,
+        error: getErrorMessage(
+          err,
+          'Unable to confirm whether a current-week timesheet already exists.'
+        ),
+      }
     }
   }
 }
@@ -120,7 +184,9 @@ export async function financeTimesheetListLoader({ request }) {
   try {
     const timesheets = await getTimesheets({}, { signal: request.signal })
     return {
-      timesheets: timesheets.filter((item) => item.status === 'APPROVED' || item.status === 'COMPLETED'),
+      timesheets: timesheets.filter(
+        (item) => item.status === 'APPROVED' || item.status === 'COMPLETED'
+      ),
       error: null,
     }
   } catch (err) {
@@ -170,12 +236,14 @@ export async function assignmentsLoader({ request }) {
     clientAssignments: clientResult.status === 'fulfilled' ? clientResult.value : [],
     managerAssignments: managerResult.status === 'fulfilled' ? managerResult.value : [],
     users: usersResult.status === 'fulfilled' ? usersResult.value : [],
-    clientError: clientResult.status === 'rejected'
-      ? getErrorMessage(clientResult.reason, 'Failed to load client assignments.')
-      : '',
-    managerError: managerResult.status === 'rejected'
-      ? getErrorMessage(managerResult.reason, 'Failed to load manager assignments.')
-      : '',
+    clientError:
+      clientResult.status === 'rejected'
+        ? getErrorMessage(clientResult.reason, 'Failed to load client assignments.')
+        : '',
+    managerError:
+      managerResult.status === 'rejected'
+        ? getErrorMessage(managerResult.reason, 'Failed to load manager assignments.')
+        : '',
   }
 }
 
@@ -230,9 +298,10 @@ export async function financePaymentLoader({ params, request }) {
       getTimesheet(params.id, { signal: request.signal }),
       getTimesheets({}, { signal: request.signal }),
     ])
-    const fetchedNotes = timesheet.status === 'COMPLETED'
-      ? await getTimesheetNotes(params.id, { signal: request.signal }).catch(() => [])
-      : []
+    const fetchedNotes =
+      timesheet.status === 'COMPLETED'
+        ? await getTimesheetNotes(params.id, { signal: request.signal }).catch(() => [])
+        : []
 
     return {
       timesheet,

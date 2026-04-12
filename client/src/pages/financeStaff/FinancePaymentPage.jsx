@@ -16,12 +16,10 @@ import DetailList from '../../components/shared/DetailList.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { useConfirmation } from '../../context/useConfirmation.js'
-import {
-  useGuardedNavigate,
-  useUnsavedChangesGuard,
-} from '../../context/useUnsavedChanges.js'
+import { useGuardedNavigate, useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
 import { processPayment } from '../../api/timesheets'
+import { formatCurrency } from '../../utils/currency.js'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import {
   getSubmitterDisplayLabel,
@@ -29,15 +27,6 @@ import {
   getWorkSummaryDisplayLabel,
 } from '../../utils/displayLabels'
 import { entriesToReadOnlyMatrixRows, getWorkBucketKey } from '../../utils/timesheetMatrix.js'
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
 
 function buildCompletedSummaryItems(timesheet) {
   if (timesheet?.status !== 'COMPLETED') return []
@@ -122,20 +111,15 @@ export default function FinancePaymentPage() {
   const guardedNavigate = useGuardedNavigate()
   const { id } = useParams()
   const { confirm } = useConfirmation()
-  const {
-    timesheet,
-    approvedQueue,
-    fetchedNotes,
-    error,
-  } = useLoaderData()
+  const { timesheet, approvedQueue, fetchedNotes, error } = useLoaderData()
 
   const [bucketRates, setBucketRates] = useState(() => buildInitialBucketRates(timesheet))
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
-  const [savedDraftSnapshot, setSavedDraftSnapshot] = useState(() => (
+  const [savedDraftSnapshot, setSavedDraftSnapshot] = useState(() =>
     serializePaymentDraft(buildInitialBucketRates(timesheet), '')
-  ))
+  )
 
   useEffect(() => {
     const initialRates = buildInitialBucketRates(timesheet)
@@ -150,9 +134,8 @@ export default function FinancePaymentPage() {
     const billRate = Number(values.billRate)
     const payRate = Number(values.payRate)
     const hours = Number(item.totalHours ?? 0)
-    const hasValidBillRate = item.entryKind === 'INTERNAL'
-      ? billRate === 0
-      : Number.isFinite(billRate) && billRate > 0
+    const hasValidBillRate =
+      item.entryKind === 'INTERNAL' ? billRate === 0 : Number.isFinite(billRate) && billRate > 0
     const hasValidPayRate = Number.isFinite(payRate) && payRate > 0
 
     return {
@@ -168,22 +151,25 @@ export default function FinancePaymentPage() {
     }
   })
 
-  const isPaymentReady = computedBuckets.length > 0 && computedBuckets.every((item) => (
-    item.hasValidBillRate && item.hasValidPayRate
-  ))
+  const isPaymentReady =
+    computedBuckets.length > 0 &&
+    computedBuckets.every((item) => item.hasValidBillRate && item.hasValidPayRate)
 
-  const totals = computedBuckets.reduce((sum, item) => ({
-    incoming: sum.incoming + (item.billAmount ?? 0),
-    outgoing: sum.outgoing + (item.payAmount ?? 0),
-  }), { incoming: 0, outgoing: 0 })
+  const totals = computedBuckets.reduce(
+    (sum, item) => ({
+      incoming: sum.incoming + (item.billAmount ?? 0),
+      outgoing: sum.outgoing + (item.payAmount ?? 0),
+    }),
+    { incoming: 0, outgoing: 0 }
+  )
   const netMargin = totals.incoming - totals.outgoing
 
   function getNextApprovedId() {
-    const idx = approvedQueue.findIndex(ts => ts.id === id)
+    const idx = approvedQueue.findIndex((ts) => ts.id === id)
     if (idx !== -1 && idx + 1 < approvedQueue.length) {
       return approvedQueue[idx + 1].id
     }
-    const nextUnseen = approvedQueue.find(ts => ts.id !== id)
+    const nextUnseen = approvedQueue.find((ts) => ts.id !== id)
     return nextUnseen ? nextUnseen.id : null
   }
 
@@ -193,7 +179,8 @@ export default function FinancePaymentPage() {
   useUnsavedChangesGuard({
     isDirty,
     title: 'Leave with unsaved payment changes?',
-    message: 'You have adjusted rates or notes on this payment screen. Leaving now will discard those local changes.',
+    message:
+      'You have adjusted rates or notes on this payment screen. Leaving now will discard those local changes.',
     variant: 'warning',
     discardLabel: 'Discard changes',
     stayLabel: 'Keep editing',
@@ -211,7 +198,11 @@ export default function FinancePaymentPage() {
       confirmLabel: goNext ? 'Process and continue' : 'Process payment',
       cancelLabel: 'Review again',
       summaryItems: [
-        { key: 'submitter', label: 'Submitter', value: getSubmitterDisplayLabel(timesheet.consultantName) },
+        {
+          key: 'submitter',
+          label: 'Submitter',
+          value: getSubmitterDisplayLabel(timesheet.consultantName),
+        },
         { key: 'week', label: 'Week of', value: formatWeekStart(timesheet.weekStart) },
         { key: 'hours', label: 'Total hours', value: `${timesheet.totalHours ?? 0}h` },
         { key: 'incoming', label: 'Money in', value: formatCurrency(totals.incoming) },
@@ -234,9 +225,12 @@ export default function FinancePaymentPage() {
         })),
         notes: notes.trim(),
       })
-      
+
       if (goNext && nextId) {
-        setFeedback({ severity: 'success', message: 'Payment processed. Showing next approved timesheet.' })
+        setFeedback({
+          severity: 'success',
+          message: 'Payment processed. Showing next approved timesheet.',
+        })
         navigate(`/finance/timesheets/${nextId}`, { replace: true })
       } else {
         setFeedback({ severity: 'success', message: 'Payment processed successfully.' })
@@ -264,7 +258,12 @@ export default function FinancePaymentPage() {
         {
           key: 'status',
           label: 'Status',
-          value: <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />,
+          value: (
+            <TimesheetStatusDisplay
+              status={timesheet.status}
+              submittedLate={timesheet.submittedLate}
+            />
+          ),
         },
         {
           key: 'hours',

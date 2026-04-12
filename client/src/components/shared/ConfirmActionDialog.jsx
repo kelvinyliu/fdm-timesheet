@@ -106,10 +106,10 @@ export default function ConfirmActionDialog({
         },
       }}
     >
-      <DialogTitle 
-        sx={{ 
-          px: { xs: 3.5, sm: 4.5 }, 
-          pt: { xs: 3.5, sm: 4.5 }, 
+      <DialogTitle
+        sx={{
+          px: { xs: 3.5, sm: 4.5 },
+          pt: { xs: 3.5, sm: 4.5 },
           pb: { xs: 2.5, sm: 2.75 },
           position: 'sticky',
           top: 0,
@@ -140,7 +140,15 @@ export default function ConfirmActionDialog({
             <Icon sx={{ fontSize: { xs: 22, sm: 24 } }} />
           </Box>
 
-          <Box sx={{ minWidth: 0, pt: { xs: 0, sm: 0.5 }, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+          <Box
+            sx={{
+              minWidth: 0,
+              pt: { xs: 0, sm: 0.5 },
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+            }}
+          >
             <Typography
               variant="caption"
               sx={{
@@ -162,9 +170,9 @@ export default function ConfirmActionDialog({
             >
               {variantStyle.pill}
             </Typography>
-            <Typography 
-              variant="h4" 
-              sx={{ 
+            <Typography
+              variant="h4"
+              sx={{
                 color: palette.textPrimary,
                 fontWeight: 600,
                 lineHeight: 1.18,
@@ -189,12 +197,12 @@ export default function ConfirmActionDialog({
           <Box sx={{ pl: { sm: '74px' } }}>
             {message && (
               <Box sx={{ mb: summaryItems.length > 0 ? 3 : 0 }}>
-                <Typography 
-                  variant="body1" 
-                  sx={{ 
+                <Typography
+                  variant="body1"
+                  sx={{
                     color: palette.textSecondary,
                     lineHeight: 1.7,
-                    fontSize: '0.95rem'
+                    fontSize: '0.95rem',
                   }}
                 >
                   {message}
@@ -207,13 +215,13 @@ export default function ConfirmActionDialog({
                 {summaryItems.map((item, index) => (
                   <Box key={item.key || index}>
                     {index > 0 && (
-                      <Divider 
-                        sx={{ 
+                      <Divider
+                        sx={{
                           my: 2.5,
-                          borderStyle: 'dashed', 
+                          borderStyle: 'dashed',
                           borderColor: palette.border,
-                          opacity: 0.7 
-                        }} 
+                          opacity: 0.7,
+                        }}
                       />
                     )}
                     <Box
@@ -232,17 +240,17 @@ export default function ConfirmActionDialog({
                           fontWeight: 600,
                           letterSpacing: '0.06em',
                           textTransform: 'uppercase',
-                          mt: 0.5
+                          mt: 0.5,
                         }}
                       >
                         {item.label}
                       </Typography>
-                      <Typography 
-                        variant="body2" 
-                        sx={{ 
-                          color: palette.textPrimary, 
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: palette.textPrimary,
                           fontWeight: 500,
-                          lineHeight: 1.5
+                          lineHeight: 1.5,
                         }}
                       >
                         {item.value}
@@ -288,7 +296,7 @@ export default function ConfirmActionDialog({
             borderRadius: '12px',
             '&:hover': {
               backgroundColor: palette.surfaceMuted,
-            }
+            },
           }}
         >
           {cancelLabel}
@@ -327,14 +335,10 @@ export default function ConfirmActionDialog({
             '&:hover': {
               transform: 'translateY(-1px)',
               boxShadow: `0 6px 16px ${variant === 'danger' ? palette.error : palette.primary}60`,
-            }
+            },
           }}
         >
-          {loading ? (
-            <CircularProgress size={22} color="inherit" thickness={5} />
-          ) : (
-            confirmLabel
-          )}
+          {loading ? <CircularProgress size={22} color="inherit" thickness={5} /> : confirmLabel}
         </Button>
       </DialogActions>
     </Dialog>

@@ -78,7 +78,9 @@ describe('timesheet matrix utilities', () => {
   })
 
   it('serializes entries in stable semantic order', () => {
-    expect(serializeEntries([entries[1], entries[0]])).toBe(serializeEntries([entries[0], entries[1]]))
+    expect(serializeEntries([entries[1], entries[0]])).toBe(
+      serializeEntries([entries[0], entries[1]])
+    )
   })
 
   it('calculates row and matrix totals', () => {
@@ -100,7 +102,10 @@ describe('timesheet matrix utilities', () => {
       shortDate: '04-06',
       totalHours: 8.5,
     })
-    expect(dayCards[0].categories.map((category) => category.rowId)).toEqual(['assignment-1', 'INTERNAL'])
+    expect(dayCards[0].categories.map((category) => category.rowId)).toEqual([
+      'assignment-1',
+      'INTERNAL',
+    ])
     expect(dayCards[1].categories[1]).toMatchObject({
       rowId: 'INTERNAL',
       numericHours: 0,
@@ -111,7 +116,10 @@ describe('timesheet matrix utilities', () => {
   it('parses client and internal bucket values', () => {
     expect(getBucketValue('INTERNAL', null)).toBe('INTERNAL')
     expect(parseBucketValue('INTERNAL')).toEqual({ entryKind: 'INTERNAL', assignmentId: null })
-    expect(parseBucketValue('assignment-1')).toEqual({ entryKind: 'CLIENT', assignmentId: 'assignment-1' })
+    expect(parseBucketValue('assignment-1')).toEqual({
+      entryKind: 'CLIENT',
+      assignmentId: 'assignment-1',
+    })
   })
 
   it('adjusts and formats stepper hour values safely', () => {

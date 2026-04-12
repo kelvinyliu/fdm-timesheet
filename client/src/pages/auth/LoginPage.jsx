@@ -25,36 +25,36 @@ export default function LoginPage() {
     return <Navigate to={ROLE_ROUTES[user.role] ?? '/'} replace />
   }
 
-async function handleSubmit(e) {
-  e.preventDefault()
-  setError('')
-  setLoading(true)
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
 
-  try {
-    const data = await loginRequest(email, password)
-    const tokenPayload = decodeJwtPayload(data.token)
+    try {
+      const data = await loginRequest(email, password)
+      const tokenPayload = decodeJwtPayload(data.token)
 
-    if (!tokenPayload) {
-      throw new Error('Invalid login response.')
+      if (!tokenPayload) {
+        throw new Error('Invalid login response.')
+      }
+
+      const nextUser = data.user ?? tokenPayload
+      const role = nextUser?.role || tokenPayload?.role
+
+      if (!role) {
+        throw new Error('Unable to determine user role.')
+      }
+
+      login(data.token, nextUser)
+
+      const destination = ROLE_ROUTES[role] ?? '/login'
+      navigate(destination, { replace: true })
+    } catch (err) {
+      setError(err.message || 'Invalid email or password.')
+    } finally {
+      setLoading(false)
     }
-
-    const nextUser = data.user ?? tokenPayload
-    const role = nextUser?.role || tokenPayload?.role
-
-    if (!role) {
-      throw new Error('Unable to determine user role.')
-    }
-
-    login(data.token, nextUser)
-
-    const destination = ROLE_ROUTES[role] ?? '/login'
-    navigate(destination, { replace: true })
-  } catch (err) {
-    setError(err.message || 'Invalid email or password.')
-  } finally {
-    setLoading(false)
   }
-}
 
   return (
     <Box
@@ -237,10 +237,7 @@ async function handleSubmit(e) {
           >
             Welcome back
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: 'text.secondary', mb: 4 }}
-          >
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
             Sign in to your account to continue
           </Typography>
 

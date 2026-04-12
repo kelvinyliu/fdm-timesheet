@@ -27,19 +27,18 @@ function getDayCardStyles(hasHours, isOverLimit) {
     p: 2,
     border: '1px solid',
     borderColor: isOverLimit ? palette.error : hasHours ? palette.primary : palette.border,
-    backgroundColor: isOverLimit ? palette.errorBg : hasHours ? palette.surfaceRaised : palette.surfaceMuted,
-    boxShadow: (hasHours || isOverLimit) ? palette.shadowSoft : 'none',
+    backgroundColor: isOverLimit
+      ? palette.errorBg
+      : hasHours
+        ? palette.surfaceRaised
+        : palette.surfaceMuted,
+    boxShadow: hasHours || isOverLimit ? palette.shadowSoft : 'none',
     transform: hasHours ? 'translateY(-1px)' : 'none',
     transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
   }
 }
 
-export default function WeeklyMatrix({
-  rows,
-  weekDates,
-  totalHours,
-  emptyMessage = '',
-}) {
+export default function WeeklyMatrix({ rows, weekDates, totalHours, emptyMessage = '' }) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
 
@@ -57,9 +56,23 @@ export default function WeeklyMatrix({
 
   return (
     <Paper sx={{ mb: 3, p: 0, overflow: 'hidden' }}>
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
-        <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
-        <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}>
+      <Box
+        sx={{
+          p: 2,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          backgroundColor: palette.sidebarBg,
+          color: palette.textInverse,
+        }}
+      >
+        <Typography variant="h6" sx={{ color: palette.textInverse }}>
+          Weekly Matrix
+        </Typography>
+        <Typography
+          variant="h6"
+          sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}
+        >
           {totalHours ?? '-'}h Total
         </Typography>
       </Box>
@@ -73,12 +86,31 @@ export default function WeeklyMatrix({
             return (
               <Paper key={day.date} variant="outlined" sx={getDayCardStyles(hasHours, isOverLimit)}>
                 <Stack spacing={1.5}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 1.5 }}>
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                      gap: 1.5,
+                    }}
+                  >
                     <Box>
-                      <Typography variant="subtitle2" sx={{ color: isOverLimit ? palette.error : hasHours ? palette.textPrimary : palette.textSecondary }}>
+                      <Typography
+                        variant="subtitle2"
+                        sx={{
+                          color: isOverLimit
+                            ? palette.error
+                            : hasHours
+                              ? palette.textPrimary
+                              : palette.textSecondary,
+                        }}
+                      >
                         {day.dayLabel}
                       </Typography>
-                      <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}
+                      >
                         {day.shortDate}
                       </Typography>
                     </Box>
@@ -87,7 +119,11 @@ export default function WeeklyMatrix({
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
                         fontWeight: 700,
-                        color: isOverLimit ? palette.error : hasHours ? palette.textPrimary : palette.textMuted,
+                        color: isOverLimit
+                          ? palette.error
+                          : hasHours
+                            ? palette.textPrimary
+                            : palette.textMuted,
                       }}
                     >
                       {formatTotalHoursValue(day.totalHours)}h
@@ -95,7 +131,10 @@ export default function WeeklyMatrix({
                   </Box>
 
                   {isOverLimit && (
-                    <Typography variant="caption" sx={{ color: palette.error, fontWeight: 600, letterSpacing: '0.03em' }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ color: palette.error, fontWeight: 600, letterSpacing: '0.03em' }}
+                    >
                       Over daily limit
                     </Typography>
                   )}
@@ -121,10 +160,13 @@ export default function WeeklyMatrix({
                           sx={{
                             fontFamily: '"JetBrains Mono", monospace',
                             fontWeight: 700,
-                            color: category.numericHours > 0 ? palette.textPrimary : palette.textMuted,
+                            color:
+                              category.numericHours > 0 ? palette.textPrimary : palette.textMuted,
                           }}
                         >
-                          {category.numericHours > 0 ? formatHoursValue(category.numericHours) : '-'}
+                          {category.numericHours > 0
+                            ? formatHoursValue(category.numericHours)
+                            : '-'}
                         </Typography>
                       </Box>
                     ))}
@@ -139,18 +181,32 @@ export default function WeeklyMatrix({
           <Table size="small" sx={{ minWidth: 800 }}>
             <TableHead>
               <TableRow>
-                <TableCell sx={{ width: 250, borderRight: `2px solid ${palette.border}` }}>Work Category</TableCell>
+                <TableCell sx={{ width: 250, borderRight: `2px solid ${palette.border}` }}>
+                  Work Category
+                </TableCell>
                 {weekDates.map((date) => (
-                  <TableCell key={date} align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>
-                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: palette.textPrimary }}>
+                  <TableCell
+                    key={date}
+                    align="center"
+                    sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={{ display: 'block', fontWeight: 700, color: palette.textPrimary }}
+                    >
                       {formatDayName(date).slice(0, 3)}
                     </Typography>
-                    <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}>
+                    <Typography
+                      variant="caption"
+                      sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}
+                    >
                       {date.slice(5)}
                     </Typography>
                   </TableCell>
                 ))}
-                <TableCell align="center" sx={{ width: 80 }}>Total</TableCell>
+                <TableCell align="center" sx={{ width: 80 }}>
+                  Total
+                </TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -165,15 +221,26 @@ export default function WeeklyMatrix({
                     {weekDates.map((date) => {
                       const val = row.hours[date]
                       return (
-                        <TableCell key={date} align="center" sx={{ p: 1, borderRight: `2px solid ${palette.border}` }}>
-                          <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', color: val ? palette.textPrimary : palette.textMuted }}>
+                        <TableCell
+                          key={date}
+                          align="center"
+                          sx={{ p: 1, borderRight: `2px solid ${palette.border}` }}
+                        >
+                          <Typography
+                            sx={{
+                              fontFamily: '"JetBrains Mono", monospace',
+                              color: val ? palette.textPrimary : palette.textMuted,
+                            }}
+                          >
                             {val || '-'}
                           </Typography>
                         </TableCell>
                       )
                     })}
                     <TableCell align="center">
-                      <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
+                      <Typography
+                        sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
+                      >
                         {rowTotal.toFixed(2)}
                       </Typography>
                     </TableCell>

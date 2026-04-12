@@ -25,22 +25,43 @@ import SearchIcon from '@mui/icons-material/Search'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { formatWeekStart } from '../../utils/dateFormatters'
+import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 import {
-  getSubmitterDisplayLabel,
-  getTimesheetStatusDisplayLabel,
-} from '../../utils/displayLabels'
+  buildManagerTimesheetListPath,
+  getManagerStatusFilterFromSearch,
+  getManagerStatusFilterLabel,
+  MANAGER_STATUS_FILTERS,
+  matchesManagerStatusFilter,
+} from './utils/managerTimesheetFilters.js'
+
+function getStatusFilterFromUrl() {
+  return getManagerStatusFilterFromSearch(window.location.search)
+}
 
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
   const { timesheets, error } = useLoaderData()
-  const [statusFilter, setStatusFilter] = useState('ALL')
+  const [statusFilter, setStatusFilter] = useState(getStatusFilterFromUrl)
   const [searchQuery, setSearchQuery] = useState('')
+
+  function handleStatusFilterChange(nextStatusFilter) {
+    setStatusFilter(nextStatusFilter)
+
+    const nextPath = buildManagerTimesheetListPath(nextStatusFilter)
+    window.history.replaceState(window.history.state, '', nextPath)
+  }
+
+  function handleOpenTimesheet(timesheetId) {
+    navigate(`/manager/timesheets/${timesheetId}`, {
+      state: { returnTo: buildManagerTimesheetListPath(statusFilter) },
+    })
+  }
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
   const filtered = timesheets.filter((timesheet) => {
-    const matchesStatus = statusFilter === 'ALL' || timesheet.status === statusFilter
+    const matchesStatus = matchesManagerStatusFilter(timesheet.status, statusFilter)
     const matchesConsultant =
       normalizedSearchQuery.length === 0 ||
       getSubmitterDisplayLabel(timesheet.consultantName)
@@ -51,22 +72,22 @@ export default function ManagerTimesheetListPage() {
   })
 
   let emptyMessage = 'No timesheets found.'
-  if (statusFilter !== 'ALL' && normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}" with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
-  } else if (statusFilter !== 'ALL') {
-    emptyMessage = `No timesheets found with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
+  if (statusFilter !== MANAGER_STATUS_FILTERS.ALL && normalizedSearchQuery) {
+    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}" with status "${getManagerStatusFilterLabel(statusFilter)}".`
+  } else if (statusFilter !== MANAGER_STATUS_FILTERS.ALL) {
+    emptyMessage = `No timesheets found with status "${getManagerStatusFilterLabel(statusFilter)}".`
   } else if (normalizedSearchQuery) {
     emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}".`
   }
 
   const pageTitle =
-    statusFilter === 'PENDING'
+    statusFilter === MANAGER_STATUS_FILTERS.PENDING
       ? 'Pending Timesheets'
-      : statusFilter === 'APPROVED'
-      ? 'Approved Timesheets'
-      : statusFilter === 'REJECTED'
-      ? 'Rejected Timesheets'
-      : 'Team Timesheets'
+      : statusFilter === MANAGER_STATUS_FILTERS.APPROVED_GROUP
+        ? 'Approved Timesheets'
+        : statusFilter === MANAGER_STATUS_FILTERS.REJECTED
+          ? 'Rejected Timesheets'
+          : 'Team Timesheets'
 
   return (
     <Box>
@@ -93,12 +114,12 @@ export default function ManagerTimesheetListPage() {
             labelId="status-filter-label"
             value={statusFilter}
             label="Status"
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
           >
-            <MenuItem value="ALL">All</MenuItem>
-            <MenuItem value="PENDING">Pending</MenuItem>
-            <MenuItem value="APPROVED">Approved</MenuItem>
-            <MenuItem value="REJECTED">Rejected</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.ALL}>All</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.APPROVED_GROUP}>Approved</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.REJECTED}>Rejected</MenuItem>
           </Select>
         </FormControl>
       </PageHeader>
@@ -180,7 +201,7 @@ export default function ManagerTimesheetListPage() {
                   <Button
                     variant="outlined"
                     startIcon={<RateReviewIcon sx={{ fontSize: '0.95rem' }} />}
-                    onClick={() => navigate(`/manager/timesheets/${timesheet.id}`)}
+                    onClick={() => handleOpenTimesheet(timesheet.id)}
                   >
                     Open Timesheet
                   </Button>
@@ -234,7 +255,7 @@ export default function ManagerTimesheetListPage() {
                         size="small"
                         variant="outlined"
                         startIcon={<RateReviewIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={() => navigate(`/manager/timesheets/${timesheet.id}`)}
+                        onClick={() => handleOpenTimesheet(timesheet.id)}
                       >
                         Open Timesheet
                       </Button>

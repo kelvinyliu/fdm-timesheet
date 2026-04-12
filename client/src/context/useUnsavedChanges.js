@@ -4,7 +4,8 @@ import { UnsavedChangesContext } from './UnsavedChangesContext.jsx'
 
 export function useUnsavedChangesController() {
   const value = useContext(UnsavedChangesContext)
-  if (!value) throw new Error('useUnsavedChangesController must be used within UnsavedChangesProvider')
+  if (!value)
+    throw new Error('useUnsavedChangesController must be used within UnsavedChangesProvider')
   return value
 }
 

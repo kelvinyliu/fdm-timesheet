@@ -1,6 +1,6 @@
-import Box from "@mui/material/Box"
-import Paper from "@mui/material/Paper"
-import Typography from "@mui/material/Typography"
+import Box from '@mui/material/Box'
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
 
 export default function DashboardCard({
   icon: Icon,
@@ -18,30 +18,30 @@ export default function DashboardCard({
         p: 3,
         minHeight: 190,
         borderRadius: 3,
-        cursor: onClick ? "pointer" : "default",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        transition: "transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease",
-        border: "1px solid",
-        borderColor: "divider",
-        animation: "dashboardFadeUp 0.45s ease both",
+        cursor: onClick ? 'pointer' : 'default',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+        transition: 'transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease',
+        border: '1px solid',
+        borderColor: 'divider',
+        animation: 'dashboardFadeUp 0.45s ease both',
         animationDelay: `${delay}ms`,
-        "&:hover": onClick
+        '&:hover': onClick
           ? {
-              transform: "translateY(-3px)",
+              transform: 'translateY(-3px)',
               boxShadow: 3,
-              borderColor: "text.primary",
+              borderColor: 'text.primary',
             }
           : {},
-        "@keyframes dashboardFadeUp": {
+        '@keyframes dashboardFadeUp': {
           from: {
             opacity: 0,
-            transform: "translateY(14px)",
+            transform: 'translateY(14px)',
           },
           to: {
             opacity: 1,
-            transform: "translateY(0)",
+            transform: 'translateY(0)',
           },
         },
       }}
@@ -53,14 +53,14 @@ export default function DashboardCard({
               width: 44,
               height: 44,
               borderRadius: 2,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               mb: 2,
               backgroundColor: `${color}18`,
             }}
           >
-            <Icon sx={{ color, fontSize: "1.25rem" }} />
+            <Icon sx={{ color, fontSize: '1.25rem' }} />
           </Box>
         ) : null}
 
@@ -70,7 +70,7 @@ export default function DashboardCard({
 
         <Typography
           sx={{
-            fontSize: { xs: "1.9rem", sm: "2.2rem" },
+            fontSize: { xs: '1.9rem', sm: '2.2rem' },
             fontWeight: 700,
             lineHeight: 1,
             mb: 1.25,

@@ -105,7 +105,7 @@ export function normaliseHoursValue(value) {
 }
 
 export function adjustHoursValue(currentValue, delta, step = 0.5) {
-  const nextValue = clampHoursValue((parseFloat(currentValue) || 0) + (delta * step))
+  const nextValue = clampHoursValue((parseFloat(currentValue) || 0) + delta * step)
   return normaliseHoursValue(nextValue)
 }
 

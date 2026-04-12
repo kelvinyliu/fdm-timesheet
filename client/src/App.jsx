@@ -17,14 +17,18 @@ import { ROLE_ROUTES } from './constants/routes.js'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import ForbiddenPage from './pages/auth/ForbiddenPage.jsx'
 import {
+  adminDashboardLoader,
   assignmentsLoader,
   auditLogLoader,
+  consultantDashboardLoader,
   createTimesheetCreateLoader,
   createTimesheetEditLoader,
   createTimesheetListLoader,
+  financeDashboardLoader,
   financePayRatesLoader,
   financePaymentLoader,
   financeTimesheetListLoader,
+  managerDashboardLoader,
   managerTimesheetListLoader,
   timesheetDetailLoader,
   timesheetReviewLoader,
@@ -77,7 +81,11 @@ const router = createBrowserRouter(
           <Route element={<RoleGuard roles={['CONSULTANT']} />}>
             <Route
               path="/consultant/dashboard"
-              lazy={lazyPage(() => import('./pages/consultant/ConsultantDashboard.jsx'))}
+              lazy={lazyPage(
+                () => import('./pages/consultant/ConsultantDashboard.jsx'),
+                {},
+                consultantDashboardLoader
+              )}
             />
             <Route
               path="/consultant/timesheets"
@@ -116,7 +124,11 @@ const router = createBrowserRouter(
           <Route element={<RoleGuard roles={['LINE_MANAGER']} />}>
             <Route
               path="/manager/dashboard"
-              lazy={lazyPage(() => import('./pages/lineManager/ManagerDashboard.jsx'))}
+              lazy={lazyPage(
+                () => import('./pages/lineManager/ManagerDashboard.jsx'),
+                {},
+                managerDashboardLoader
+              )}
             />
             <Route
               path="/manager/timesheets"
@@ -190,7 +202,11 @@ const router = createBrowserRouter(
           <Route element={<RoleGuard roles={['FINANCE_MANAGER']} />}>
             <Route
               path="/finance/dashboard"
-              lazy={lazyPage(() => import('./pages/financeStaff/FinanceDashboard.jsx'))}
+              lazy={lazyPage(
+                () => import('./pages/financeStaff/FinanceDashboard.jsx'),
+                {},
+                financeDashboardLoader
+              )}
             />
             <Route
               path="/finance/timesheets"
@@ -221,7 +237,11 @@ const router = createBrowserRouter(
           <Route element={<RoleGuard roles={['SYSTEM_ADMIN']} />}>
             <Route
               path="/admin/dashboard"
-              lazy={lazyPage(() => import('./pages/admin/AdminDashboard.jsx'))}
+              lazy={lazyPage(
+                () => import('./pages/admin/AdminDashboard.jsx'),
+                {},
+                adminDashboardLoader
+              )}
             />
             <Route
               path="/admin/users"
@@ -241,11 +261,7 @@ const router = createBrowserRouter(
             />
             <Route
               path="/admin/audit"
-              lazy={lazyPage(
-                () => import('./pages/admin/AuditLogPage.jsx'),
-                {},
-                auditLogLoader
-              )}
+              lazy={lazyPage(() => import('./pages/admin/AuditLogPage.jsx'), {}, auditLogLoader)}
             />
           </Route>
         </Route>

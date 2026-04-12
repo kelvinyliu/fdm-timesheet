@@ -13,16 +13,11 @@ import DetailList from '../../components/shared/DetailList.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
-import {
-  getWorkBucketDisplayLabel,
-  getWorkSummaryDisplayLabel,
-} from '../../utils/displayLabels'
+import { getWorkBucketDisplayLabel, getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
 import { isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
 
-export default function TimesheetDetailPage({
-  basePath = '/consultant/timesheets',
-}) {
+export default function TimesheetDetailPage({ basePath = '/consultant/timesheets' }) {
   const { id } = useParams()
   const navigate = useNavigate()
   const { timesheet, error } = useLoaderData()
@@ -33,11 +28,7 @@ export default function TimesheetDetailPage({
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(basePath)}
-        >
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
           Back to Timesheets
         </Button>
       </Box>
@@ -48,9 +39,7 @@ export default function TimesheetDetailPage({
   const workSummary = timesheet.workSummary ?? []
   const hasManagerFeedback = Boolean(timesheet.rejectionComment)
   const feedbackSeverity = timesheet.status === 'REJECTED' ? 'error' : 'warning'
-  const feedbackTitle = timesheet.status === 'REJECTED'
-    ? 'Rejected'
-    : 'Manager feedback'
+  const feedbackTitle = timesheet.status === 'REJECTED' ? 'Rejected' : 'Manager feedback'
   const detailItems = [
     {
       key: 'week',
@@ -60,7 +49,9 @@ export default function TimesheetDetailPage({
     {
       key: 'status',
       label: 'Status',
-      value: <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />,
+      value: (
+        <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />
+      ),
     },
     {
       key: 'hours',
@@ -99,11 +90,7 @@ export default function TimesheetDetailPage({
             Edit
           </Button>
         )}
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(basePath)}
-        >
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
           Back
         </Button>
       </PageHeader>

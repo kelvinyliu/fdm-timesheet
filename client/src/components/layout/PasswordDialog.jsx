@@ -22,11 +22,7 @@ export default function PasswordDialog({ open, onClose }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
-  const isDirty = open && (
-    Boolean(form.current) ||
-    Boolean(form.next) ||
-    Boolean(form.confirm)
-  )
+  const isDirty = open && (Boolean(form.current) || Boolean(form.next) || Boolean(form.confirm))
 
   useUnsavedChangesGuard({
     isDirty,
@@ -93,9 +89,13 @@ export default function PasswordDialog({ open, onClose }) {
   return (
     <Dialog
       open={open}
-      onClose={loading ? undefined : () => {
-        void attemptCloseDialog()
-      }}
+      onClose={
+        loading
+          ? undefined
+          : () => {
+              void attemptCloseDialog()
+            }
+      }
       maxWidth="xs"
       fullWidth
       fullScreen={fullScreen}
@@ -137,9 +137,12 @@ export default function PasswordDialog({ open, onClose }) {
         />
       </DialogContent>
       <DialogActions>
-        <Button onClick={() => {
-          void attemptCloseDialog()
-        }} disabled={loading}>
+        <Button
+          onClick={() => {
+            void attemptCloseDialog()
+          }}
+          disabled={loading}
+        >
           Cancel
         </Button>
         <Button variant="contained" onClick={handleChangePassword} disabled={loading}>

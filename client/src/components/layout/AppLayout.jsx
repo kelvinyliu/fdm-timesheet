@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -6,12 +6,6 @@ import IconButton from '@mui/material/IconButton'
 import AppBar from '@mui/material/AppBar'
 import Drawer from '@mui/material/Drawer'
 import Toolbar from '@mui/material/Toolbar'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import TextField from '@mui/material/TextField'
-import Alert from '@mui/material/Alert'
 import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
@@ -20,13 +14,9 @@ import LockResetIcon from '@mui/icons-material/LockReset'
 import MenuIcon from '@mui/icons-material/Menu'
 import { Outlet, useLocation } from 'react-router'
 import Sidebar from './Sidebar.jsx'
+import PasswordDialog from './PasswordDialog.jsx'
 import { useAuth } from '../../context/useAuth.js'
-import { useConfirmation } from '../../context/useConfirmation.js'
-import {
-  useUnsavedChangesController,
-  useUnsavedChangesGuard,
-} from '../../context/useUnsavedChanges.js'
-import { changePassword } from '../../api/auth.js'
+import { useUnsavedChangesController } from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
 
 const SIDEBAR_WIDTH = 260
@@ -271,87 +261,23 @@ export default function AppLayout() {
   const theme = useTheme()
   const location = useLocation()
   const { logout, user } = useAuth()
-  const { confirm } = useConfirmation()
   const { runWithGuard } = useUnsavedChangesController()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'))
 
   const [pwOpen, setPwOpen] = useState(false)
-  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
-  const [pwError, setPwError] = useState('')
-  const [pwSuccess, setPwSuccess] = useState(false)
-  const [pwLoading, setPwLoading] = useState(false)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
-  const crumbs = getBreadcrumbs(location.pathname)
-  const isPasswordDialogDirty = pwOpen && (
-    Boolean(pwForm.current) ||
-    Boolean(pwForm.next) ||
-    Boolean(pwForm.confirm)
-  )
-
-  useUnsavedChangesGuard({
-    isDirty: isPasswordDialogDirty,
-    title: 'Discard password changes?',
-    message: 'You have started editing the password form. Leaving now will discard those values.',
-    variant: 'warning',
-    discardLabel: 'Discard password changes',
-    stayLabel: 'Keep editing',
+  const [mobileNavState, setMobileNavState] = useState({
+    open: false,
+    pathname: location.pathname,
   })
+  const crumbs = getBreadcrumbs(location.pathname)
+  const mobileNavOpen = mobileNavState.open && mobileNavState.pathname === location.pathname
 
-  useEffect(() => {
-    setMobileNavOpen(false)
-  }, [location.pathname])
-
-  function closeDialog() {
-    setPwOpen(false)
-    setPwError('')
-    setPwSuccess(false)
-    setPwForm({ current: '', next: '', confirm: '' })
+  function openMobileNav() {
+    setMobileNavState({ open: true, pathname: location.pathname })
   }
 
-  async function attemptCloseDialog() {
-    if (!isPasswordDialogDirty || pwLoading) {
-      closeDialog()
-      return
-    }
-
-    const result = await confirm({
-      variant: 'warning',
-      title: 'Discard password changes?',
-      message: 'The password form has unsaved values. Closing it now will discard them.',
-      confirmLabel: 'Discard changes',
-      cancelLabel: 'Keep editing',
-    })
-
-    if (result === 'confirm') {
-      closeDialog()
-    }
-  }
-
-  async function handleChangePassword() {
-    setPwError('')
-    if (!pwForm.current || !pwForm.next || !pwForm.confirm) {
-      setPwError('All fields are required.')
-      return
-    }
-    if (pwForm.next.length < 8) {
-      setPwError('New password must be at least 8 characters.')
-      return
-    }
-    if (pwForm.next !== pwForm.confirm) {
-      setPwError('New passwords do not match.')
-      return
-    }
-    setPwLoading(true)
-    try {
-      await changePassword(pwForm.current, pwForm.next)
-      setPwSuccess(true)
-      setPwForm({ current: '', next: '', confirm: '' })
-    } catch (err) {
-      setPwError(err.message || 'Failed to change password.')
-    } finally {
-      setPwLoading(false)
-    }
+  function closeMobileNav() {
+    setMobileNavState({ open: false, pathname: location.pathname })
   }
 
   const todayLabel = new Date().toLocaleDateString('en-GB', {
@@ -438,7 +364,7 @@ export default function AppLayout() {
             >
               <IconButton
                 edge="start"
-                onClick={() => setMobileNavOpen(true)}
+                onClick={openMobileNav}
                 sx={{
                   color: palette.textPrimary,
                   border: `1px solid ${palette.border}`,
@@ -507,7 +433,7 @@ export default function AppLayout() {
 
           <Drawer
             open={mobileNavOpen}
-            onClose={() => setMobileNavOpen(false)}
+            onClose={closeMobileNav}
             ModalProps={{ keepMounted: true }}
             slotProps={{
               paper: {
@@ -525,13 +451,13 @@ export default function AppLayout() {
           >
             <BrandLockup compact />
             <Box sx={{ minHeight: 0, overflow: 'auto', position: 'relative' }}>
-              <Sidebar onNavigate={() => setMobileNavOpen(false)} />
+              <Sidebar onNavigate={closeMobileNav} />
             </Box>
             <UserFooter
               user={user}
               mobile
               onChangePassword={() => {
-                setMobileNavOpen(false)
+                closeMobileNav()
                 setPwOpen(true)
               }}
               onLogout={() => runWithGuard(logout)}
@@ -640,63 +566,7 @@ export default function AppLayout() {
         </Box>
       </Box>
 
-      {/* Change Password Dialog */}
-      <Dialog
-        open={pwOpen}
-        onClose={pwLoading ? undefined : () => {
-          void attemptCloseDialog()
-        }}
-        maxWidth="xs"
-        fullWidth
-        fullScreen={isSmallScreen}
-      >
-        <DialogTitle>Change Password</DialogTitle>
-        <DialogContent>
-          {pwError && (
-            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
-              {pwError}
-            </Alert>
-          )}
-          {pwSuccess && (
-            <Alert severity="success" sx={{ mb: 2, mt: 1 }}>
-              Password changed successfully.
-            </Alert>
-          )}
-          <TextField
-            label="Current Password"
-            type="password"
-            value={pwForm.current}
-            onChange={(e) => setPwForm((p) => ({ ...p, current: e.target.value }))}
-            fullWidth
-            sx={{ mt: 1, mb: 2 }}
-          />
-          <TextField
-            label="New Password"
-            type="password"
-            value={pwForm.next}
-            onChange={(e) => setPwForm((p) => ({ ...p, next: e.target.value }))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Confirm New Password"
-            type="password"
-            value={pwForm.confirm}
-            onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))}
-            fullWidth
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => {
-            void attemptCloseDialog()
-          }} disabled={pwLoading}>
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleChangePassword} disabled={pwLoading}>
-            {pwLoading ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
     </Box>
   )
 }

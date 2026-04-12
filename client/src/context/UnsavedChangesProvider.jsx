@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useBeforeUnload, useBlocker } from 'react-router'
 import { useConfirmation } from './useConfirmation.js'
 import { UnsavedChangesContext } from './UnsavedChangesContext.jsx'
@@ -142,14 +142,14 @@ export function UnsavedChangesProvider({ children }) {
     event.returnValue = ''
   })
 
+  const value = useMemo(() => ({
+    registerGuard,
+    unregisterGuard,
+    runWithGuard,
+  }), [registerGuard, unregisterGuard, runWithGuard])
+
   return (
-    <UnsavedChangesContext.Provider
-      value={{
-        registerGuard,
-        unregisterGuard,
-        runWithGuard,
-      }}
-    >
+    <UnsavedChangesContext.Provider value={value}>
       {children}
     </UnsavedChangesContext.Provider>
   )

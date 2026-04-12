@@ -69,10 +69,14 @@ export default function ConfirmActionDialog({
   useEffect(() => {
     if (open && variant === 'danger' && cancelBtnRef.current) {
       // Small timeout ensures the dialog is fully rendered before focusing
-      setTimeout(() => {
+      const timeoutId = setTimeout(() => {
         cancelBtnRef.current?.focus()
       }, 50)
+
+      return () => clearTimeout(timeoutId)
     }
+
+    return undefined
   }, [open, variant])
 
   return (
@@ -194,13 +198,13 @@ export default function ConfirmActionDialog({
           </Alert>
 
           {summaryItems.length > 0 && (
-            <Box sx={{ mb: 2 }}>
+            <Box sx={{ mb: 3 }}>
               {summaryItems.map((item, index) => (
-                <Box key={item.key}>
+                <Box key={item.key || index}>
                   {index > 0 && (
                     <Divider 
                       sx={{ 
-                        my: 1.5, 
+                        my: 2.5,
                         borderStyle: 'dashed', 
                         borderColor: palette.border,
                         opacity: 0.7 
@@ -209,10 +213,10 @@ export default function ConfirmActionDialog({
                   )}
                   <Box
                     sx={{
-                      py: 0.5,
+                      py: 1,
                       display: 'grid',
                       gridTemplateColumns: { xs: '1fr', sm: '140px 1fr' },
-                      gap: { xs: 0.5, sm: 2 },
+                      gap: { xs: 1, sm: 3 },
                       alignItems: 'start',
                     }}
                   >

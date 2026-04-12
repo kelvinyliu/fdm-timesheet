@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AuthContext } from './useAuth.js'
 import { decodeJwtPayload, isJwtExpired } from '../utils/jwt.js'
@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(initUser)
   const navigate = useNavigate()
 
-  function login(newToken, userFromResponse) {
+  const login = useCallback((newToken, userFromResponse) => {
     const payload = decodeJwtPayload(newToken)
     if (!payload) return
 
@@ -74,17 +74,24 @@ export function AuthProvider({ children }) {
     persistAuth(newToken, nextUser)
     setToken(newToken)
     setUser(nextUser)
-  }
+  }, [])
 
-  function logout() {
+  const logout = useCallback(() => {
     clearAuth()
     setToken(null)
     setUser(null)
     navigate('/login')
-  }
+  }, [navigate])
+
+  const value = useMemo(() => ({
+    user,
+    token,
+    login,
+    logout,
+  }), [user, token, login, logout])
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

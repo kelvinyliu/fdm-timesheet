@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import ConfirmActionDialog from '../components/shared/ConfirmActionDialog.jsx'
 import { ConfirmationContext } from './ConfirmationContext.jsx'
 
@@ -7,18 +7,18 @@ export function ConfirmationProvider({ children }) {
   const [request, setRequest] = useState(null)
   const [open, setOpen] = useState(false)
 
-  function close(result) {
+  const close = useCallback((result) => {
     const resolve = resolverRef.current
     resolverRef.current = null
     setOpen(false)
     resolve?.(result)
-  }
+  }, [])
 
-  function handleExited() {
+  const handleExited = useCallback(() => {
     setRequest(null)
-  }
+  }, [])
 
-  function confirm(options) {
+  const confirm = useCallback((options) => {
     if (resolverRef.current) {
       resolverRef.current('cancel')
       resolverRef.current = null
@@ -37,10 +37,12 @@ export function ConfirmationProvider({ children }) {
       })
       setOpen(true)
     })
-  }
+  }, [])
+
+  const value = useMemo(() => ({ confirm }), [confirm])
 
   return (
-    <ConfirmationContext.Provider value={{ confirm }}>
+    <ConfirmationContext.Provider value={value}>
       {children}
       <ConfirmActionDialog
         open={open}

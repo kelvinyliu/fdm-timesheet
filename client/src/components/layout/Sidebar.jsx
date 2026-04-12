@@ -12,22 +12,22 @@ import { palette } from '../../theme.js'
 
 const NAV_LINKS = {
   CONSULTANT: [
-  { label: 'Dashboard', path: '/consultant/dashboard', icon: DashboardIcon },
-  { label: 'Timesheets', path: '/consultant/timesheets', icon: AccessTimeIcon },
-],
+    { label: 'Dashboard', path: '/consultant/dashboard', icon: DashboardIcon },
+    { label: 'Timesheets', path: '/consultant/timesheets', icon: AccessTimeIcon },
+  ],
   LINE_MANAGER: [
     { label: 'Dashboard', path: '/manager/dashboard', icon: DashboardIcon },
     { label: 'Timesheets', path: '/manager/timesheets', icon: AccessTimeIcon },
   ],
   FINANCE_MANAGER: [
-  { label: 'Dashboard', path: '/finance/dashboard', icon: DashboardIcon },
-  { label: 'Timesheets', path: '/finance/timesheets', icon: AccessTimeIcon },
-],
+    { label: 'Dashboard', path: '/finance/dashboard', icon: DashboardIcon },
+    { label: 'Timesheets', path: '/finance/timesheets', icon: AccessTimeIcon },
+  ],
   SYSTEM_ADMIN: [
+    { label: 'Dashboard', path: '/admin/dashboard', icon: DashboardIcon },
     { label: 'Users', path: '/admin/users', icon: PeopleIcon },
     { label: 'Assignments', path: '/admin/assignments', icon: AssignmentIndIcon },
     { label: 'Audit Log', path: '/admin/audit', icon: HistoryIcon },
-    { label: 'Dashboard', path: '/admin/dashboard', icon: DashboardIcon },
   ],
 }
 

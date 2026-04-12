@@ -438,7 +438,7 @@ export default function AppLayout() {
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' ,alignItems: 'stretch'}}>
       {!isMobile && (
         <Box
           component="nav"
@@ -446,8 +446,9 @@ export default function AppLayout() {
             width: desktopSidebarWidth,
             flexShrink: 0,
             display: 'grid',
-            gridTemplateRows: 'auto minmax(0, 1fr) auto',
-            height: '100vh',
+            gridTemplateRows: 'auto 1fr auto',
+            minHeight: '100%',
+            alignSelf: 'stretch',
             overflow: 'hidden',
             transition: 'width 0.2s ease',
             ...navShellStyles,

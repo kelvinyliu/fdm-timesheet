@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
+import Tooltip from '@mui/material/Tooltip'
 import DashboardIcon from '@mui/icons-material/Dashboard'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import PeopleIcon from '@mui/icons-material/People'
@@ -31,7 +32,7 @@ const NAV_LINKS = {
   ],
 }
 
-export default function Sidebar({ onNavigate }) {
+export default function Sidebar({ onNavigate, collapsed = false }) {
   const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
@@ -39,25 +40,27 @@ export default function Sidebar({ onNavigate }) {
   const links = (user && NAV_LINKS[user.role]) || []
 
   return (
-    <Box sx={{ py: 2, px: 1.5 }}>
-      <Typography
-        sx={{
-          fontSize: '0.6rem',
-          fontWeight: 600,
-          letterSpacing: '0.14em',
-          textTransform: 'uppercase',
-          color: palette.textInverseMuted,
-          px: 1.5,
-          mb: 1,
-        }}
-      >
-        Navigation
-      </Typography>
+    <Box sx={{ py: 2, px: collapsed ? 1 : 1.5 }}>
+      {!collapsed && (
+        <Typography
+          sx={{
+            fontSize: '0.6rem',
+            fontWeight: 600,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: palette.textInverseMuted,
+            px: 1.5,
+            mb: 1,
+          }}
+        >
+          Navigation
+        </Typography>
+      )}
 
       {links.map(({ label, path, icon: Icon }) => {
         const isActive = location.pathname.startsWith(path)
 
-        return (
+        const button = (
           <ButtonBase
             key={path}
             onClick={() => {
@@ -68,18 +71,19 @@ export default function Sidebar({ onNavigate }) {
               width: '100%',
               display: 'flex',
               alignItems: 'center',
-              gap: 1.5,
-              px: 1.5,
+              gap: collapsed ? 0 : 1.5,
+              px: collapsed ? 0 : 1.5,
               py: 1.1,
               mb: 0.3,
               borderRadius: '8px',
               textAlign: 'left',
-              justifyContent: 'flex-start',
+              justifyContent: collapsed ? 'center' : 'flex-start',
               color: isActive ? palette.textInverse : palette.textInverseMuted,
               backgroundColor: isActive ? palette.overlayPrimaryMuted : 'transparent',
               transition: 'all 0.15s ease',
               position: 'relative',
               overflow: 'hidden',
+              minHeight: 44,
               '&:hover': {
                 backgroundColor: isActive
                   ? 'rgba(var(--ui-primary-rgb), 0.24)'
@@ -106,16 +110,27 @@ export default function Sidebar({ onNavigate }) {
                 opacity: isActive ? 1 : 0.7,
               }}
             />
-            <Typography
-              sx={{
-                fontSize: '0.825rem',
-                fontWeight: isActive ? 600 : 400,
-                letterSpacing: '0.01em',
-              }}
-            >
-              {label}
-            </Typography>
+
+            {!collapsed && (
+              <Typography
+                sx={{
+                  fontSize: '0.825rem',
+                  fontWeight: isActive ? 600 : 400,
+                  letterSpacing: '0.01em',
+                }}
+              >
+                {label}
+              </Typography>
+            )}
           </ButtonBase>
+        )
+
+        return collapsed ? (
+          <Tooltip key={path} title={label} placement="right">
+            {button}
+          </Tooltip>
+        ) : (
+          button
         )
       })}
     </Box>

@@ -28,7 +28,7 @@ import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDispl
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import {
-  getConsultantDisplayLabel,
+  getSubmitterDisplayLabel,
   getTimesheetStatusDisplayLabel,
 } from '../../utils/displayLabels'
 
@@ -57,25 +57,25 @@ export default function ManagerTimesheetListPage() {
     const matchesStatus = statusFilter === 'ALL' || ts.status === statusFilter
     const matchesConsultant =
       normalizedSearchQuery.length === 0 ||
-      getConsultantDisplayLabel(ts.consultantName).toLowerCase().includes(normalizedSearchQuery)
+      getSubmitterDisplayLabel(ts.consultantName).toLowerCase().includes(normalizedSearchQuery)
 
     return matchesStatus && matchesConsultant
   })
 
   let emptyMessage = 'No timesheets found.'
   if (statusFilter !== 'ALL' && normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}" with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
+    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}" with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
   } else if (statusFilter !== 'ALL') {
     emptyMessage = `No timesheets found with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
   } else if (normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}".`
+    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}".`
   }
 
   return (
     <Box>
       <PageHeader title="Team Timesheets" subtitle="View and manage your team's submissions">
         <TextField
-          placeholder="Search consultants..."
+          placeholder="Search submitters..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -136,10 +136,10 @@ export default function ManagerTimesheetListPage() {
                   >
                     <Box>
                       <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Consultant
+                        Submitter
                       </Typography>
                       <Typography variant="body2" fontWeight={600}>
-                        {getConsultantDisplayLabel(ts.consultantName)}
+                        {getSubmitterDisplayLabel(ts.consultantName)}
                       </Typography>
                     </Box>
                     <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
@@ -192,7 +192,7 @@ export default function ManagerTimesheetListPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Consultant</TableCell>
+                  <TableCell>Submitter</TableCell>
                   <TableCell>Week of</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Total Hours</TableCell>
@@ -204,7 +204,7 @@ export default function ManagerTimesheetListPage() {
                   <TableRow key={ts.id}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {getConsultantDisplayLabel(ts.consultantName)}
+                          {getSubmitterDisplayLabel(ts.consultantName)}
                       </Typography>
                     </TableCell>
                     <TableCell>

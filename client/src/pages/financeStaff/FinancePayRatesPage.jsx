@@ -20,7 +20,7 @@ import InputAdornment from '@mui/material/InputAdornment'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
-import { getConsultantPayRates, updateDefaultPayRate } from '../../api/users'
+import { getSubmitterPayRates, updateDefaultPayRate } from '../../api/users'
 import { formatDate } from '../../utils/dateFormatters'
 
 export default function FinancePayRatesPage() {
@@ -38,7 +38,7 @@ export default function FinancePayRatesPage() {
     setLoading(true)
     setError('')
     try {
-      const data = await getConsultantPayRates()
+      const data = await getSubmitterPayRates()
       setConsultants(data)
       setPendingRates(
         Object.fromEntries(
@@ -49,7 +49,7 @@ export default function FinancePayRatesPage() {
         )
       )
     } catch (err) {
-      setError(err.message || 'Failed to load consultant pay rates.')
+      setError(err.message || 'Failed to load submitter pay rates.')
     } finally {
       setLoading(false)
     }
@@ -77,9 +77,9 @@ export default function FinancePayRatesPage() {
         consultant.id === consultantId ? updated : consultant
       )))
       setPendingRates((prev) => ({ ...prev, [consultantId]: String(updated.defaultPayRate) }))
-      setFeedback('Consultant pay rate updated.')
+      setFeedback('Submitter pay rate updated.')
     } catch (err) {
-      setError(err.message || 'Failed to update consultant pay rate.')
+      setError(err.message || 'Failed to update submitter pay rate.')
     } finally {
       setSavingById((prev) => ({ ...prev, [consultantId]: false }))
     }
@@ -93,7 +93,7 @@ export default function FinancePayRatesPage() {
   useUnsavedChangesGuard({
     isDirty: hasUnsavedRateChanges,
     title: 'Leave with unsaved pay-rate edits?',
-    message: 'Some consultant pay-rate fields have been edited locally but not saved yet.',
+    message: 'Some submitter pay-rate fields have been edited locally but not saved yet.',
     variant: 'warning',
     discardLabel: 'Discard edits',
     stayLabel: 'Keep editing',
@@ -109,11 +109,11 @@ export default function FinancePayRatesPage() {
   return (
     <Box>
       <PageHeader
-        title="Consultant Pay Rates"
-        subtitle="Configure the default consultant pay rate used to prefill outgoing payroll costs"
+        title="Submitter Pay Rates"
+        subtitle="Configure default pay rates used to prefill outgoing payroll costs"
       >
         <TextField
-          placeholder="Search consultants..."
+          placeholder="Search submitters..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -145,7 +145,7 @@ export default function FinancePayRatesPage() {
       {filteredConsultants.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
           <Typography variant="body2" color="text.secondary">
-            No consultants found.
+            No submitters found.
           </Typography>
         </Paper>
       ) : isMobile ? (
@@ -204,7 +204,7 @@ export default function FinancePayRatesPage() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Consultant</TableCell>
+                <TableCell>Submitter</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Default Pay Rate</TableCell>
                 <TableCell align="right">Actions</TableCell>

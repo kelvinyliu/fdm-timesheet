@@ -33,7 +33,7 @@ import { palette } from '../../theme.js'
 import { getTimesheet, processPayment, getTimesheetNotes, getTimesheets } from '../../api/timesheets'
 import { formatDayName, buildWeekDates, formatWeekStart, formatTimestamp } from '../../utils/dateFormatters'
 import {
-  getConsultantDisplayLabel,
+  getSubmitterDisplayLabel,
   getWorkBucketDisplayLabel,
   getWorkSummaryDisplayLabel,
 } from '../../utils/displayLabels'
@@ -266,7 +266,7 @@ export default function FinancePaymentPage() {
       confirmLabel: goNext ? 'Process and continue' : 'Process payment',
       cancelLabel: 'Review again',
       summaryItems: [
-        { key: 'consultant', label: 'Consultant', value: getConsultantDisplayLabel(timesheet.consultantName) },
+        { key: 'submitter', label: 'Submitter', value: getSubmitterDisplayLabel(timesheet.consultantName) },
         { key: 'week', label: 'Week of', value: formatWeekStart(timesheet.weekStart) },
         { key: 'hours', label: 'Total hours', value: `${timesheet.totalHours ?? 0}h` },
         { key: 'incoming', label: 'Money in', value: formatCurrency(totals.incoming) },
@@ -309,9 +309,9 @@ export default function FinancePaymentPage() {
   const summaryItems = timesheet
     ? [
         {
-          key: 'consultant',
-          label: 'Consultant',
-          value: getConsultantDisplayLabel(timesheet.consultantName),
+          key: 'submitter',
+          label: 'Submitter',
+          value: getSubmitterDisplayLabel(timesheet.consultantName),
         },
         {
           key: 'week',
@@ -469,7 +469,7 @@ export default function FinancePaymentPage() {
                 Payment Details
               </Typography>
               <Alert severity="info" sx={{ mb: 4 }}>
-                Rates are pre-filled from client assignments and consultant defaults.
+                Rates are pre-filled from client assignments and submitter defaults.
                 Overrides only affect this payment processing.
               </Alert>
 
@@ -494,7 +494,7 @@ export default function FinancePaymentPage() {
                       Client Bill Rate
                     </Typography>
                     <Typography variant="caption" fontWeight={700} sx={{ color: palette.textPrimary, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Consultant Pay Rate
+                      Submitter Pay Rate
                     </Typography>
                     <Box sx={{ gridColumn: '1 / -1', mt: -1 }}>
                       <Divider />
@@ -538,7 +538,7 @@ export default function FinancePaymentPage() {
                     />
 
                     <TextField
-                      label={isMobile ? "Consultant Pay Rate (£/hr)" : ""}
+                      label={isMobile ? "Submitter Pay Rate (£/hr)" : ""}
                       type="number"
                       size="small"
                       required

@@ -67,6 +67,29 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route element={<RoleGuard roles={['LINE_MANAGER']} />}>
           <Route path="/manager/timesheets" element={<ManagerTimesheetListPage />} />
           <Route path="/manager/timesheets/:id" element={<TimesheetReviewPage />} />
+          <Route
+            path="/manager/my-timesheets"
+            element={(
+              <TimesheetListPage
+                basePath="/manager/my-timesheets"
+                title="My Timesheets"
+                subtitle="Create and track your own weekly timesheets"
+                timesheetScope="own"
+              />
+            )}
+          />
+          <Route
+            path="/manager/my-timesheets/new"
+            element={<TimesheetCreatePage basePath="/manager/my-timesheets" timesheetScope="own" />}
+          />
+          <Route
+            path="/manager/my-timesheets/:id"
+            element={<TimesheetDetailPage basePath="/manager/my-timesheets" />}
+          />
+          <Route
+            path="/manager/my-timesheets/:id/edit"
+            element={<TimesheetEditPage basePath="/manager/my-timesheets" timesheetScope="own" />}
+          />
         </Route>
 
         <Route element={<RoleGuard roles={['FINANCE_MANAGER']} />}>

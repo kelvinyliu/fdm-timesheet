@@ -16,7 +16,10 @@ import {
   isConsultantEditableStatus,
 } from '../../utils/timesheetWorkflow.js'
 
-export default function TimesheetCreatePage() {
+export default function TimesheetCreatePage({
+  basePath = '/consultant/timesheets',
+  timesheetScope,
+}) {
   const navigate = useNavigate()
   const [weekStart] = useState(() => getCurrentMonday())
   const [loading, setLoading] = useState(true)
@@ -24,14 +27,14 @@ export default function TimesheetCreatePage() {
   const [submitError, setSubmitError] = useState(null)
 
   useEffect(() => {
-    getTimesheets()
+    getTimesheets({ scope: timesheetScope })
       .then((all) => {
         const currentWeekTimesheet = getTimesheetForWeek(all, weekStart)
         if (currentWeekTimesheet) {
           navigate(
             isConsultantEditableStatus(currentWeekTimesheet.status)
-              ? `/consultant/timesheets/${currentWeekTimesheet.id}/edit`
-              : `/consultant/timesheets/${currentWeekTimesheet.id}`,
+              ? `${basePath}/${currentWeekTimesheet.id}/edit`
+              : `${basePath}/${currentWeekTimesheet.id}`,
             { replace: true }
           )
           return
@@ -40,14 +43,14 @@ export default function TimesheetCreatePage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
-  }, [navigate, weekStart])
+  }, [basePath, navigate, timesheetScope, weekStart])
 
   async function handleCreate() {
     setSubmitError(null)
     setSubmitting(true)
     try {
       const newTimesheet = await createTimesheet({ weekStart })
-      navigate(`/consultant/timesheets/${newTimesheet.id}/edit`, { replace: true })
+      navigate(`${basePath}/${newTimesheet.id}/edit`, { replace: true })
     } catch (err) {
       setSubmitError(err.message ?? 'Failed to create timesheet.')
       setSubmitting(false)
@@ -65,7 +68,7 @@ export default function TimesheetCreatePage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/consultant/timesheets')}
+          onClick={() => navigate(basePath)}
         >
           Back
         </Button>
@@ -98,7 +101,7 @@ export default function TimesheetCreatePage() {
             </Button>
             <Button
               variant="outlined"
-              onClick={() => navigate('/consultant/timesheets')}
+              onClick={() => navigate(basePath)}
               disabled={submitting}
             >
               Cancel

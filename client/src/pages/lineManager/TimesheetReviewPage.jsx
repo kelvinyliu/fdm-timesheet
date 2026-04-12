@@ -33,7 +33,7 @@ import { getTimesheet, reviewTimesheet, getTimesheets } from '../../api/timeshee
 import { formatDayName, buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import { palette } from '../../theme.js'
 import {
-  getConsultantDisplayLabel,
+  getSubmitterDisplayLabel,
   getWorkBucketDisplayLabel,
   getWorkSummaryDisplayLabel,
 } from '../../utils/displayLabels'
@@ -136,7 +136,7 @@ export default function TimesheetReviewPage() {
         setFeedback({ severity: 'info', message: 'Timesheet rejected. Showing next pending timesheet.' })
         navigate(`/manager/timesheets/${nextId}`, { replace: true })
       } else {
-        setFeedback({ severity: 'info', message: 'Timesheet rejected and returned to the consultant.' })
+        setFeedback({ severity: 'info', message: 'Timesheet rejected and returned to the submitter.' })
         setRefreshKey((k) => k + 1)
       }
     } catch (err) {
@@ -162,9 +162,9 @@ export default function TimesheetReviewPage() {
   const summaryItems = timesheet
     ? [
         {
-          key: 'consultant',
-          label: 'Consultant',
-          value: getConsultantDisplayLabel(timesheet.consultantName),
+          key: 'submitter',
+          label: 'Submitter',
+          value: getSubmitterDisplayLabel(timesheet.consultantName),
         },
         {
           key: 'week',
@@ -426,7 +426,7 @@ export default function TimesheetReviewPage() {
             <DialogTitle>Reject timesheet?</DialogTitle>
             <DialogContent>
               <DialogContentText sx={{ mb: 2 }}>
-                Rejecting this timesheet will return it to the consultant for changes.
+                Rejecting this timesheet will return it to the submitter for changes.
                 {isNextAction && nextId && " You will be taken to the next pending timesheet."}
               </DialogContentText>
               <TextField

@@ -50,7 +50,9 @@ function entriesToMatrixRows(entries) {
   return Array.from(rowMap.values())
 }
 
-export default function TimesheetDetailPage() {
+export default function TimesheetDetailPage({
+  basePath = '/consultant/timesheets',
+}) {
   const { id } = useParams()
   const navigate = useNavigate()
   const [timesheet, setTimesheet] = useState(null)
@@ -75,7 +77,7 @@ export default function TimesheetDetailPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/consultant/timesheets')}
+          onClick={() => navigate(basePath)}
         >
           Back to Timesheets
         </Button>
@@ -133,7 +135,7 @@ export default function TimesheetDetailPage() {
           <Button
             variant="contained"
             startIcon={<EditIcon />}
-            onClick={() => navigate(`/consultant/timesheets/${id}/edit`)}
+            onClick={() => navigate(`${basePath}/${id}/edit`)}
           >
             Edit
           </Button>
@@ -141,7 +143,7 @@ export default function TimesheetDetailPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/consultant/timesheets')}
+          onClick={() => navigate(basePath)}
         >
           Back
         </Button>

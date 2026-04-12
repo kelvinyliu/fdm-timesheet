@@ -23,7 +23,7 @@ import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { getTimesheets } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
-import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-GB', {
@@ -156,10 +156,10 @@ export default function FinanceTimesheetListPage() {
                     >
                       <Box>
                         <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Consultant
+                          Submitter
                         </Typography>
                         <Typography variant="body2" fontWeight={600}>
-                          {getConsultantDisplayLabel(ts.consultantName)}
+                          {getSubmitterDisplayLabel(ts.consultantName)}
                         </Typography>
                       </Box>
                       <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
@@ -252,7 +252,7 @@ export default function FinanceTimesheetListPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Consultant</TableCell>
+                  <TableCell>Submitter</TableCell>
                   <TableCell>Week of</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Total Hours</TableCell>
@@ -267,7 +267,7 @@ export default function FinanceTimesheetListPage() {
                     <TableRow key={ts.id}>
                       <TableCell>
                         <Typography variant="body2" fontWeight={500}>
-                          {getConsultantDisplayLabel(ts.consultantName)}
+                          {getSubmitterDisplayLabel(ts.consultantName)}
                         </Typography>
                       </TableCell>
                       <TableCell>

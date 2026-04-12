@@ -2,6 +2,7 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import ButtonBase from '@mui/material/ButtonBase'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import AssignmentTurnedInIcon from '@mui/icons-material/AssignmentTurnedIn'
 import PeopleIcon from '@mui/icons-material/People'
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd'
 import HistoryIcon from '@mui/icons-material/History'
@@ -16,7 +17,8 @@ const NAV_LINKS = {
     { label: 'Timesheets', path: '/consultant/timesheets', icon: AccessTimeIcon },
   ],
   LINE_MANAGER: [
-    { label: 'Timesheets', path: '/manager/timesheets', icon: AccessTimeIcon },
+    { label: 'Team Timesheets', path: '/manager/timesheets', icon: AccessTimeIcon },
+    { label: 'My Timesheets', path: '/manager/my-timesheets', icon: AssignmentTurnedInIcon },
   ],
   FINANCE_MANAGER: [
     { label: 'Timesheets', path: '/finance/timesheets', icon: AccessTimeIcon },

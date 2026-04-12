@@ -44,7 +44,12 @@ const EMPTY_ELIGIBILITY = {
   missingPastWeekStarts: [],
 }
 
-export default function TimesheetListPage() {
+export default function TimesheetListPage({
+  basePath = '/consultant/timesheets',
+  title = 'My Timesheets',
+  subtitle = 'View and manage your weekly timesheets',
+  timesheetScope,
+}) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
@@ -59,7 +64,7 @@ export default function TimesheetListPage() {
   useEffect(() => {
     let active = true
 
-    Promise.allSettled([getTimesheets(), getEligibleWeeks()])
+    Promise.allSettled([getTimesheets({ scope: timesheetScope }), getEligibleWeeks()])
       .then(([timesheetResult, eligibilityResult]) => {
         if (!active) return
 
@@ -82,7 +87,7 @@ export default function TimesheetListPage() {
     return () => {
       active = false
     }
-  }, [])
+  }, [timesheetScope])
 
   if (loading) return <LoadingSpinner />
 
@@ -102,7 +107,7 @@ export default function TimesheetListPage() {
     try {
       const newTimesheet = await createTimesheet({ weekStart })
       setMissingWeekDialogOpen(false)
-      navigate(`/consultant/timesheets/${newTimesheet.id}/edit`, { replace: true })
+      navigate(`${basePath}/${newTimesheet.id}/edit`, { replace: true })
     } catch (err) {
       setError(err.message ?? 'Failed to create timesheet.')
     } finally {
@@ -122,8 +127,8 @@ export default function TimesheetListPage() {
           onClick={() =>
             navigate(
               isEditable
-                ? `/consultant/timesheets/${currentWeekTimesheet.id}/edit`
-                : `/consultant/timesheets/${currentWeekTimesheet.id}`
+                ? `${basePath}/${currentWeekTimesheet.id}/edit`
+                : `${basePath}/${currentWeekTimesheet.id}`
             )
           }
         >
@@ -137,7 +142,7 @@ export default function TimesheetListPage() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/consultant/timesheets/new')}
+          onClick={() => navigate(`${basePath}/new`)}
         >
           New Timesheet
         </Button>
@@ -176,7 +181,7 @@ export default function TimesheetListPage() {
 
   return (
     <Box>
-      <PageHeader title="My Timesheets" subtitle="View and manage your weekly timesheets">
+      <PageHeader title={title} subtitle={subtitle}>
         {renderPrimaryActionButton()}
         {renderMissingWeekButton()}
       </PageHeader>
@@ -225,8 +230,8 @@ export default function TimesheetListPage() {
               const actionLabel = isEditable ? 'Edit Timesheet' : 'View Timesheet'
               const ActionIcon = isEditable ? EditIcon : VisibilityIcon
               const destination = isEditable
-                ? `/consultant/timesheets/${ts.id}/edit`
-                : `/consultant/timesheets/${ts.id}`
+                ? `${basePath}/${ts.id}/edit`
+                : `${basePath}/${ts.id}`
 
               return (
                 <Paper key={ts.id} sx={{ p: 2.5 }}>
@@ -326,7 +331,7 @@ export default function TimesheetListPage() {
                           size="small"
                           variant="outlined"
                           startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`/consultant/timesheets/${ts.id}/edit`)}
+                          onClick={() => navigate(`${basePath}/${ts.id}/edit`)}
                         >
                           Edit
                         </Button>
@@ -335,7 +340,7 @@ export default function TimesheetListPage() {
                           size="small"
                           variant="outlined"
                           startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`/consultant/timesheets/${ts.id}`)}
+                          onClick={() => navigate(`${basePath}/${ts.id}`)}
                         >
                           View
                         </Button>

@@ -11,8 +11,11 @@ function normalizeTimesheet(timesheet) {
   }
 }
 
-export async function getTimesheets() {
-  return apiClient('/api/timesheets')
+export async function getTimesheets(options = {}) {
+  const params = new URLSearchParams()
+  if (options.scope) params.set('scope', options.scope)
+  const query = params.toString()
+  return apiClient(`/api/timesheets${query ? `?${query}` : ''}`)
 }
 
 export async function getEligibleWeeks() {

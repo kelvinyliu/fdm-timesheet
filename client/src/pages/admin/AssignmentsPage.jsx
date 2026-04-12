@@ -42,7 +42,7 @@ import {
   deleteManagerAssignment,
 } from '../../api/assignments'
 import { getUsers } from '../../api/users'
-import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 import { formatDate } from '../../utils/dateFormatters'
 
 function formatCurrency(value) {
@@ -116,7 +116,7 @@ export default function AssignmentsPage() {
     stayLabel: 'Keep editing',
   })
 
-  const consultants = users.filter((u) => u.role === 'CONSULTANT')
+  const submitters = users.filter((u) => u.role === 'CONSULTANT' || u.role === 'LINE_MANAGER')
   const managers = users.filter((u) => u.role === 'LINE_MANAGER')
 
   async function fetchClientAssignments() {
@@ -154,10 +154,10 @@ export default function AssignmentsPage() {
   const filteredClientAssignments = useMemo(() => {
     return clientAssignments.filter((a) => {
       const q = searchQuery.toLowerCase()
-      const consultantName = getConsultantDisplayLabel(
+      const submitterName = getSubmitterDisplayLabel(
         users.find((u) => u.id === a.consultantId)?.name ?? null
       ).toLowerCase()
-      return a.clientName.toLowerCase().includes(q) || consultantName.includes(q)
+      return a.clientName.toLowerCase().includes(q) || submitterName.includes(q)
     })
   }, [clientAssignments, searchQuery, users])
 
@@ -227,7 +227,7 @@ export default function AssignmentsPage() {
     const parsedClientBillRate = Number(clientBillRate)
 
     if (!consultantId || !clientName || !clientBillRate) {
-      setClientFormError('Consultant, Client Name, and Client Bill Rate are required.')
+      setClientFormError('Submitter, Client Name, and Client Bill Rate are required.')
       return
     }
 
@@ -319,7 +319,7 @@ export default function AssignmentsPage() {
     setManagerFormError('')
     const { managerId, consultantId } = managerForm
     if (!managerId || !consultantId) {
-      setManagerFormError('Both Manager and Consultant are required.')
+      setManagerFormError('Both Manager and Submitter are required.')
       return
     }
     setManagerFormLoading(true)
@@ -344,7 +344,7 @@ export default function AssignmentsPage() {
     <Box>
       <PageHeader
         title="Assignments"
-        subtitle="Manage client and manager-consultant assignments"
+        subtitle="Manage client assignments and manager approval ownership"
       />
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -416,10 +416,10 @@ export default function AssignmentsPage() {
                     <Stack spacing={2}>
                       <Box>
                         <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Consultant
+                          Submitter
                         </Typography>
                         <Typography variant="body2" fontWeight={600}>
-                          {getConsultantDisplayLabel(
+                          {getSubmitterDisplayLabel(
                             users.find((u) => u.id === a.consultantId)?.name ?? null
                           )}
                         </Typography>
@@ -470,7 +470,7 @@ export default function AssignmentsPage() {
                           onClick={() => {
                             void handleDeleteClientAssignment(
                               a.id,
-                              `${a.clientName} for ${getConsultantDisplayLabel(
+                              `${a.clientName} for ${getSubmitterDisplayLabel(
                                 users.find((u) => u.id === a.consultantId)?.name ?? null
                               )}`
                             )
@@ -488,7 +488,7 @@ export default function AssignmentsPage() {
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Consultant</TableCell>
+                    <TableCell>Submitter</TableCell>
                     <TableCell>Client Name</TableCell>
                     <TableCell>Client Bill Rate</TableCell>
                     <TableCell>Created</TableCell>
@@ -501,7 +501,7 @@ export default function AssignmentsPage() {
                       <TableCell>
                         <Box>
                           <Typography variant="body2" fontWeight={500}>
-                            {getConsultantDisplayLabel(
+                            {getSubmitterDisplayLabel(
                               users.find((u) => u.id === a.consultantId)?.name ?? null
                             )}
                           </Typography>
@@ -532,7 +532,7 @@ export default function AssignmentsPage() {
                             onClick={() => {
                               void handleDeleteClientAssignment(
                                 a.id,
-                                `${a.clientName} for ${getConsultantDisplayLabel(
+                                `${a.clientName} for ${getSubmitterDisplayLabel(
                                   users.find((u) => u.id === a.consultantId)?.name ?? null
                                 )}`
                               )
@@ -596,7 +596,7 @@ export default function AssignmentsPage() {
 
                       <Box>
                         <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Consultant
+                          Submitter
                         </Typography>
                         <Typography variant="body2">{a.consultantName}</Typography>
                       </Box>
@@ -633,7 +633,7 @@ export default function AssignmentsPage() {
                 <TableHead>
                   <TableRow>
                     <TableCell>Manager</TableCell>
-                    <TableCell>Consultant</TableCell>
+                    <TableCell>Submitter</TableCell>
                     <TableCell align="right">Actions</TableCell>
                   </TableRow>
                 </TableHead>
@@ -709,14 +709,14 @@ export default function AssignmentsPage() {
           )}
           <Box sx={{ mt: 1, mb: 2 }}>
             <Autocomplete
-              options={consultants}
+              options={submitters}
               getOptionLabel={(option) => option.name || ''}
-              value={consultants.find((u) => u.id === clientForm.consultantId) || null}
+              value={submitters.find((u) => u.id === clientForm.consultantId) || null}
               onChange={(e, newValue) => {
                 setClientForm((p) => ({ ...p, consultantId: newValue ? newValue.id : '' }))
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Consultant" required />
+                <TextField {...params} label="Submitter" required />
               )}
             />
           </Box>
@@ -789,14 +789,14 @@ export default function AssignmentsPage() {
           </Box>
           <Box sx={{ mb: 2 }}>
             <Autocomplete
-              options={consultants}
+              options={submitters}
               getOptionLabel={(option) => option.name || ''}
-              value={consultants.find((u) => u.id === managerForm.consultantId) || null}
+              value={submitters.find((u) => u.id === managerForm.consultantId) || null}
               onChange={(e, newValue) => {
                 setManagerForm((p) => ({ ...p, consultantId: newValue ? newValue.id : '' }))
               }}
               renderInput={(params) => (
-                <TextField {...params} label="Consultant" required />
+                <TextField {...params} label="Submitter" required />
               )}
             />
           </Box>

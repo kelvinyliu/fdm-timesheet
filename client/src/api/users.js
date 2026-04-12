@@ -8,6 +8,10 @@ export async function getConsultantPayRates() {
   return apiClient('/api/users/consultants/pay-rates')
 }
 
+export async function getSubmitterPayRates() {
+  return apiClient('/api/users/submitters/pay-rates')
+}
+
 export async function createUser(body) {
   return apiClient('/api/users', {
     method: 'POST',

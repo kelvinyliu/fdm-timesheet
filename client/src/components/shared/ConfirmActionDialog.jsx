@@ -97,10 +97,6 @@ export default function ConfirmActionDialog({
             backgroundColor: palette.surface,
             boxShadow: '0 24px 48px rgba(0, 0, 0, 0.08), 0 12px 24px rgba(0, 0, 0, 0.04)',
             border: `1px solid ${palette.border}`,
-            // Soft radial glow behind the icon
-            backgroundImage: `radial-gradient(circle at 48px 48px, ${variantStyle.bg} 0%, transparent 70%)`,
-            backgroundRepeat: 'no-repeat',
-            backgroundSize: '150% 200px',
             '@keyframes dialogEnter': {
               '0%': { opacity: 0, transform: 'scale(0.97)' },
               '100%': { opacity: 1, transform: 'scale(1)' },
@@ -110,12 +106,27 @@ export default function ConfirmActionDialog({
         },
       }}
     >
-      <DialogTitle sx={{ px: { xs: 3, sm: 4 }, pt: { xs: 3, sm: 4 }, pb: 2 }}>
-        <Stack direction="row" spacing={2.5} alignItems="flex-start">
+      <DialogTitle 
+        sx={{ 
+          px: { xs: 3.5, sm: 4.5 }, 
+          pt: { xs: 3.5, sm: 4.5 }, 
+          pb: { xs: 2.5, sm: 2.75 },
+          position: 'sticky',
+          top: 0,
+          zIndex: 10,
+          backgroundColor: palette.surface,
+          // Soft radial glow behind the icon
+          backgroundImage: `radial-gradient(circle at 48px 48px, ${variantStyle.bg} 0%, transparent 70%)`,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '150% 200px',
+          borderBottom: `1px solid rgba(0,0,0,0.03)`, // subtle separator when scrolling
+        }}
+      >
+        <Stack direction="row" spacing={{ xs: 2, sm: 2.75 }} alignItems="flex-start">
           <Box
             sx={{
-              width: 52,
-              height: 52,
+              width: { xs: 48, sm: 52 },
+              height: { xs: 48, sm: 52 },
               borderRadius: '16px',
               backgroundColor: variantStyle.accent,
               color: palette.textInverse,
@@ -126,10 +137,10 @@ export default function ConfirmActionDialog({
               flexShrink: 0,
             }}
           >
-            <Icon sx={{ fontSize: 24 }} />
+            <Icon sx={{ fontSize: { xs: 22, sm: 24 } }} />
           </Box>
 
-          <Box sx={{ minWidth: 0, pt: 0.5 }}>
+          <Box sx={{ minWidth: 0, pt: { xs: 0, sm: 0.5 }, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
             <Typography
               variant="caption"
               sx={{
@@ -156,8 +167,8 @@ export default function ConfirmActionDialog({
               sx={{ 
                 color: palette.textPrimary,
                 fontWeight: 600,
-                lineHeight: 1.2,
-                letterSpacing: '-0.01em'
+                lineHeight: 1.18,
+                letterSpacing: '-0.01em',
               }}
             >
               {title}
@@ -166,95 +177,90 @@ export default function ConfirmActionDialog({
         </Stack>
       </DialogTitle>
 
-      <DialogContent sx={{ px: { xs: 3, sm: 4 }, pb: 1, overflowX: 'hidden' }}>
-        <Box sx={{ pl: { sm: 9 } }}>
-          <Alert
-            icon={false}
-            sx={{
-              mb: summaryItems.length > 0 ? 4 : 2,
-              p: 0,
-              backgroundColor: 'transparent',
-              border: 'none',
-              borderLeft: `3px solid ${variantStyle.accent}88`,
-              borderRadius: 0,
-              pl: 2.5,
-              py: 0.5,
-              '& .MuiAlert-message': {
-                width: '100%',
-                p: 0,
-              },
-            }}
-          >
-            <Typography 
-              variant="body1" 
-              sx={{ 
-                color: palette.textSecondary,
-                lineHeight: 1.6,
-                fontSize: '0.95rem'
-              }}
-            >
-              {message}
-            </Typography>
-          </Alert>
+      {(message || summaryItems.length > 0) && (
+        <DialogContent
+          sx={{
+            px: { xs: 3.5, sm: 4.5 },
+            pt: { xs: 2.5, sm: 3 },
+            pb: { xs: 2, sm: 1.5 },
+            overflowX: 'hidden',
+          }}
+        >
+          <Box sx={{ pl: { sm: '74px' } }}>
+            {message && (
+              <Box sx={{ mb: summaryItems.length > 0 ? 3 : 0 }}>
+                <Typography 
+                  variant="body1" 
+                  sx={{ 
+                    color: palette.textSecondary,
+                    lineHeight: 1.7,
+                    fontSize: '0.95rem'
+                  }}
+                >
+                  {message}
+                </Typography>
+              </Box>
+            )}
 
-          {summaryItems.length > 0 && (
-            <Box sx={{ mb: 3 }}>
-              {summaryItems.map((item, index) => (
-                <Box key={item.key || index}>
-                  {index > 0 && (
-                    <Divider 
-                      sx={{ 
-                        my: 2.5,
-                        borderStyle: 'dashed', 
-                        borderColor: palette.border,
-                        opacity: 0.7 
-                      }} 
-                    />
-                  )}
-                  <Box
-                    sx={{
-                      py: 1,
-                      display: 'grid',
-                      gridTemplateColumns: { xs: '1fr', sm: '140px 1fr' },
-                      gap: { xs: 1, sm: 3 },
-                      alignItems: 'start',
-                    }}
-                  >
-                    <Typography
-                      variant="caption"
+            {summaryItems.length > 0 && (
+              <Box sx={{ mt: message ? 4 : 0, mb: 3 }}>
+                {summaryItems.map((item, index) => (
+                  <Box key={item.key || index}>
+                    {index > 0 && (
+                      <Divider 
+                        sx={{ 
+                          my: 2.5,
+                          borderStyle: 'dashed', 
+                          borderColor: palette.border,
+                          opacity: 0.7 
+                        }} 
+                      />
+                    )}
+                    <Box
                       sx={{
-                        color: palette.textMuted,
-                        fontWeight: 600,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        mt: 0.5
+                        py: 1,
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '140px 1fr' },
+                        gap: { xs: 1, sm: 3 },
+                        alignItems: 'start',
                       }}
                     >
-                      {item.label}
-                    </Typography>
-                    <Typography 
-                      variant="body2" 
-                      sx={{ 
-                        color: palette.textPrimary, 
-                        fontWeight: 500,
-                        lineHeight: 1.5
-                      }}
-                    >
-                      {item.value}
-                    </Typography>
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          color: palette.textMuted,
+                          fontWeight: 600,
+                          letterSpacing: '0.06em',
+                          textTransform: 'uppercase',
+                          mt: 0.5
+                        }}
+                      >
+                        {item.label}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        sx={{ 
+                          color: palette.textPrimary, 
+                          fontWeight: 500,
+                          lineHeight: 1.5
+                        }}
+                      >
+                        {item.value}
+                      </Typography>
+                    </Box>
                   </Box>
-                </Box>
-              ))}
-            </Box>
-          )}
-        </Box>
-      </DialogContent>
+                ))}
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+      )}
 
       <DialogActions
         sx={{
-          px: { xs: 3, sm: 4 },
-          py: { xs: 2.5, sm: 3 },
-          mt: 2,
+          px: { xs: 3.5, sm: 4.5 },
+          py: { xs: 2.75, sm: 3.25 },
+          mt: { xs: 1, sm: 2 },
           gap: 1.5,
           flexDirection: { xs: 'column-reverse', sm: 'row' },
           alignItems: 'stretch',
@@ -265,6 +271,8 @@ export default function ConfirmActionDialog({
           // Subtle top shadow to separate actions from content
           boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.02)',
           borderTop: `1px solid ${palette.border}`,
+          '& > :not(:style)': { m: 0 }, // Reset MUI default margin
+          '& > :not(:first-of-type)': { m: 0 }, // Reset MUI default margin
         }}
       >
         <Button

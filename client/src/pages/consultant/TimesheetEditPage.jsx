@@ -261,9 +261,10 @@ export default function TimesheetEditPage({
 
   const currentEntriesPayload = getEntriesPayload()
   const isDirty = serializeEntries(currentEntriesPayload) !== savedEntriesSnapshot
+  const shouldBlockUnsavedChanges = isDirty && !submitting
 
   useUnsavedChangesGuard({
-    isDirty,
+    isDirty: shouldBlockUnsavedChanges,
     title: 'Leave with unsaved timesheet changes?',
     message: 'This draft has local edits that have not been saved yet. You can save now or discard them.',
     variant: 'warning',
@@ -306,6 +307,7 @@ export default function TimesheetEditPage({
     setSubmitting(true)
     try {
       await updateEntries(id, currentEntriesPayload)
+      setSavedEntriesSnapshot(serializeEntries(currentEntriesPayload))
       await submitTimesheet(id)
       navigate(`${basePath}/${id}`)
     } catch (err) {

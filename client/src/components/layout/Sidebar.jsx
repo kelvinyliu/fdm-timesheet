@@ -60,7 +60,7 @@ export default function Sidebar({ onNavigate, collapsed = false }) {
       {links.map(({ label, path, icon: Icon }) => {
         const isActive = location.pathname.startsWith(path)
 
-        const button = (
+        const navButton = (
           <ButtonBase
             key={path}
             onClick={() => {
@@ -69,21 +69,21 @@ export default function Sidebar({ onNavigate, collapsed = false }) {
             }}
             sx={{
               width: '100%',
+              minHeight: collapsed ? 48 : 44,
               display: 'flex',
               alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
               gap: collapsed ? 0 : 1.5,
               px: collapsed ? 0 : 1.5,
               py: 1.1,
-              mb: 0.3,
-              borderRadius: '8px',
+              mb: 0.5,
+              borderRadius: '10px',
               textAlign: 'left',
-              justifyContent: collapsed ? 'center' : 'flex-start',
               color: isActive ? palette.textInverse : palette.textInverseMuted,
               backgroundColor: isActive ? palette.overlayPrimaryMuted : 'transparent',
               transition: 'all 0.15s ease',
               position: 'relative',
               overflow: 'hidden',
-              minHeight: 44,
               '&:hover': {
                 backgroundColor: isActive
                   ? 'rgba(var(--ui-primary-rgb), 0.24)'
@@ -95,8 +95,8 @@ export default function Sidebar({ onNavigate, collapsed = false }) {
                     content: '""',
                     position: 'absolute',
                     left: 0,
-                    top: '20%',
-                    bottom: '20%',
+                    top: collapsed ? '22%' : '20%',
+                    bottom: collapsed ? '22%' : '20%',
                     width: 3,
                     borderRadius: '0 3px 3px 0',
                     backgroundColor: palette.primary,
@@ -106,8 +106,9 @@ export default function Sidebar({ onNavigate, collapsed = false }) {
           >
             <Icon
               sx={{
-                fontSize: '1.15rem',
-                opacity: isActive ? 1 : 0.7,
+                fontSize: collapsed ? '1.3rem' : '1.15rem',
+                opacity: isActive ? 1 : 0.78,
+                flexShrink: 0,
               }}
             />
 
@@ -127,10 +128,10 @@ export default function Sidebar({ onNavigate, collapsed = false }) {
 
         return collapsed ? (
           <Tooltip key={path} title={label} placement="right">
-            {button}
+            {navButton}
           </Tooltip>
         ) : (
-          button
+          navButton
         )
       })}
     </Box>

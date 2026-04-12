@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useNavigate } from "react-router"
 import Box from "@mui/material/Box"
 import Grid from "@mui/material/Grid"
 import Paper from "@mui/material/Paper"
@@ -32,6 +33,7 @@ function getAuditActionLabel(action) {
 }
 
 export default function AdminDashboard() {
+  const navigate = useNavigate()
   const [users, setUsers] = useState([])
   const [auditLog, setAuditLog] = useState([])
   const [loading, setLoading] = useState(true)
@@ -62,7 +64,7 @@ export default function AdminDashboard() {
       : "No recent system activity recorded."
 
   return (
-    <Box sx={{ maxWidth: 1200, width: "100%" }}>
+    <Box sx={{ maxWidth: 1280, width: "100%" }}>
       <Paper
         sx={{
           p: { xs: 3, md: 4 },
@@ -121,6 +123,7 @@ export default function AdminDashboard() {
             subtitle="All active accounts"
             color="#1976D2"
             delay={80}
+            onClick={() => navigate("/admin/users")}
           />
         </Grid>
 
@@ -132,6 +135,7 @@ export default function AdminDashboard() {
             subtitle="Submitting timesheets"
             color="#2E7D32"
             delay={160}
+            onClick={() => navigate("/admin/users?role=CONSULTANT")}
           />
         </Grid>
 
@@ -143,6 +147,7 @@ export default function AdminDashboard() {
             subtitle="Reviewing submissions"
             color="#C58A00"
             delay={240}
+            onClick={() => navigate("/admin/users?role=LINE_MANAGER")}
           />
         </Grid>
 
@@ -154,12 +159,13 @@ export default function AdminDashboard() {
             subtitle="Tracked system actions"
             color="#6A1B9A"
             delay={320}
+            onClick={() => navigate("/admin/audit")}
           />
         </Grid>
       </Grid>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={5}>
+        <Grid item xs={12} md={6}>
           <Paper
             sx={{
               p: 3,
@@ -169,28 +175,28 @@ export default function AdminDashboard() {
               height: "100%",
             }}
           >
-            <Typography variant="h6" sx={{ mb: 1.5 }}>
+            <Typography variant="h6" sx={{ mb: 2 }}>
               Role distribution
             </Typography>
 
-            <Stack spacing={1.25}>
-              <Typography variant="body2" color="text.secondary">
+            <Stack spacing={1.2}>
+              <Typography variant="body2">
                 Consultants: <strong>{consultants}</strong>
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Line managers: <strong>{managers}</strong>
+              <Typography variant="body2">
+                Managers: <strong>{managers}</strong>
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Finance managers: <strong>{financeManagers}</strong>
+              <Typography variant="body2">
+                Finance: <strong>{financeManagers}</strong>
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                System admins: <strong>{admins}</strong>
+              <Typography variant="body2">
+                Admins: <strong>{admins}</strong>
               </Typography>
             </Stack>
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={7}>
+        <Grid item xs={12} md={6}>
           <Paper
             sx={{
               p: 3,
@@ -198,6 +204,8 @@ export default function AdminDashboard() {
               border: "1px solid",
               borderColor: "divider",
               height: "100%",
+              display: "flex",
+              flexDirection: "column",
             }}
           >
             <Typography variant="h6" sx={{ mb: 2 }}>

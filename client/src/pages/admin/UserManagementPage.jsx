@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -20,34 +21,52 @@ import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
 import Alert from '@mui/material/Alert'
 import Tooltip from '@mui/material/Tooltip'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
+import InputAdornment from '@mui/material/InputAdornment'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
+import SearchIcon from '@mui/icons-material/Search'
 import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import { getUsers, createUser, updateUserRole, deleteUser } from '../../api/users'
 
 const ROLES = ['CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN']
-
 const EMPTY_FORM = { name: '', email: '', password: '', role: 'CONSULTANT' }
+
+function getRoleLabel(role) {
+  return role.replace(/_/g, ' ')
+}
 
 export default function UserManagementPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const [searchParams] = useSearchParams()
+
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   const [pendingRoles, setPendingRoles] = useState({})
 
+  const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || 'ALL')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState('nameAsc')
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
+
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState({ id: null, name: '' })
+
+  useEffect(() => {
+    setRoleFilter(searchParams.get('role') || 'ALL')
+  }, [searchParams])
 
   async function fetchUsers() {
     setLoading(true)
@@ -73,6 +92,7 @@ export default function UserManagementPage() {
   async function handleSaveRole(userId) {
     const role = pendingRoles[userId]
     if (!role) return
+
     try {
       await updateUserRole(userId, role)
       setPendingRoles((prev) => {
@@ -127,6 +147,7 @@ export default function UserManagementPage() {
       setFormError('All fields are required.')
       return
     }
+
     setFormLoading(true)
     try {
       await createUser(form)
@@ -141,9 +162,95 @@ export default function UserManagementPage() {
 
   if (loading) return <LoadingSpinner />
 
+  const normalizedQuery = searchQuery.trim().toLowerCase()
+
+  const filteredUsers = users.filter((u) => {
+    const matchesRole = roleFilter === 'ALL' || u.role === roleFilter
+    const matchesSearch =
+      normalizedQuery.length === 0 ||
+      u.name.toLowerCase().includes(normalizedQuery) ||
+      u.email.toLowerCase().includes(normalizedQuery)
+
+    return matchesRole && matchesSearch
+  })
+
+  const sortedUsers = [...filteredUsers].sort((a, b) => {
+    if (sortBy === 'nameAsc') {
+      return a.name.localeCompare(b.name)
+    }
+    if (sortBy === 'nameDesc') {
+      return b.name.localeCompare(a.name)
+    }
+    if (sortBy === 'roleAsc') {
+      return a.role.localeCompare(b.role)
+    }
+    if (sortBy === 'roleDesc') {
+      return b.role.localeCompare(a.role)
+    }
+    return 0
+  })
+
+  let emptyMessage = 'No users found.'
+  if (roleFilter !== 'ALL' && normalizedQuery) {
+    emptyMessage = `No users found for "${searchQuery.trim()}" with role "${getRoleLabel(roleFilter)}".`
+  } else if (roleFilter !== 'ALL') {
+    emptyMessage = `No users found with role "${getRoleLabel(roleFilter)}".`
+  } else if (normalizedQuery) {
+    emptyMessage = `No users found for "${searchQuery.trim()}".`
+  }
+
   return (
     <Box>
       <PageHeader title="User Management" subtitle="Create, manage, and assign roles to users">
+        <TextField
+          placeholder="Search users..."
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ minWidth: { sm: 220 } }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            },
+          }}
+        />
+
+        <FormControl size="small" sx={{ minWidth: 170 }}>
+          <InputLabel id="user-role-filter-label">Role</InputLabel>
+          <Select
+            labelId="user-role-filter-label"
+            value={roleFilter}
+            label="Role"
+            onChange={(e) => setRoleFilter(e.target.value)}
+          >
+            <MenuItem value="ALL">All</MenuItem>
+            {ROLES.map((role) => (
+              <MenuItem key={role} value={role}>
+                {getRoleLabel(role)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
+
+        <FormControl size="small" sx={{ minWidth: 170 }}>
+          <InputLabel id="user-sort-label">Sort</InputLabel>
+          <Select
+            labelId="user-sort-label"
+            value={sortBy}
+            label="Sort"
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            <MenuItem value="nameAsc">Name (A → Z)</MenuItem>
+            <MenuItem value="nameDesc">Name (Z → A)</MenuItem>
+            <MenuItem value="roleAsc">Role (A → Z)</MenuItem>
+            <MenuItem value="roleDesc">Role (Z → A)</MenuItem>
+          </Select>
+        </FormControl>
+
         <Button variant="contained" startIcon={<AddIcon />} onClick={openDialog}>
           Create User
         </Button>
@@ -156,17 +263,18 @@ export default function UserManagementPage() {
       )}
 
       {isMobile ? (
-        users.length === 0 ? (
+        sortedUsers.length === 0 ? (
           <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
             <Typography variant="body2" color="text.secondary">
-              No users found.
+              {emptyMessage}
             </Typography>
           </Paper>
         ) : (
           <Stack spacing={1.5}>
-            {users.map((u) => {
+            {sortedUsers.map((u) => {
               const currentRole = pendingRoles[u.id] ?? u.role
               const isDirty = pendingRoles[u.id] !== undefined && pendingRoles[u.id] !== u.role
+
               return (
                 <Paper key={u.id} sx={{ p: 2.5 }}>
                   <Stack spacing={2}>
@@ -174,14 +282,7 @@ export default function UserManagementPage() {
                       <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
                         {u.name}
                       </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.78rem',
-                          color: 'text.secondary',
-                        }}
-                      >
+                      <Typography variant="body2" color="text.secondary">
                         {u.email}
                       </Typography>
                     </Box>
@@ -198,7 +299,7 @@ export default function UserManagementPage() {
                       >
                         {ROLES.map((r) => (
                           <MenuItem key={r} value={r}>
-                            {r.replace(/_/g, ' ')}
+                            {getRoleLabel(r)}
                           </MenuItem>
                         ))}
                       </Select>
@@ -242,9 +343,10 @@ export default function UserManagementPage() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {users.map((u) => {
+              {sortedUsers.map((u) => {
                 const currentRole = pendingRoles[u.id] ?? u.role
                 const isDirty = pendingRoles[u.id] !== undefined && pendingRoles[u.id] !== u.role
+
                 return (
                   <TableRow key={u.id}>
                     <TableCell>
@@ -252,31 +354,28 @@ export default function UserManagementPage() {
                         {u.name}
                       </Typography>
                     </TableCell>
+
                     <TableCell>
-                      <Typography
-                        variant="body2"
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.8rem',
-                        }}
-                      >
+                      <Typography variant="body2" color="text.secondary">
                         {u.email}
                       </Typography>
                     </TableCell>
+
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1}>
                         <Select
                           size="small"
                           value={currentRole}
                           onChange={(e) => handleRoleSelectChange(u.id, e.target.value)}
-                          sx={{ minWidth: 160, fontSize: '0.8rem' }}
+                          sx={{ minWidth: 180, fontSize: '0.85rem' }}
                         >
                           {ROLES.map((r) => (
                             <MenuItem key={r} value={r}>
-                              {r.replace(/_/g, ' ')}
+                              {getRoleLabel(r)}
                             </MenuItem>
                           ))}
                         </Select>
+
                         <Tooltip title="Save role">
                           <span>
                             <IconButton
@@ -291,6 +390,7 @@ export default function UserManagementPage() {
                         </Tooltip>
                       </Box>
                     </TableCell>
+
                     <TableCell align="right">
                       <Tooltip title="Delete user">
                         <IconButton
@@ -305,10 +405,11 @@ export default function UserManagementPage() {
                   </TableRow>
                 )
               })}
-              {users.length === 0 && (
+
+              {sortedUsers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    No users found.
+                    {emptyMessage}
                   </TableCell>
                 </TableRow>
               )}
@@ -333,7 +434,6 @@ export default function UserManagementPage() {
         </DialogActions>
       </Dialog>
 
-      {/* Create User Dialog */}
       <Dialog
         open={dialogOpen}
         onClose={closeDialog}
@@ -348,6 +448,7 @@ export default function UserManagementPage() {
               {formError}
             </Alert>
           )}
+
           <TextField
             label="Name"
             value={form.name}
@@ -356,6 +457,7 @@ export default function UserManagementPage() {
             required
             sx={{ mt: 1, mb: 2 }}
           />
+
           <TextField
             label="Email"
             type="email"
@@ -365,6 +467,7 @@ export default function UserManagementPage() {
             required
             sx={{ mb: 2 }}
           />
+
           <TextField
             label="Password"
             type="password"
@@ -374,20 +477,21 @@ export default function UserManagementPage() {
             required
             sx={{ mb: 2 }}
           />
+
           <Select
             value={form.role}
             onChange={(e) => handleFormChange('role', e.target.value)}
             fullWidth
-            size="medium"
             displayEmpty
           >
             {ROLES.map((r) => (
               <MenuItem key={r} value={r}>
-                {r.replace(/_/g, ' ')}
+                {getRoleLabel(r)}
               </MenuItem>
             ))}
           </Select>
         </DialogContent>
+
         <DialogActions>
           <Button onClick={closeDialog} disabled={formLoading}>
             Cancel

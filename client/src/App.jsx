@@ -13,6 +13,7 @@ import { useAuth } from './context/useAuth.js'
 import PrivateRoute from './components/guards/PrivateRoute.jsx'
 import RoleGuard from './components/guards/RoleGuard.jsx'
 import AppLayout from './components/layout/AppLayout.jsx'
+import LoadingSpinner from './components/shared/LoadingSpinner.jsx'
 import { ROLE_ROUTES } from './constants/routes.js'
 import LoginPage from './pages/auth/LoginPage.jsx'
 import ForbiddenPage from './pages/auth/ForbiddenPage.jsx'
@@ -71,7 +72,7 @@ function RootRedirect() {
 
 const router = createBrowserRouter(
   createRoutesFromElements(
-    <Route element={<AppProviders />}>
+    <Route element={<AppProviders />} hydrateFallbackElement={<LoadingSpinner />}>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/403" element={<ForbiddenPage />} />
       <Route index element={<RootRedirect />} />

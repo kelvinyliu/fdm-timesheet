@@ -18,8 +18,9 @@ export default function PageHeader({ title, subtitle, children }) {
           variant="h4"
           component="h1"
           sx={{
-            fontFamily: '"Instrument Serif", Georgia, serif',
+            fontFamily: 'Poppins, Georgia, serif',
             fontWeight: 400,
+            fontSize: '2.5rem',
           }}
         >
           {title}
@@ -27,7 +28,7 @@ export default function PageHeader({ title, subtitle, children }) {
         {subtitle && (
           <Typography
             variant="body2"
-            sx={{ color: 'text.secondary', mt: 0.5 }}
+            sx={{ color: 'text.secondary', mt: 0.5, fontSize: '1.15rem' }}
           >
             {subtitle}
           </Typography>
@@ -46,7 +47,7 @@ export default function PageHeader({ title, subtitle, children }) {
               width: { xs: '100%', sm: 'auto' },
             },
             '& .MuiButton-root, & .MuiFormControl-root': {
-              width: { xs: '100%', sm: 'auto' },
+              width: { xs: '100%', sm: 'auto'},
             },
           }}
         >

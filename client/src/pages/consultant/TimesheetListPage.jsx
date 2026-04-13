@@ -138,6 +138,7 @@ export default function TimesheetListPage() {
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => navigate('/consultant/timesheets/new')}
+          sx={{backgroundColor : '#c5ff00', '&:hover': {backgroundColor: '#000000',color: '#ffffff'}}}
         >
           New Timesheet
         </Button>
@@ -179,6 +180,7 @@ export default function TimesheetListPage() {
       <PageHeader title="My Timesheets" subtitle="View and manage your weekly timesheets">
         {renderPrimaryActionButton()}
         {renderMissingWeekButton()}
+      
       </PageHeader>
 
       {error && (
@@ -203,7 +205,7 @@ export default function TimesheetListPage() {
         >
           <Typography
             sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: 'Poppins, Georgia, serif',
               fontSize: '1.2rem',
               color: 'text.secondary',
               mb: 1,
@@ -289,13 +291,17 @@ export default function TimesheetListPage() {
         ) : (
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
             <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Week of</TableCell>
-                  <TableCell>Work Categories</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Total Hours</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+              <TableHead >
+                <TableRow >
+                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>Week of</TableCell>
+                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>Work Categories</TableCell>
+                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>Status</TableCell>
+                  <TableCell align="right" sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>
+                    Total Hours
+                  </TableCell>
+                  <TableCell align="right" sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

@@ -464,7 +464,7 @@ export default function WeeklyMatrix({
                         sx={{
                           borderRight: `1px solid ${palette.border}`,
                           py: 1.5,
-                          backgroundColor: isOverLimit ? palette.errorBg : palette.surfaceRaised,
+                          backgroundColor: isOverLimit ? palette.errorBg : palette.surfaceMuted,
                         }}
                       >
                         <Typography
@@ -495,7 +495,7 @@ export default function WeeklyMatrix({
                   <TableCell
                     align="center"
                     sx={{
-                      backgroundColor: palette.surfaceRaised,
+                      backgroundColor: palette.surfaceMuted,
                       py: 1.5,
                     }}
                   >

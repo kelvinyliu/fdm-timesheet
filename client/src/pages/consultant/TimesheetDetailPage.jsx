@@ -101,11 +101,23 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
         </Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+      <Paper sx={{ 
+        p: 3, 
+        borderRadius: 3, 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        border: '1px solid rgba(0,0,0,0.05)', 
+        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
+        }}>
         <DetailList items={detailItems} rowGap={2} />
       </Paper>
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+      <Paper sx={{ 
+        p: 3, 
+        borderRadius: 3,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)', 
+        border: '1px solid rgba(0,0,0,0.05)',
+        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
+        }}>
         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
           Weekly Work Summary
         </Typography>

@@ -214,35 +214,45 @@ export default function TimesheetReviewPage() {
 
       {timesheet && (
         <>
-          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+          <Paper sx={{ 
+            p: { xs: 2.5, sm: 3 },
+            borderRadius: 3, 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            border: '1px solid rgba(0,0,0,0.05)', 
+            background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
+            mb: 3 
+          }}>
             <Typography variant="h6" gutterBottom>
               Summary
             </Typography>
             <DetailList items={summaryItems} />
-          </Paper>
 
-          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+            <Divider sx={{ my: 3 }} />
+
             <Typography variant="h6" gutterBottom>
               Work Summary
             </Typography>
-            <Stack spacing={1.25}>
-              {(timesheet.workSummary ?? []).map((item) => (
-                <Box
-                  key={`${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`}
-                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
-                >
-                  <Typography variant="body2">
-                    {getWorkBucketDisplayLabel(item.bucketLabel)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
-                  >
-                    {item.totalHours}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
+            {(timesheet.workSummary ?? []).length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No client or Internal categories recorded for this week.
+              </Typography>
+            ) : (
+              <DetailList
+                items={(timesheet.workSummary ?? []).map((item) => ({
+                  key: `${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`,
+                  label: getWorkBucketDisplayLabel(item.bucketLabel),
+                  value: (
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
+                    >
+                      {item.totalHours}
+                    </Typography>
+                  )
+                }))}
+                rowGap={1.25}
+              />
+            )}
           </Paper>
 
           <WeeklyMatrix

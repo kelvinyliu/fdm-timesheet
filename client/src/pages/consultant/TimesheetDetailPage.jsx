@@ -106,18 +106,16 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
         borderRadius: 3, 
         boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
         border: '1px solid rgba(0,0,0,0.05)', 
-        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
+        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
+        mb: 3
         }}>
+        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+          Summary
+        </Typography>
         <DetailList items={detailItems} rowGap={2} />
-      </Paper>
 
-      <Paper sx={{ 
-        p: 3, 
-        borderRadius: 3,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.04)', 
-        border: '1px solid rgba(0,0,0,0.05)',
-        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
-        }}>
+        <Divider sx={{ my: 3 }} />
+
         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
           Weekly Work Summary
         </Typography>
@@ -126,24 +124,21 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
             No client or Internal categories recorded for this week.
           </Typography>
         ) : (
-          <Stack spacing={1.25}>
-            {workSummary.map((item) => (
-              <Box
-                key={`${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`}
-                sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
-              >
-                <Typography variant="body2">
-                  {getWorkBucketDisplayLabel(item.bucketLabel)}
-                </Typography>
+          <DetailList 
+            items={workSummary.map((item) => ({
+              key: `${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`,
+              label: getWorkBucketDisplayLabel(item.bucketLabel),
+              value: (
                 <Typography
                   variant="body2"
                   sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
                 >
                   {item.totalHours}
                 </Typography>
-              </Box>
-            ))}
-          </Stack>
+              )
+            }))}
+            rowGap={1.25}
+          />
         )}
       </Paper>
 

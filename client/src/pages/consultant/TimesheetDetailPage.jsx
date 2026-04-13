@@ -153,11 +153,23 @@ export default function TimesheetDetailPage() {
         </Alert>
       )}
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+      <Paper sx={{ 
+        p: 3, 
+        borderRadius: 3, 
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+        border: '1px solid rgba(0,0,0,0.05)', 
+        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
+        }}>
         <DetailList items={detailItems} rowGap={2} />
       </Paper>
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+      <Paper sx={{ 
+        p: 3, 
+        borderRadius: 3,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.04)', 
+        border: '1px solid rgba(0,0,0,0.05)',
+        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
+        }}>
         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
           Weekly Work Summary
         </Typography>
@@ -194,13 +206,25 @@ export default function TimesheetDetailPage() {
       </Typography>
 
       {entries.length === 0 ? (
-        <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+        <Paper sx={{ 
+          p: 3, 
+          borderRadius: 3, 
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+          border: '1px solid rgba(0,0,0,0.05)', 
+          background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
+          }}>
           <Typography variant="body2" color="text.secondary">
             No entries recorded for this timesheet.
           </Typography>
         </Paper>
       ) : (
-        <Paper sx={{ mb: 3, p: { xs: 0, sm: 0 }, overflow: 'hidden' }}>
+        <Paper sx={{ 
+          p: 3, 
+          borderRadius: 3, 
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+          border: '1px solid rgba(0,0,0,0.05)', 
+          background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)'
+          }}>
           <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
              <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
              <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}>

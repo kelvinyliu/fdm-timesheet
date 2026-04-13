@@ -78,6 +78,7 @@ export default function TimesheetListPage() {
       .finally(() => {
         if (active) setLoading(false)
       })
+     
 
     return () => {
       active = false
@@ -173,6 +174,11 @@ export default function TimesheetListPage() {
       </Tooltip>
     )
   }
+  const statusCounts = (timesheets || []).reduce((acc, ts) => {
+    const s = ts.status;
+    if (acc[s] !== undefined) acc[s]++;
+    return acc;
+  }, { DRAFT: 0, PENDING: 0, APPROVED: 0, REJECTED: 0 });
 
   return (
     <Box>
@@ -180,6 +186,84 @@ export default function TimesheetListPage() {
         {renderPrimaryActionButton()}
         {renderMissingWeekButton()}
       </PageHeader>
+
+      {/* --- STATUS DASHBOARD SECTION --- */}
+      {!error && timesheets.length > 0 && (
+  <Paper
+    elevation={0}
+    sx={{
+      mb: 4,
+      p: 2,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-around',
+      borderRadius: 3,
+      border: '1px solid rgba(0,0,0,0.08)',
+      background: 'linear-gradient(to right, rgba(255,255,255,0.7), rgba(252,252,252,0.8))',
+      backdropFilter: 'blur(10px)',
+      // Responsive: stacks on very small screens, stays horizontal on tablet/desktop
+      flexDirection: { xs: 'column', sm: 'row' },
+      gap: { xs: 2, sm: 0 }
+    }}
+  >
+    {[
+      { label: 'Drafts', count: statusCounts.DRAFT, color: 'text.secondary' },
+      { label: 'Pending', count: statusCounts.PENDING, color: '#ed6c02' },
+      { label: 'Rejected', count: statusCounts.REJECTED, color: '#d32f2f' },
+      { label: 'Approved', count: statusCounts.APPROVED, color: '#2e7d32' },
+    ].map((item, index) => (
+      <Box
+        key={item.label}
+        sx={{
+          flex: 1,
+          textAlign: 'center',
+          // Add a divider border for all except the last item
+          borderRight: { 
+            xs: 'none', 
+            sm: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none' 
+          },
+          // Add a bottom border on mobile instead
+          borderBottom: { 
+            xs: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none', 
+            sm: 'none' 
+          },
+          pb: { xs: index !== 3 ? 2 : 0, sm: 0 },
+          width: '100%'
+        }}
+      >
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 700,
+            color: 'text.secondary',
+            textTransform: 'uppercase',
+            letterSpacing: 1,
+            display: 'block',
+          }}
+        >
+          {item.label}
+        </Typography>
+        <Typography
+          variant="h5"
+          sx={{
+            fontFamily: '"JetBrains Mono", monospace',
+            fontWeight: 800,
+            color: item.color,
+            mt: 0.5,
+          }}
+        >
+          {item.count}
+        </Typography>
+      </Box>
+    ))}
+  </Paper>
+)}
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>

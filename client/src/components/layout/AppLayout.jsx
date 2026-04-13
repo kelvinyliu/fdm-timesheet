@@ -402,11 +402,12 @@ export default function AppLayout() {
             flexShrink: 0,
             display: 'grid',
             gridTemplateRows: 'auto 1fr auto',
-            minHeight: '100%',
-            alignSelf: 'stretch',
+            height: '100vh',
+            top: 0,
             overflow: 'hidden',
             transition: 'width 0.2s ease',
             ...navShellStyles,
+            position: 'sticky',
           }}
         >
           <Box sx={{ position: 'relative' }}>
@@ -647,55 +648,6 @@ export default function AppLayout() {
             >
               {todayLabel}
             </Typography>
-
-            <Box sx={{ width: 1, height: 20, backgroundColor: palette.border, flexShrink: 0 }} />
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
-              <Box
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '8px',
-                  background: `linear-gradient(135deg, ${palette.sidebarBg} 0%, #2d3224 100%)`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  color: palette.textInverse,
-                  flexShrink: 0,
-                }}
-              >
-                {user?.name?.[0]?.toUpperCase() ?? '?'}
-              </Box>
-
-              {!desktopNavCollapsed && (
-                <Box>
-                  <Typography
-                    sx={{
-                      fontSize: '0.8rem',
-                      fontWeight: 500,
-                      color: palette.textPrimary,
-                      lineHeight: 1.25,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {user?.name ?? 'User'}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: '0.62rem',
-                      color: palette.textMuted,
-                      letterSpacing: '0.06em',
-                      textTransform: 'uppercase',
-                      lineHeight: 1,
-                    }}
-                  >
-                    {ROLE_SHORT[user?.role] ?? user?.role}
-                  </Typography>
-                </Box>
-              )}
-            </Box>
           </Box>
         </Box>
 

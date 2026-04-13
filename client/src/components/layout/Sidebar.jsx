@@ -40,7 +40,7 @@ export default function Sidebar({ onNavigate }) {
     <Box sx={{ py: 2, px: 1.5 }}>
       <Typography
         sx={{
-          fontSize: '0.6rem',
+          fontSize: '1rem',
           fontWeight: 600,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
@@ -74,7 +74,7 @@ export default function Sidebar({ onNavigate }) {
               textAlign: 'left',
               justifyContent: 'flex-start',
               color: isActive ? palette.textInverse : palette.textInverseMuted,
-              backgroundColor: isActive ? palette.overlayPrimaryMuted : 'transparent',
+              backgroundColor: isActive ? '#c3ff0081' : 'transparent',
               transition: 'all 0.15s ease',
               position: 'relative',
               overflow: 'hidden',
@@ -93,7 +93,7 @@ export default function Sidebar({ onNavigate }) {
                     bottom: '20%',
                     width: 3,
                     borderRadius: '0 3px 3px 0',
-                    backgroundColor: palette.primary,
+                    backgroundColor: '#c5ff00',
                   }
                 : {},
             }}

@@ -221,10 +221,15 @@ export default function LoginPage() {
           </Box>
 
           <Typography
-            variant="h4"
+            variant="h1"
             sx={{
               fontFamily: '"Instrument Serif", Georgia, serif',
-              mb: 0.5,
+              color: palette.textPrimary,
+              lineHeight: 1.1,
+              mb: 1,
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: 1
             }}
           >
             Welcome back
@@ -284,7 +289,12 @@ export default function LoginPage() {
                   backgroundColor: palette.primary,
                   color: palette.primaryContrast,
                   borderColor: palette.primary,
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 },
+              '&:active': {
+              transform: 'translateY(0)',
+              }
               }}
             >
               {loading ? 'Signing in...' : 'Sign In'}

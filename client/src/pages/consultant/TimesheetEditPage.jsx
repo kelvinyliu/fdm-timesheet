@@ -20,7 +20,10 @@ import { palette } from '../../theme.js'
 import { buildAutofillEntries, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import {
   entriesToEditableMatrixRows,
+  getBucketValue,
+  getDuplicateBucketValues,
   getMatrixTotalHours,
+  getNextAvailableBucketValue,
   parseBucketValue,
   rowHasValues,
   serializeEntries,
@@ -130,6 +133,14 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
 
   function handleRowCategoryChange(rowId, value) {
     if (!canChangeBuckets) return
+    const isDuplicateBucket = matrixRows.some(
+      (row) => row.id !== rowId && getBucketValue(row.entryKind, row.assignmentId) === value
+    )
+    if (isDuplicateBucket) {
+      showSnackbar('Each work category can only appear once in the weekly matrix.', 'warning')
+      return
+    }
+
     const { entryKind, assignmentId } = parseBucketValue(value)
     setMatrixRows((prev) =>
       prev.map((r) => (r.id === rowId ? { ...r, entryKind, assignmentId } : r))
@@ -144,16 +155,24 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
 
   function handleAddRow() {
     if (!canChangeBuckets) return
-    const selectedAssignment =
-      availableAssignments.length === 1
-        ? availableAssignments[0]
-        : availableAssignments.find((a) => a.id === preferredAssignmentId) || null
+    const nextBucketValue = getNextAvailableBucketValue(
+      matrixRows,
+      availableAssignments,
+      preferredAssignmentId
+    )
+
+    if (!nextBucketValue) {
+      showSnackbar('All available work categories have already been added.', 'info')
+      return
+    }
+
+    const { entryKind, assignmentId } = parseBucketValue(nextBucketValue)
     setMatrixRows((prev) => [
       ...prev,
       {
         id: `row-${nextLocalId()}`,
-        entryKind: selectedAssignment ? 'CLIENT' : 'INTERNAL',
-        assignmentId: selectedAssignment?.id ?? null,
+        entryKind,
+        assignmentId,
         hours: {},
       },
     ])
@@ -201,6 +220,12 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   const isDirty = serializeEntries(currentEntriesPayload) !== savedEntriesSnapshot
   const shouldBlockUnsavedChanges = isDirty && !submitting
 
+  function validateMatrixRows() {
+    if (getDuplicateBucketValues(matrixRows).length === 0) return true
+    showSnackbar('Each work category can only appear once in the weekly matrix.', 'error')
+    return false
+  }
+
   useUnsavedChangesGuard({
     isDirty: shouldBlockUnsavedChanges,
     title: 'Leave with unsaved timesheet changes?',
@@ -214,6 +239,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   })
 
   async function saveDraft() {
+    if (!validateMatrixRows()) return false
     setSaving(true)
     try {
       await updateEntries(id, currentEntriesPayload)
@@ -229,6 +255,8 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   }
 
   async function handleSubmit() {
+    if (!validateMatrixRows()) return
+
     const result = await confirm({
       variant: 'info',
       title: 'Submit timesheet for review?',

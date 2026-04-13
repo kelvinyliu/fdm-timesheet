@@ -245,13 +245,12 @@ export default function TimesheetReviewPage() {
             </Stack>
           </Paper>
 
-          {timesheet.entries && timesheet.entries.length > 0 && (
-            <WeeklyMatrix
-              rows={matrixRows}
-              weekDates={weekDates}
-              totalHours={timesheet.totalHours ?? '-'}
-            />
-          )}
+          <WeeklyMatrix
+            rows={matrixRows}
+            weekDates={weekDates}
+            totalHours={timesheet.totalHours ?? '-'}
+            emptyMessage="No entries recorded for this timesheet."
+          />
 
           {timesheet.status === 'PENDING' && (
             <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>

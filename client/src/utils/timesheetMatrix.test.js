@@ -7,8 +7,13 @@ import {
   formatHoursValue,
   formatTotalHoursValue,
   getBucketValue,
+  getDuplicateBucketValues,
+  getMatrixDayTotal,
+  getMatrixDayTotals,
   getMatrixRowTotal,
   getMatrixTotalHours,
+  getNextAvailableBucketValue,
+  getUsedBucketValues,
   parseBucketValue,
   rowHasValues,
   serializeEntries,
@@ -88,6 +93,11 @@ describe('timesheet matrix utilities', () => {
     const weekDates = ['2026-04-06', '2026-04-07']
 
     expect(getMatrixRowTotal(rows[0], weekDates)).toBe(13.5)
+    expect(getMatrixDayTotal(rows, '2026-04-06')).toBe(8.5)
+    expect(getMatrixDayTotals(rows, weekDates)).toEqual([
+      { date: '2026-04-06', totalHours: 8.5 },
+      { date: '2026-04-07', totalHours: 6 },
+    ])
     expect(getMatrixTotalHours(rows, weekDates)).toBe(14.5)
   })
 
@@ -136,5 +146,48 @@ describe('timesheet matrix utilities', () => {
   it('detects rows with entered values', () => {
     expect(rowHasValues({ hours: { '2026-04-06': '' } })).toBe(false)
     expect(rowHasValues({ hours: { '2026-04-06': '0.25' } })).toBe(true)
+  })
+
+  it('tracks used and duplicate bucket values', () => {
+    const rows = [
+      { id: 'row-1', entryKind: 'CLIENT', assignmentId: 'assignment-1', hours: {} },
+      { id: 'row-2', entryKind: 'INTERNAL', assignmentId: null, hours: {} },
+      { id: 'row-3', entryKind: 'CLIENT', assignmentId: 'assignment-1', hours: {} },
+    ]
+
+    expect(getUsedBucketValues(rows)).toEqual(new Set(['assignment-1', 'INTERNAL']))
+    expect(getUsedBucketValues(rows, 'row-3')).toEqual(new Set(['assignment-1', 'INTERNAL']))
+    expect(getDuplicateBucketValues(rows)).toEqual(['assignment-1'])
+  })
+
+  it('finds the next available bucket using preferred assignment first', () => {
+    const rows = [
+      { id: 'row-1', entryKind: 'CLIENT', assignmentId: 'assignment-1', hours: {} },
+    ]
+    const assignments = [
+      { id: 'assignment-1', clientName: 'Client A' },
+      { id: 'assignment-2', clientName: 'Client B' },
+    ]
+
+    expect(getNextAvailableBucketValue(rows, assignments, 'assignment-1')).toBe('assignment-2')
+    expect(getNextAvailableBucketValue(rows, assignments, 'assignment-2')).toBe('assignment-2')
+    expect(
+      getNextAvailableBucketValue(
+        [
+          ...rows,
+          { id: 'row-2', entryKind: 'CLIENT', assignmentId: 'assignment-2', hours: {} },
+          { id: 'row-3', entryKind: 'INTERNAL', assignmentId: null, hours: {} },
+        ],
+        assignments,
+        'assignment-2'
+      )
+    ).toBeUndefined()
+  })
+
+  it('ignores a preferred assignment that is no longer available', () => {
+    const rows = []
+    const assignments = [{ id: 'assignment-2', clientName: 'Client B' }]
+
+    expect(getNextAvailableBucketValue(rows, assignments, 'assignment-1')).toBe('assignment-2')
   })
 })

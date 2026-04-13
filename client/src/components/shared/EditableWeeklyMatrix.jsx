@@ -9,6 +9,7 @@ import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
+import TableFooter from '@mui/material/TableFooter'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
@@ -24,11 +25,18 @@ import {
   buildDayCardData,
   formatTotalHoursValue,
   getBucketValue,
+  getMatrixDayTotals,
   getMatrixRowTotal,
+  getUsedBucketValues,
 } from '../../utils/timesheetMatrix.js'
 
 const MOBILE_HOURS_STEP = 0.25
 const DAILY_HOURS_LIMIT = 24
+const DESKTOP_WORK_CATEGORY_COLUMN_WIDTH = 200
+const DESKTOP_DAY_COLUMN_WIDTH = 65
+const DESKTOP_TOTAL_COLUMN_WIDTH = 100
+const DESKTOP_ACTION_COLUMN_WIDTH = 70
+const DESKTOP_NUMERIC_CELL_WIDTH = '6ch'
 
 function getAssignmentOptionLabel(assignment) {
   if (!assignment) return 'Unknown client assignment'
@@ -175,13 +183,24 @@ export default function EditableWeeklyMatrix({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const dayCards = buildDayCardData(rows, weekDates)
+  const dayTotals = getMatrixDayTotals(rows, weekDates)
+  const desktopTableMinWidth =
+    DESKTOP_WORK_CATEGORY_COLUMN_WIDTH +
+    weekDates.length * DESKTOP_DAY_COLUMN_WIDTH +
+    DESKTOP_TOTAL_COLUMN_WIDTH +
+    DESKTOP_ACTION_COLUMN_WIDTH
   const assignmentMap = new Map(
     availableAssignments.map((assignment) => [assignment.id, assignment])
   )
+  const canAddMoreBuckets = getUsedBucketValues(rows).size < availableAssignments.length + 1
 
   function getRowLabel(row) {
     if (row.entryKind === 'INTERNAL') return 'Internal'
     return getAssignmentOptionLabel(assignmentMap.get(row.assignmentId))
+  }
+
+  function isBucketDisabled(rowId, bucketValue) {
+    return getUsedBucketValues(rows, rowId).has(bucketValue)
   }
 
   return (
@@ -310,11 +329,20 @@ export default function EditableWeeklyMatrix({
                               }}
                             >
                               {availableAssignments.map((assignment) => (
-                                <MenuItem key={assignment.id} value={assignment.id}>
+                                <MenuItem
+                                  key={assignment.id}
+                                  value={assignment.id}
+                                  disabled={isBucketDisabled(row.id, assignment.id)}
+                                >
                                   {getAssignmentOptionLabel(assignment)}
                                 </MenuItem>
                               ))}
-                              <MenuItem value="INTERNAL">Internal</MenuItem>
+                              <MenuItem
+                                value="INTERNAL"
+                                disabled={isBucketDisabled(row.id, 'INTERNAL')}
+                              >
+                                Internal
+                              </MenuItem>
                             </TextField>
                           ) : (
                             <Typography
@@ -352,7 +380,7 @@ export default function EditableWeeklyMatrix({
                   variant="outlined"
                   startIcon={<AddIcon />}
                   onClick={onAddRow}
-                  disabled={isBusy}
+                  disabled={isBusy || !canAddMoreBuckets}
                   sx={{
                     mt: 1,
                     py: 1.5,
@@ -373,6 +401,11 @@ export default function EditableWeeklyMatrix({
                 >
                   Add Category
                 </Button>
+              )}
+              {canChangeBuckets && !canAddMoreBuckets && (
+                <Typography variant="body2" sx={{ color: palette.textMuted }}>
+                  All available work categories have already been added.
+                </Typography>
               )}
             </Stack>
           </Box>
@@ -502,12 +535,19 @@ export default function EditableWeeklyMatrix({
           <TableContainer
             sx={{ borderTop: `1px solid ${palette.border}`, borderRadius: 0, boxShadow: 'none' }}
           >
-            <Table size="medium" sx={{ minWidth: 800 }}>
+            <Table
+              size="medium"
+              sx={{
+                minWidth: desktopTableMinWidth,
+                width: '100%',
+                tableLayout: 'fixed',
+              }}
+            >
               <TableHead>
                 <TableRow sx={{ backgroundColor: palette.surfaceMuted }}>
                   <TableCell
                     sx={{
-                      width: 280,
+                      width: DESKTOP_WORK_CATEGORY_COLUMN_WIDTH,
                       borderRight: `1px solid ${palette.borderStrong}`,
                       py: 2.5,
                       px: 3,
@@ -529,7 +569,11 @@ export default function EditableWeeklyMatrix({
                     <TableCell
                       key={date}
                       align="center"
-                      sx={{ width: 95, borderRight: `1px solid ${palette.border}`, py: 2 }}
+                      sx={{
+                        width: DESKTOP_DAY_COLUMN_WIDTH,
+                        borderRight: `1px solid ${palette.border}`,
+                        py: 2,
+                      }}
                     >
                       <Typography
                         sx={{
@@ -558,7 +602,7 @@ export default function EditableWeeklyMatrix({
                   <TableCell
                     align="center"
                     sx={{
-                      width: 100,
+                      width: DESKTOP_TOTAL_COLUMN_WIDTH,
                       borderRight: `1px solid ${palette.borderStrong}`,
                       backgroundColor: palette.surfaceRaised,
                       py: 2,
@@ -576,7 +620,7 @@ export default function EditableWeeklyMatrix({
                       Total
                     </Typography>
                   </TableCell>
-                  <TableCell align="center" sx={{ width: 70, py: 2 }}>
+                  <TableCell align="center" sx={{ width: DESKTOP_ACTION_COLUMN_WIDTH, py: 2 }}>
                     <Typography
                       sx={{
                         fontWeight: 600,
@@ -647,11 +691,20 @@ export default function EditableWeeklyMatrix({
                               }}
                             >
                               {availableAssignments.map((assignment) => (
-                                <MenuItem key={assignment.id} value={assignment.id}>
+                                <MenuItem
+                                  key={assignment.id}
+                                  value={assignment.id}
+                                  disabled={isBucketDisabled(row.id, assignment.id)}
+                                >
                                   {getAssignmentOptionLabel(assignment)}
                                 </MenuItem>
                               ))}
-                              <MenuItem value="INTERNAL">Internal</MenuItem>
+                              <MenuItem
+                                value="INTERNAL"
+                                disabled={isBucketDisabled(row.id, 'INTERNAL')}
+                              >
+                                Internal
+                              </MenuItem>
                             </TextField>
                           ) : (
                             <Typography
@@ -681,9 +734,12 @@ export default function EditableWeeklyMatrix({
                                   max: 24,
                                   step: '0.25',
                                   style: {
+                                    width: '100%',
+                                    minWidth: DESKTOP_NUMERIC_CELL_WIDTH,
                                     textAlign: 'center',
                                     padding: '10px 4px',
                                     fontFamily: '"JetBrains Mono", monospace',
+                                    fontVariantNumeric: 'tabular-nums',
                                     fontWeight: 600,
                                     color:
                                       row.hours[date] > 0 ? palette.textPrimary : palette.textMuted,
@@ -693,6 +749,7 @@ export default function EditableWeeklyMatrix({
                               sx={{
                                 width: '100%',
                                 '& .MuiOutlinedInput-root': {
+                                  minWidth: DESKTOP_NUMERIC_CELL_WIDTH,
                                   borderRadius: 1.5,
                                   backgroundColor:
                                     row.hours[date] > 0
@@ -724,9 +781,10 @@ export default function EditableWeeklyMatrix({
                         >
                           <Typography
                             sx={{
-                              fontFamily: '"Instrument Serif", Georgia, serif',
-                              fontSize: '1.5rem',
-                              fontWeight: 400,
+                              fontFamily: '"JetBrains Mono", monospace',
+                              fontSize: '1.25rem',
+                              fontVariantNumeric: 'tabular-nums',
+                              fontWeight: 700,
                               color: rowTotal > 0 ? palette.primaryContrast : palette.textMuted,
                             }}
                           >
@@ -756,6 +814,93 @@ export default function EditableWeeklyMatrix({
                   })
                 )}
               </TableBody>
+              <TableFooter>
+                <TableRow sx={{ backgroundColor: palette.surfaceMuted }}>
+                  <TableCell
+                    sx={{
+                      borderRight: `1px solid ${palette.borderStrong}`,
+                      px: 3,
+                      py: 2,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontWeight: 600,
+                        color: palette.textSecondary,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em',
+                        fontSize: '0.8rem',
+                      }}
+                    >
+                      Daily Total
+                    </Typography>
+                  </TableCell>
+                  {dayTotals.map((day) => {
+                    const isOverLimit = day.totalHours > DAILY_HOURS_LIMIT
+
+                    return (
+                      <TableCell
+                        key={day.date}
+                        align="center"
+                        sx={{
+                          borderRight: `1px solid ${palette.border}`,
+                          py: 1.5,
+                          backgroundColor: isOverLimit ? palette.errorBg : palette.surfaceRaised,
+                        }}
+                      >
+                        <Typography
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontVariantNumeric: 'tabular-nums',
+                            fontWeight: 700,
+                            color: isOverLimit ? palette.error : palette.textPrimary,
+                          }}
+                        >
+                          {formatTotalHoursValue(day.totalHours)}
+                        </Typography>
+                        {isOverLimit && (
+                          <Typography
+                            variant="caption"
+                            sx={{
+                              display: 'block',
+                              mt: 0.5,
+                              color: palette.error,
+                              fontWeight: 600,
+                            }}
+                          >
+                            Over daily limit
+                          </Typography>
+                        )}
+                      </TableCell>
+                    )
+                  })}
+                  <TableCell
+                    align="center"
+                    sx={{
+                      borderRight: `1px solid ${palette.borderStrong}`,
+                      backgroundColor: palette.surfaceRaised,
+                      py: 1.5,
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '1.25rem',
+                        fontVariantNumeric: 'tabular-nums',
+                        fontWeight: 700,
+                        color: totalHours > 0 ? palette.primaryContrast : palette.textMuted,
+                      }}
+                    >
+                      {totalHours.toFixed(2)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell align="center" sx={{ py: 1.5 }}>
+                    <Typography variant="body2" sx={{ color: palette.textMuted }}>
+                      -
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              </TableFooter>
             </Table>
           </TableContainer>
           {canChangeBuckets && (
@@ -771,7 +916,7 @@ export default function EditableWeeklyMatrix({
                 variant="outlined"
                 startIcon={<AddIcon />}
                 onClick={onAddRow}
-                disabled={isBusy}
+                disabled={isBusy || !canAddMoreBuckets}
                 sx={{
                   py: 1,
                   px: 4,
@@ -794,6 +939,11 @@ export default function EditableWeeklyMatrix({
               >
                 Add Row
               </Button>
+              {!canAddMoreBuckets && (
+                <Typography variant="body2" sx={{ mt: 1.5, color: palette.textMuted }}>
+                  All available work categories have already been added.
+                </Typography>
+              )}
             </Box>
           )}
         </>

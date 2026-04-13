@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import TimesheetReviewPage from './TimesheetReviewPage.jsx'
+import FinancePaymentPage from './FinancePaymentPage.jsx'
 
 const mocks = vi.hoisted(() => ({
+  confirm: vi.fn(),
+  guardedNavigate: vi.fn(),
   navigate: vi.fn(),
-  reviewTimesheet: vi.fn(),
   useLoaderData: vi.fn(),
   useLocation: vi.fn(),
   useMediaQuery: vi.fn(),
@@ -26,10 +27,6 @@ vi.mock('react-router', async () => {
 
 vi.mock('@mui/material/useMediaQuery', () => ({
   default: mocks.useMediaQuery,
-}))
-
-vi.mock('../../api/timesheets', () => ({
-  reviewTimesheet: (...args) => mocks.reviewTimesheet(...args),
 }))
 
 vi.mock('../../components/shared/PageHeader', () => ({
@@ -61,10 +58,36 @@ vi.mock('../../components/shared/WeeklyMatrix.jsx', () => ({
   },
 }))
 
-describe('TimesheetReviewPage', () => {
+vi.mock('./PaymentDetailsPanel.jsx', () => ({
+  default: function MockPaymentDetailsPanel() {
+    return <div>PaymentDetailsPanel</div>
+  },
+}))
+
+vi.mock('./FinanceNotesPanel.jsx', () => ({
+  default: function MockFinanceNotesPanel() {
+    return <div>FinanceNotesPanel</div>
+  },
+}))
+
+vi.mock('../../context/useConfirmation.js', () => ({
+  useConfirmation: () => ({ confirm: mocks.confirm }),
+}))
+
+vi.mock('../../context/useUnsavedChanges.js', () => ({
+  useGuardedNavigate: () => mocks.guardedNavigate,
+  useUnsavedChangesGuard: vi.fn(),
+}))
+
+vi.mock('../../api/timesheets', () => ({
+  processPayment: vi.fn(),
+}))
+
+describe('FinancePaymentPage', () => {
   beforeEach(() => {
+    mocks.confirm.mockReset()
+    mocks.guardedNavigate.mockReset()
     mocks.navigate.mockReset()
-    mocks.reviewTimesheet.mockReset()
     mocks.useLoaderData.mockReset()
     mocks.useLocation.mockReset()
     mocks.useMediaQuery.mockReset()
@@ -75,61 +98,29 @@ describe('TimesheetReviewPage', () => {
     mocks.useMediaQuery.mockReturnValue(false)
     mocks.useRevalidator.mockReturnValue({ revalidate: vi.fn() })
     mocks.useLocation.mockReturnValue({
-      pathname: '/manager/timesheets/ts-1',
+      pathname: '/finance/timesheets/ts-1',
       search: '',
-      state: { returnTo: '/manager/timesheets?status=PENDING' },
+      state: null,
     })
     mocks.useLoaderData.mockReturnValue({
+      approvedQueue: [],
+      error: '',
+      fetchedNotes: '',
       timesheet: {
         id: 'ts-1',
         consultantName: 'Pat Pending',
-        weekStart: '2026-04-06',
-        totalHours: 40,
-        status: 'PENDING',
-        workSummary: [],
         entries: [],
+        status: 'APPROVED',
+        submittedLate: false,
+        totalHours: 0,
+        weekStart: '2026-04-06',
+        workSummary: [],
       },
-      pendingQueue: [
-        { id: 'ts-1' },
-        { id: 'ts-2' },
-      ],
-      error: '',
-    })
-  })
-
-  it('returns to the same filtered list path', () => {
-    render(<TimesheetReviewPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-
-    expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets?status=PENDING')
-  })
-
-  it('preserves the filtered return path when approving and moving to the next timesheet', async () => {
-    mocks.reviewTimesheet.mockResolvedValue({})
-
-    render(<TimesheetReviewPage />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Approve & Next' }))
-    fireEvent.click(
-      within(screen.getByRole('dialog')).getByRole('button', { name: 'Approve & Next' })
-    )
-
-    await waitFor(() => {
-      expect(mocks.reviewTimesheet).toHaveBeenCalledWith('ts-1', {
-        action: 'APPROVE',
-        comment: '',
-      })
-    })
-
-    expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets/ts-2', {
-      replace: true,
-      state: { returnTo: '/manager/timesheets?status=PENDING' },
     })
   })
 
   it('shows the shared empty matrix message when a timesheet has no entries', () => {
-    render(<TimesheetReviewPage />)
+    render(<FinancePaymentPage />)
 
     expect(screen.getByText('No entries recorded for this timesheet.')).toBeInTheDocument()
   })

@@ -27,6 +27,15 @@ export function getWorkBucketKey(item) {
   return `${item.entryKind}-${item.assignmentId ?? INTERNAL_BUCKET_VALUE}`
 }
 
+export function getBucketLabel(item, assignmentMap = new Map()) {
+  if (item?.entryKind === 'INTERNAL' || item === INTERNAL_BUCKET_VALUE) return 'Internal'
+  if (typeof item === 'string') return assignmentMap.get(item)?.clientName ?? 'Unknown client assignment'
+  if (item?.assignmentId) {
+    return item.bucketLabel ?? assignmentMap.get(item.assignmentId)?.clientName ?? 'Unknown client assignment'
+  }
+  return item?.bucketLabel ?? 'Unknown client assignment'
+}
+
 export function entriesToReadOnlyMatrixRows(entries = []) {
   const rowMap = new Map()
 
@@ -71,16 +80,27 @@ export function getMatrixRowTotal(row, weekDates = []) {
   return weekDates.reduce((sum, date) => sum + (parseFloat(row.hours?.[date]) || 0), 0)
 }
 
+export function getMatrixDayTotal(rows = [], date) {
+  return rows.reduce((sum, row) => sum + (parseFloat(row.hours?.[date]) || 0), 0)
+}
+
+export function getMatrixDayTotals(rows = [], weekDates = []) {
+  return weekDates.map((date) => ({
+    date,
+    totalHours: getMatrixDayTotal(rows, date),
+  }))
+}
+
 export function getMatrixTotalHours(rows = [], weekDates = []) {
   return rows.reduce((sum, row) => sum + getMatrixRowTotal(row, weekDates), 0)
 }
 
 export function buildDayCardData(rows = [], weekDates = []) {
-  return weekDates.map((date) => ({
+  return getMatrixDayTotals(rows, weekDates).map(({ date, totalHours }) => ({
     date,
     dayLabel: formatDayName(date),
     shortDate: date.slice(5),
-    totalHours: rows.reduce((sum, row) => sum + (parseFloat(row.hours?.[date]) || 0), 0),
+    totalHours,
     categories: rows.map((row) => ({
       rowId: row.id,
       entryKind: row.entryKind,
@@ -90,6 +110,57 @@ export function buildDayCardData(rows = [], weekDates = []) {
       numericHours: parseFloat(row.hours?.[date]) || 0,
     })),
   }))
+}
+
+export function getUsedBucketValues(rows = [], excludeRowId = null) {
+  return new Set(
+    rows
+      .filter((row) => row.id !== excludeRowId)
+      .map((row) => getBucketValue(row.entryKind, row.assignmentId))
+      .filter(Boolean)
+  )
+}
+
+export function getDuplicateBucketValues(rows = []) {
+  const seen = new Set()
+  const duplicates = new Set()
+
+  rows.forEach((row) => {
+    const bucketValue = getBucketValue(row.entryKind, row.assignmentId)
+    if (!bucketValue) return
+    if (seen.has(bucketValue)) {
+      duplicates.add(bucketValue)
+      return
+    }
+    seen.add(bucketValue)
+  })
+
+  return [...duplicates]
+}
+
+export function getNextAvailableBucketValue(
+  rows = [],
+  availableAssignments = [],
+  preferredAssignmentId = null
+) {
+  const usedBucketValues = getUsedBucketValues(rows)
+  const candidateValues = []
+  const availableAssignmentIds = new Set(
+    availableAssignments.map((assignment) => assignment?.id).filter(Boolean)
+  )
+
+  if (preferredAssignmentId && availableAssignmentIds.has(preferredAssignmentId)) {
+    candidateValues.push(preferredAssignmentId)
+  }
+
+  availableAssignments.forEach((assignment) => {
+    if (assignment?.id) candidateValues.push(assignment.id)
+  })
+  candidateValues.push(INTERNAL_BUCKET_VALUE)
+
+  return candidateValues.find(
+    (value, index) => candidateValues.indexOf(value) === index && !usedBucketValues.has(value)
+  )
 }
 
 export function clampHoursValue(value, min = 0, max = 24) {

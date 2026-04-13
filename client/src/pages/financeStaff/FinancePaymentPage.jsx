@@ -347,13 +347,12 @@ export default function FinancePaymentPage() {
             </Stack>
           </Paper>
 
-          {timesheet.entries && timesheet.entries.length > 0 && (
-            <WeeklyMatrix
-              rows={matrixRows}
-              weekDates={weekDates}
-              totalHours={timesheet.totalHours ?? '-'}
-            />
-          )}
+          <WeeklyMatrix
+            rows={matrixRows}
+            weekDates={weekDates}
+            totalHours={timesheet.totalHours ?? '-'}
+            emptyMessage="No entries recorded for this timesheet."
+          />
 
           {timesheet.status === 'APPROVED' && (
             <PaymentDetailsPanel

@@ -35,11 +35,11 @@ describe('WeeklyMatrix', () => {
     )
 
     expect(screen.getByText('Weekly Matrix')).toBeInTheDocument()
-    expect(screen.getByText('13.5h Total')).toBeInTheDocument()
+    expect(screen.getByText('Total Hours')).toBeInTheDocument()
     expect(screen.getByText('Client A')).toBeInTheDocument()
-    expect(screen.getByText('7.5')).toBeInTheDocument()
-    expect(screen.getByText('6')).toBeInTheDocument()
-    expect(screen.getByText('13.50')).toBeInTheDocument()
+    expect(screen.getAllByText('7.5').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('6').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('13.50').length).toBeGreaterThan(0)
   })
 
   it('renders an empty state when requested', () => {
@@ -83,8 +83,8 @@ describe('WeeklyMatrix', () => {
 
     expect(screen.getByText('Monday')).toBeInTheDocument()
     expect(screen.getByText('Tuesday')).toBeInTheDocument()
-    expect(screen.getByText('8.5h')).toBeInTheDocument()
-    expect(screen.getByText('0.0h')).toBeInTheDocument()
+    expect(screen.getByText('8.5')).toBeInTheDocument()
+    expect(screen.getByText('0.0')).toBeInTheDocument()
     expect(screen.getAllByText('Client A')).toHaveLength(2)
     expect(screen.getAllByText('Internal')).toHaveLength(2)
   })
@@ -115,7 +115,7 @@ describe('WeeklyMatrix', () => {
       />
     )
 
-    expect(screen.getByText('26.5h')).toBeInTheDocument()
+    expect(screen.getByText('26.5')).toBeInTheDocument()
     expect(screen.getByText('Over daily limit')).toBeInTheDocument()
   })
 })

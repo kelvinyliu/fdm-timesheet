@@ -223,11 +223,14 @@ export default function LoginPage() {
           <Typography
             variant="h4"
             sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: 'Poppins, Georgia, serif',
               mb: 0.5,
+              fontSize: '3em',
+              fontWeight: 400,
+
             }}
           >
-            Welcome back
+            Welcome Back
           </Typography>
           <Typography
             variant="body2"
@@ -274,16 +277,17 @@ export default function LoginPage() {
               sx={{
                 py: 1.6,
                 borderRadius: 2,
-                backgroundColor: palette.textPrimary,
-                color: palette.textInverse,
+                backgroundColor: '#c5ff00',
+                color: '#000000',
+                borderColor: '#c5ff00',
+                boxShadow: '0 4px 12px rgba(142, 142, 142, 0.3)',
                 fontWeight: 700,
                 fontSize: '0.95rem',
                 letterSpacing: '0.02em',
-                border: `1px solid ${palette.textPrimary}`,
                 '&:hover': {
-                  backgroundColor: palette.primary,
-                  color: palette.primaryContrast,
-                  borderColor: palette.primary,
+                  backgroundColor: '#000000',
+                  color: '#ffffff',
+                  borderColor: '#000000',
                 },
               }}
             >

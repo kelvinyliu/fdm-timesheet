@@ -293,13 +293,13 @@ export default function TimesheetListPage() {
             <Table>
               <TableHead >
                 <TableRow >
-                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>Week of</TableCell>
-                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>Work Categories</TableCell>
-                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>Status</TableCell>
-                  <TableCell align="right" sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>
+                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important',fontSize: '1.3rem !important' }}>Week of</TableCell>
+                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important',fontSize: '1.3rem !important' }}>Work Categories</TableCell>
+                  <TableCell sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important',fontSize: '1.3rem !important' }}>Status</TableCell>
+                  <TableCell align="right" sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important',fontSize: '1.3rem !important' }}>
                     Total Hours
                   </TableCell>
-                  <TableCell align="right" sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important' }}>
+                  <TableCell align="right" sx ={{ backgroundColor: '#1e1e1e !important', color: '#ffffff !important',fontSize: '1.3rem !important' }}>
                     Actions
                   </TableCell>
                 </TableRow>
@@ -308,19 +308,19 @@ export default function TimesheetListPage() {
                 {timesheets.map((ts) => (
                   <TableRow key={ts.id}>
                     <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography variant="body2" sx={{fontSize: '1rem'}}>
                         {formatWeekStart(ts.weekStart)}
                       </Typography>
                     </TableCell>
-                    <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
+                    <TableCell sx={{fontFamily : '"Outfit", system-ui, sans-serif', fontSize: '1rem !important'}}>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
                     <TableCell>
                       <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                     </TableCell>
                     <TableCell align="right">
                       <Typography
                         sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.85rem',
+                          fontFamily: '"Outfit", system-ui, sans-serif',
+                          fontSize: '1rem',
                         }}
                       >
                         {ts.totalHours ?? '-'}

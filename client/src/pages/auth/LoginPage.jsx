@@ -61,18 +61,19 @@ export default function LoginPage() {
         sx={{
             display: { xs: 'none', md: 'flex' },
             width: '45%',
-            transition: 'width 0.4s ease',
-              '&:hover': {
-              width: '55%',  // expands left, pushes right panel left
+            transition: 'width 0.4s ease','&:hover': {
+                width: '75%', 
               },
-              background: `linear-gradient(135deg, ${palette.sidebarBg} 0%, ${palette.sidebarBgAlt} 60%, ${palette.sidebarBg} 100%)`,
-              position: 'relative',
-              overflow: 'hidden',
+            background: `linear-gradient(135deg, ${palette.sidebarBg} 0%, ${palette.sidebarBgAlt} 60%, ${palette.sidebarBg} 100%)`,
+            position: 'relative',
+            overflow: 'hidden',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             p: 6,
         }}
+
+        
       >
         {/* Geometric pattern */}
         <Box
@@ -111,7 +112,7 @@ export default function LoginPage() {
             width: 300,
             height: 300,
             borderRadius: '50%',
-            border: `1px solid ${palette.overlayPrimaryMuted}`,
+            border: `1px solid #c5ff00`,
           }}
         />
         <Box
@@ -122,7 +123,7 @@ export default function LoginPage() {
             width: 200,
             height: 200,
             borderRadius: '50%',
-            border: `1px solid ${palette.overlayWhiteMuted}`,
+            border: `1px solid #c5ff00`,
           }}
         />
 
@@ -132,7 +133,7 @@ export default function LoginPage() {
             sx={{
               fontFamily: '"Instrument Serif", Georgia, serif',
               fontSize: '10rem',
-              color: palette.textInverse,
+              color: '#ffffff',
               lineHeight: 1,
               letterSpacing: '-0.03em',
               mb: 1,
@@ -144,7 +145,7 @@ export default function LoginPage() {
             sx={{
               width: 60,
               height: 3,
-              background: `linear-gradient(90deg, ${palette.primary}, ${palette.primaryHover})`,
+              background: `linear-gradient(90deg, #c5ff00, #c5ff00)`,
               borderRadius: 2,
               mx: 'auto',
               mb: 2,
@@ -156,7 +157,7 @@ export default function LoginPage() {
               fontSize: '0.75rem',
               letterSpacing: '0.25em',
               textTransform: 'uppercase',
-              color: palette.textInverseMuted,
+              color: '#ffffff',
             }}
           >
             Timesheet Management
@@ -170,31 +171,27 @@ export default function LoginPage() {
             bottom: 40,
             left: 40,
             right: 40,
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontStyle: 'italic',
+            fontFamily: 'Poppins, Georgia, serif',
+            fontStyle: 'bold',
             fontSize: '1.1rem',
-            color: 'rgba(var(--ui-white-rgb), 0.28)',
+            color: '#ffffff',
             textAlign: 'center',
             lineHeight: 1.5,
           }}
         >
-          Track time. Manage approvals. Process payments.
+          Track Time | Manage Approvals | Process Payments
         </Typography>
       </Box>
 
       {/* Right panel - form */}
       <Box
           sx={{
-              flex: 1,
+              width: '75%',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
               p: 4,
               backgroundColor: palette.bg,
-              transition: 'flex 0.4s ease',
-              '&:hover': {
-                flex: 2,  
-              },
             }}
       >
         <Box sx={{ width: '100%', maxWidth: 400 }}>
@@ -208,7 +205,7 @@ export default function LoginPage() {
           >
             <Typography
               sx={{
-                fontFamily: '"Instrument Serif", Georgia, serif',
+                fontFamily: 'Poppins, Georgia, serif',
                 fontSize: '3.1rem',
                 color: palette.textPrimary,
                 lineHeight: 1,

@@ -383,12 +383,9 @@ const theme = createTheme({
             '&:hover .MuiOutlinedInput-notchedOutline': {
               borderColor: palette.textMuted,
             },
-            '&.Mui-focused': {
-              boxShadow: `0 0 0 3px ${palette.focusRing}`,
-            },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: palette.primary,
-              borderWidth: 1,
+              borderColor: '#c5ff00',
+              borderWidth: 2,
             },
           },
         },

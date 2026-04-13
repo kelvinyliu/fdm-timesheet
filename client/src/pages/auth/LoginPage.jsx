@@ -53,20 +53,25 @@ export default function LoginPage() {
       sx={{
         display: 'flex',
         minHeight: '100vh',
+        overflow: 'hidden',
       }}
     >
       {/* Left panel - decorative */}
       <Box
         sx={{
-          display: { xs: 'none', md: 'flex' },
-          width: '45%',
-          background: `linear-gradient(135deg, ${palette.sidebarBg} 0%, ${palette.sidebarBgAlt} 60%, ${palette.sidebarBg} 100%)`,
-          position: 'relative',
-          overflow: 'hidden',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          p: 6,
+            display: { xs: 'none', md: 'flex' },
+            width: '45%',
+            transition: 'width 0.4s ease',
+              '&:hover': {
+              width: '55%',  // expands left, pushes right panel left
+              },
+              background: `linear-gradient(135deg, ${palette.sidebarBg} 0%, ${palette.sidebarBgAlt} 60%, ${palette.sidebarBg} 100%)`,
+              position: 'relative',
+              overflow: 'hidden',
+            flexDirection: 'column',
+            justifyContent: 'center',
+            alignItems: 'center',
+            p: 6,
         }}
       >
         {/* Geometric pattern */}
@@ -179,14 +184,18 @@ export default function LoginPage() {
 
       {/* Right panel - form */}
       <Box
-        sx={{
-          flex: 1,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          p: 4,
-          backgroundColor: palette.bg,
-        }}
+          sx={{
+              flex: 1,
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              p: 4,
+              backgroundColor: palette.bg,
+              transition: 'flex 0.4s ease',
+              '&:hover': {
+                flex: 2,  
+              },
+            }}
       >
         <Box sx={{ width: '100%', maxWidth: 400 }}>
           {/* Mobile branding */}
@@ -255,7 +264,7 @@ export default function LoginPage() {
               required
               autoComplete="email"
               autoFocus
-              sx={{ mb: 2.5 }}
+              sx={{ mb: 2.5}}
             />
             <TextField
               label="Password"
@@ -265,7 +274,8 @@ export default function LoginPage() {
               fullWidth
               required
               autoComplete="current-password"
-              sx={{ mb: 3.5 }}
+              sx={{ mb: 3.5 
+              }}
             />
             <Button
               type="submit"

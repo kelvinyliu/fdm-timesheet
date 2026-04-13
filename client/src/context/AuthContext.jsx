@@ -2,21 +2,12 @@ import { useCallback, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
 import { AuthContext } from './useAuth.js'
 import { decodeJwtPayload, isJwtExpired } from '../utils/jwt.js'
-
-const AUTH_TOKEN_KEY = 'token'
-const AUTH_USER_KEY = 'auth_user'
-
-function getStoredUser() {
-  const rawUser = localStorage.getItem(AUTH_USER_KEY)
-  if (!rawUser) return null
-
-  try {
-    return JSON.parse(rawUser)
-  } catch {
-    localStorage.removeItem(AUTH_USER_KEY)
-    return null
-  }
-}
+import {
+  clearStoredAuth,
+  getStoredAuthToken,
+  getStoredAuthUser,
+  persistStoredAuth,
+} from '../utils/authStorage.js'
 
 function getUserId(user) {
   return user?.id ?? user?.userId ?? null
@@ -28,36 +19,26 @@ function isStoredUserCompatible(storedUser, payload) {
 }
 
 function getStoredAuth() {
-  const storedToken = localStorage.getItem(AUTH_TOKEN_KEY)
+  const storedToken = getStoredAuthToken()
   if (!storedToken) {
-    localStorage.removeItem(AUTH_USER_KEY)
+    clearStoredAuth()
     return { token: null, user: null }
   }
 
   const payload = decodeJwtPayload(storedToken)
   if (!payload || isJwtExpired(payload)) {
-    localStorage.removeItem(AUTH_TOKEN_KEY)
-    localStorage.removeItem(AUTH_USER_KEY)
+    clearStoredAuth()
     return { token: null, user: null }
   }
 
-  const storedUser = getStoredUser()
+  const storedUser = getStoredAuthUser()
   if (isStoredUserCompatible(storedUser, payload)) {
     return { token: storedToken, user: storedUser }
   }
 
-  localStorage.removeItem(AUTH_USER_KEY)
+  clearStoredAuth()
+  persistStoredAuth(storedToken, payload)
   return { token: storedToken, user: payload }
-}
-
-function persistAuth(token, user) {
-  localStorage.setItem(AUTH_TOKEN_KEY, token)
-  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
-}
-
-function clearAuth() {
-  localStorage.removeItem(AUTH_TOKEN_KEY)
-  localStorage.removeItem(AUTH_USER_KEY)
 }
 
 export function AuthProvider({ children }) {
@@ -71,28 +52,27 @@ export function AuthProvider({ children }) {
     if (!payload) return
 
     const nextUser = userFromResponse ?? payload
-    persistAuth(newToken, nextUser)
+    persistStoredAuth(newToken, nextUser)
     setToken(newToken)
     setUser(nextUser)
   }, [])
 
   const logout = useCallback(() => {
-    clearAuth()
+    clearStoredAuth()
     setToken(null)
     setUser(null)
     navigate('/login')
   }, [navigate])
 
-  const value = useMemo(() => ({
-    user,
-    token,
-    login,
-    logout,
-  }), [user, token, login, logout])
-
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      login,
+      logout,
+    }),
+    [user, token, login, logout]
   )
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

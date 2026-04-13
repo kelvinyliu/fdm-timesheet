@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  adminDashboardLoader,
   assignmentsLoader,
   auditLogLoader,
+  consultantDashboardLoader,
   createTimesheetCreateLoader,
   createTimesheetEditLoader,
   createTimesheetListLoader,
@@ -76,10 +78,7 @@ describe('route loaders', () => {
       error: null,
       eligibilityError: null,
     })
-    expect(mocks.getTimesheets).toHaveBeenCalledWith(
-      { scope: 'own' },
-      { signal: request.signal }
-    )
+    expect(mocks.getTimesheets).toHaveBeenCalledWith({ scope: 'own' }, { signal: request.signal })
     expect(mocks.getEligibleWeeks).toHaveBeenCalledWith({ signal: request.signal })
   })
 
@@ -96,6 +95,19 @@ describe('route loaders', () => {
 
     expect(result.status).toBe(302)
     expect(result.headers.get('Location')).toBe('/manager/my-timesheets/ts-1/edit')
+  })
+
+  it('surfaces a recoverable create-timesheet loader error when the existing-sheet check fails', async () => {
+    const request = createRequest('/consultant/timesheets/new')
+    const loader = createTimesheetCreateLoader()
+
+    mocks.getTimesheets.mockRejectedValue(new Error('Timesheet lookup unavailable'))
+
+    await expect(loader({ request })).resolves.toEqual({
+      weekStart: '2026-04-06',
+      error: 'Timesheet lookup unavailable',
+    })
+    expect(mocks.getTimesheets).toHaveBeenCalledWith({}, { signal: request.signal })
   })
 
   it('loads editable timesheet data and a preferred assignment id', async () => {
@@ -135,12 +147,42 @@ describe('route loaders', () => {
     mocks.getManagerAssignments.mockResolvedValue(managerAssignments)
     mocks.getUsers.mockResolvedValue(users)
 
-    await expect(assignmentsLoader({ request: createRequest('/admin/assignments') })).resolves.toEqual({
+    await expect(
+      assignmentsLoader({ request: createRequest('/admin/assignments') })
+    ).resolves.toEqual({
       clientAssignments: [],
       managerAssignments,
       users,
       clientError: 'Client assignment outage',
       managerError: '',
+    })
+  })
+
+  it('loads dashboard timesheets through the router loader with request cancellation support', async () => {
+    const request = createRequest('/consultant/dashboard')
+    const timesheets = [{ id: 'ts-1', status: 'DRAFT' }]
+
+    mocks.getTimesheets.mockResolvedValue(timesheets)
+
+    await expect(consultantDashboardLoader({ request })).resolves.toEqual({
+      timesheets,
+      error: null,
+    })
+    expect(mocks.getTimesheets).toHaveBeenCalledWith({}, { signal: request.signal })
+  })
+
+  it('keeps partial admin dashboard data when one overview request fails', async () => {
+    const users = [{ id: 'user-1', role: 'CONSULTANT' }]
+
+    mocks.getUsers.mockResolvedValue(users)
+    mocks.getAuditLog.mockRejectedValue(new Error('Audit service unavailable'))
+
+    await expect(
+      adminDashboardLoader({ request: createRequest('/admin/dashboard') })
+    ).resolves.toEqual({
+      users,
+      auditLog: [],
+      error: 'Audit service unavailable',
     })
   })
 
@@ -151,7 +193,9 @@ describe('route loaders', () => {
       { id: 'completed', status: 'COMPLETED' },
     ])
 
-    await expect(financeTimesheetListLoader({ request: createRequest('/finance/timesheets') })).resolves.toEqual({
+    await expect(
+      financeTimesheetListLoader({ request: createRequest('/finance/timesheets') })
+    ).resolves.toEqual({
       timesheets: [
         { id: 'approved', status: 'APPROVED' },
         { id: 'completed', status: 'COMPLETED' },

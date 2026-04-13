@@ -27,17 +27,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import SearchIcon from '@mui/icons-material/Search'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import { formatCurrency } from '../../utils/currency.js'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
 
 function getActionButtonLabel(status) {
   switch (status) {
@@ -119,8 +111,7 @@ export default function FinanceTimesheetListPage() {
     })
   }
 
-  const pageTitle =
-    activeTabKey === TAB_KEYS.PAID ? 'Paid Timesheets' : 'Timesheets for Payment'
+  const pageTitle = activeTabKey === TAB_KEYS.PAID ? 'Paid Timesheets' : 'Timesheets for Payment'
 
   let emptyMessage =
     activeTabKey === TAB_KEYS.PAID ? 'No paid timesheets found.' : 'No approved timesheets found.'

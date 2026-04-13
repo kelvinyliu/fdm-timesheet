@@ -13,11 +13,7 @@ export default function LoadingSpinner() {
       minHeight="200px"
       gap={2}
     >
-      <CircularProgress
-        size={32}
-        thickness={3}
-        sx={{ color: palette.primary }}
-      />
+      <CircularProgress size={32} thickness={3} sx={{ color: palette.primary }} />
       <Typography
         sx={{
           fontSize: '0.7rem',

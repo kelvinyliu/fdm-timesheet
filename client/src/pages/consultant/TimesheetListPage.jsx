@@ -29,10 +29,7 @@ import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDispl
 import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
-import {
-  getTimesheetForWeek,
-  isConsultantEditableStatus,
-} from '../../utils/timesheetWorkflow.js'
+import { getTimesheetForWeek, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetListPage({
   basePath = '/consultant/timesheets',
@@ -42,12 +39,7 @@ export default function TimesheetListPage({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
-  const {
-    timesheets,
-    eligibility,
-    error: loadError,
-    eligibilityError,
-  } = useLoaderData()
+  const { timesheets, eligibility, error: loadError, eligibilityError } = useLoaderData()
   const [error, setError] = useState(loadError)
   const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
   const [creatingWeekStart, setCreatingWeekStart] = useState(null)
@@ -56,10 +48,9 @@ export default function TimesheetListPage({
   const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []
   const currentWeekTimesheet = getTimesheetForWeek(timesheets, currentMonday)
   const canCreateCurrentWeek = !currentWeekTimesheet
-  const missingWeekButtonTooltip = eligibilityError
-    ?? (missingPastWeekStarts.length > 0
-      ? ''
-      : 'No missing weeks are available in the last 4 weeks.')
+  const missingWeekButtonTooltip =
+    eligibilityError ??
+    (missingPastWeekStarts.length > 0 ? '' : 'No missing weeks are available in the last 4 weeks.')
 
   async function handleCreateForWeek(weekStart) {
     setError(null)
@@ -125,7 +116,9 @@ export default function TimesheetListPage({
     const disabled = Boolean(missingWeekButtonTooltip) || creatingWeekStart !== null
 
     return (
-      <Tooltip title={missingWeekButtonTooltip || 'Create a missing timesheet from the last 4 weeks'}>
+      <Tooltip
+        title={missingWeekButtonTooltip || 'Create a missing timesheet from the last 4 weeks'}
+      >
         <span>
           <Button
             variant="outlined"
@@ -183,16 +176,15 @@ export default function TimesheetListPage({
         </Paper>
       )}
 
-      {!error && timesheets.length > 0 && (
-        isMobile ? (
+      {!error &&
+        timesheets.length > 0 &&
+        (isMobile ? (
           <Stack spacing={1.5}>
             {timesheets.map((ts) => {
               const isEditable = isConsultantEditableStatus(ts.status)
               const actionLabel = isEditable ? 'Edit Timesheet' : 'View Timesheet'
               const ActionIcon = isEditable ? EditIcon : VisibilityIcon
-              const destination = isEditable
-                ? `${basePath}/${ts.id}/edit`
-                : `${basePath}/${ts.id}`
+              const destination = isEditable ? `${basePath}/${ts.id}/edit` : `${basePath}/${ts.id}`
 
               return (
                 <Paper key={ts.id} sx={{ p: 2.5 }}>
@@ -312,8 +304,7 @@ export default function TimesheetListPage({
               </TableBody>
             </Table>
           </TableContainer>
-        )
-      )}
+        ))}
 
       <Dialog
         open={missingWeekDialogOpen}

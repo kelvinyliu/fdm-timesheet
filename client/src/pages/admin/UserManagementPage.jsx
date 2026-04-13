@@ -1,39 +1,26 @@
-import { useState, useEffect } from 'react'
-import { useLoaderData, useRevalidator, useSearchParams } from 'react-router'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
-import Select from '@mui/material/Select'
-import MenuItem from '@mui/material/MenuItem'
-import IconButton from '@mui/material/IconButton'
-import Stack from '@mui/material/Stack'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
+import { useState } from 'react'
+import { useLoaderData, useRevalidator } from 'react-router'
 import TextField from '@mui/material/TextField'
 import Alert from '@mui/material/Alert'
-import Tooltip from '@mui/material/Tooltip'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import InputAdornment from '@mui/material/InputAdornment'
+import Select from '@mui/material/Select'
+import MenuItem from '@mui/material/MenuItem'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
-import SaveIcon from '@mui/icons-material/Save'
-import DeleteIcon from '@mui/icons-material/Delete'
 import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
+import Button from '@mui/material/Button'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { createUser, updateUserRole, deleteUser } from '../../api/users'
+import CreateUserDialog from './components/CreateUserDialog.jsx'
+import UserList from './components/UserList.jsx'
+import { useSyncedErrorState } from './hooks/useSyncedErrorState.js'
+import { attemptCloseAdminDialog } from './utils/adminDialogs.js'
+import { executeAdminMutation } from './utils/adminMutations.js'
 
 const ROLES = ['CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN']
 const SENSITIVE_ROLES = new Set(['FINANCE_MANAGER', 'SYSTEM_ADMIN'])
@@ -43,26 +30,43 @@ function getRoleLabel(role) {
   return role.replace(/_/g, ' ')
 }
 
+function getRoleFilterFromUrl() {
+  const role = new URLSearchParams(window.location.search).get('role')
+  return ROLES.includes(role) ? role : 'ALL'
+}
+
+function replaceRoleFilterInUrl(nextRole) {
+  const nextUrl = new URL(window.location.href)
+
+  if (nextRole === 'ALL') {
+    nextUrl.searchParams.delete('role')
+  } else {
+    nextUrl.searchParams.set('role', nextRole)
+  }
+
+  window.history.replaceState(
+    window.history.state,
+    '',
+    `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
+  )
+}
+
 export default function UserManagementPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const revalidator = useRevalidator()
-  const { users: loadedUsers, error: loadError } = useLoaderData()
-  const [searchParams] = useSearchParams()
-
-  const [users, setUsers] = useState(loadedUsers)
+  const { users, error: loadError } = useLoaderData()
   const [searchQuery, setSearchQuery] = useState('')
-  const [error, setError] = useState(loadError)
+  const [roleFilter, setRoleFilter] = useState(getRoleFilterFromUrl)
+  const [error, setError] = useSyncedErrorState(loadError)
   const [pendingRoles, setPendingRoles] = useState({})
-  const [roleFilter, setRoleFilter] = useState(searchParams.get('role') || 'ALL')
   const [sortBy, setSortBy] = useState('nameAsc')
-
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
-
   const { confirm } = useConfirmation()
+
   const isCreateDialogDirty =
     dialogOpen &&
     (Boolean(form.name) ||
@@ -79,14 +83,10 @@ export default function UserManagementPage() {
     stayLabel: 'Keep editing',
   })
 
-  useEffect(() => {
-    setUsers(loadedUsers)
-    setError(loadError)
-  }, [loadedUsers, loadError])
-
-  useEffect(() => {
-    setRoleFilter(searchParams.get('role') || 'ALL')
-  }, [searchParams])
+  function handleRoleFilterChange(nextRole) {
+    setRoleFilter(nextRole)
+    replaceRoleFilterInUrl(nextRole)
+  }
 
   function handleRoleSelectChange(userId, role) {
     setPendingRoles((prev) => ({ ...prev, [userId]: role }))
@@ -99,8 +99,7 @@ export default function UserManagementPage() {
     const user = users.find((item) => item.id === userId)
     const currentRole = user?.role ?? null
     const needsConfirmation =
-      currentRole !== role &&
-      (SENSITIVE_ROLES.has(currentRole) || SENSITIVE_ROLES.has(role))
+      currentRole !== role && (SENSITIVE_ROLES.has(currentRole) || SENSITIVE_ROLES.has(role))
 
     if (needsConfirmation) {
       const result = await confirm({
@@ -123,18 +122,19 @@ export default function UserManagementPage() {
       if (result !== 'confirm') return
     }
 
-    try {
-      await updateUserRole(userId, role)
-      setPendingRoles((prev) => {
-        const next = { ...prev }
-        delete next[userId]
-        return next
-      })
-      setError('')
-      revalidator.revalidate()
-    } catch (err) {
-      setError(err.message || 'Failed to update role.')
-    }
+    await executeAdminMutation({
+      mutation: () => updateUserRole(userId, role),
+      revalidator,
+      onSuccess: () => {
+        setPendingRoles((prev) => {
+          const next = { ...prev }
+          delete next[userId]
+          return next
+        })
+        setError('')
+      },
+      onError: (err) => setError(err.message || 'Failed to update role.'),
+    })
   }
 
   async function handleDeleteUser(userId, userName) {
@@ -151,13 +151,12 @@ export default function UserManagementPage() {
 
     if (result !== 'confirm') return
 
-    try {
-      await deleteUser(userId)
-      setError('')
-      revalidator.revalidate()
-    } catch (err) {
-      setError(err.message || 'Failed to delete user.')
-    }
+    await executeAdminMutation({
+      mutation: () => deleteUser(userId),
+      revalidator,
+      onSuccess: () => setError(''),
+      onError: (err) => setError(err.message || 'Failed to delete user.'),
+    })
   }
 
   function openDialog() {
@@ -171,22 +170,19 @@ export default function UserManagementPage() {
   }
 
   async function attemptCloseDialog() {
-    if (!isCreateDialogDirty || formLoading) {
-      closeDialog()
-      return
-    }
-
-    const result = await confirm({
-      variant: 'warning',
-      title: 'Discard this new user draft?',
-      message: 'The create-user form has unsaved values. Closing it now will discard them.',
-      confirmLabel: 'Discard draft',
-      cancelLabel: 'Keep editing',
+    await attemptCloseAdminDialog({
+      isDirty: isCreateDialogDirty,
+      isBusy: formLoading,
+      confirm,
+      onClose: closeDialog,
+      confirmOptions: {
+        variant: 'warning',
+        title: 'Discard this new user draft?',
+        message: 'The create-user form has unsaved values. Closing it now will discard them.',
+        confirmLabel: 'Discard draft',
+        cancelLabel: 'Keep editing',
+      },
     })
-
-    if (result === 'confirm') {
-      closeDialog()
-    }
   }
 
   function handleFormChange(field, value) {
@@ -201,20 +197,19 @@ export default function UserManagementPage() {
     }
 
     setFormLoading(true)
-    try {
-      await createUser(form)
-      closeDialog()
-      setError('')
-      revalidator.revalidate()
-    } catch (err) {
-      setFormError(err.message || 'Failed to create user.')
-    } finally {
-      setFormLoading(false)
-    }
+    await executeAdminMutation({
+      mutation: () => createUser(form),
+      revalidator,
+      onSuccess: () => {
+        closeDialog()
+        setError('')
+      },
+      onError: (err) => setFormError(err.message || 'Failed to create user.'),
+    })
+    setFormLoading(false)
   }
 
   const normalizedQuery = searchQuery.trim().toLowerCase()
-
   const filteredUsers = users.filter((user) => {
     const matchesRole = roleFilter === 'ALL' || user.role === roleFilter
     const matchesSearch =
@@ -224,7 +219,6 @@ export default function UserManagementPage() {
 
     return matchesRole && matchesSearch
   })
-
   const sortedUsers = [...filteredUsers].sort((a, b) => {
     if (sortBy === 'nameAsc') return a.name.localeCompare(b.name)
     if (sortBy === 'nameDesc') return b.name.localeCompare(a.name)
@@ -243,7 +237,7 @@ export default function UserManagementPage() {
   }
 
   return (
-    <Box>
+    <>
       <PageHeader title="User Management" subtitle="Create, manage, and assign roles to users">
         <TextField
           placeholder="Search users..."
@@ -268,7 +262,7 @@ export default function UserManagementPage() {
             labelId="user-role-filter-label"
             value={roleFilter}
             label="Role"
-            onChange={(e) => setRoleFilter(e.target.value)}
+            onChange={(e) => handleRoleFilterChange(e.target.value)}
           >
             <MenuItem value="ALL">All</MenuItem>
             {ROLES.map((role) => (
@@ -305,239 +299,32 @@ export default function UserManagementPage() {
         </Alert>
       )}
 
-      {isMobile ? (
-        sortedUsers.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
-            <Typography variant="body2" color="text.secondary">
-              {emptyMessage}
-            </Typography>
-          </Paper>
-        ) : (
-          <Stack spacing={1.5}>
-            {sortedUsers.map((user) => {
-              const currentRole = pendingRoles[user.id] ?? user.role
-              const isDirty =
-                pendingRoles[user.id] !== undefined && pendingRoles[user.id] !== user.role
+      <UserList
+        users={sortedUsers}
+        pendingRoles={pendingRoles}
+        roles={ROLES}
+        getRoleLabel={getRoleLabel}
+        isMobile={isMobile}
+        emptyMessage={emptyMessage}
+        onRoleChange={handleRoleSelectChange}
+        onSaveRole={handleSaveRole}
+        onDeleteUser={handleDeleteUser}
+      />
 
-              return (
-                <Paper key={user.id} sx={{ p: 2.5 }}>
-                  <Stack spacing={2}>
-                    <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                        {user.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {user.email}
-                      </Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.75 }}>
-                        Role
-                      </Typography>
-                      <Select
-                        size="small"
-                        fullWidth
-                        value={currentRole}
-                        onChange={(e) => handleRoleSelectChange(user.id, e.target.value)}
-                      >
-                        {ROLES.map((role) => (
-                          <MenuItem key={role} value={role}>
-                            {getRoleLabel(role)}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </Box>
-
-                    <Stack direction="row" spacing={1.5}>
-                      <Button
-                        fullWidth
-                        variant="contained"
-                        startIcon={<SaveIcon />}
-                        disabled={!isDirty}
-                        onClick={() => handleSaveRole(user.id)}
-                      >
-                        Save Role
-                      </Button>
-                      <Button
-                        fullWidth
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => {
-                          void handleDeleteUser(user.id, user.name)
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </Stack>
-                  </Stack>
-                </Paper>
-              )
-            })}
-          </Stack>
-        )
-      ) : (
-        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-          <Table size="small">
-            <TableHead>
-              <TableRow>
-                <TableCell>Name</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Role</TableCell>
-                <TableCell align="right">Actions</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {sortedUsers.map((user) => {
-                const currentRole = pendingRoles[user.id] ?? user.role
-                const isDirty =
-                  pendingRoles[user.id] !== undefined && pendingRoles[user.id] !== user.role
-
-                return (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {user.name}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2" color="text.secondary">
-                        {user.email}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        <Select
-                          size="small"
-                          value={currentRole}
-                          onChange={(e) => handleRoleSelectChange(user.id, e.target.value)}
-                          sx={{ minWidth: 180, fontSize: '0.85rem' }}
-                        >
-                          {ROLES.map((role) => (
-                            <MenuItem key={role} value={role}>
-                              {getRoleLabel(role)}
-                            </MenuItem>
-                          ))}
-                        </Select>
-
-                        <Tooltip title="Save role">
-                          <span>
-                            <IconButton
-                              size="small"
-                              color="primary"
-                              disabled={!isDirty}
-                              onClick={() => handleSaveRole(user.id)}
-                            >
-                              <SaveIcon fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Delete user">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            void handleDeleteUser(user.id, user.name)
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-
-              {sortedUsers.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    {emptyMessage}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
-
-      <Dialog
+      <CreateUserDialog
         open={dialogOpen}
-        onClose={
-          formLoading
-            ? undefined
-            : () => {
-                void attemptCloseDialog()
-              }
-        }
-        maxWidth="xs"
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle>Create User</DialogTitle>
-        <DialogContent>
-          {formError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {formError}
-            </Alert>
-          )}
-
-          <TextField
-            label="Name"
-            value={form.name}
-            onChange={(e) => handleFormChange('name', e.target.value)}
-            fullWidth
-            required
-            sx={{ mt: 1, mb: 2 }}
-          />
-          <TextField
-            label="Email"
-            type="email"
-            value={form.email}
-            onChange={(e) => handleFormChange('email', e.target.value)}
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Password"
-            type="password"
-            value={form.password}
-            onChange={(e) => handleFormChange('password', e.target.value)}
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-          />
-          <Select
-            value={form.role}
-            onChange={(e) => handleFormChange('role', e.target.value)}
-            fullWidth
-            displayEmpty
-          >
-            {ROLES.map((role) => (
-              <MenuItem key={role} value={role}>
-                {getRoleLabel(role)}
-              </MenuItem>
-            ))}
-          </Select>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              void attemptCloseDialog()
-            }}
-            disabled={formLoading}
-          >
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleCreateUser} disabled={formLoading}>
-            {formLoading ? 'Creating...' : 'Create'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        form={form}
+        roles={ROLES}
+        getRoleLabel={getRoleLabel}
+        isMobile={isMobile}
+        formError={formError}
+        formLoading={formLoading}
+        onClose={() => {
+          void attemptCloseDialog()
+        }}
+        onFieldChange={handleFormChange}
+        onSubmit={handleCreateUser}
+      />
+    </>
   )
 }

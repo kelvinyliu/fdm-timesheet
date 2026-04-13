@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate, useParams, useLoaderData, useRevalidator } from 'react-router'
+import { useLocation, useNavigate, useParams, useLoaderData, useRevalidator } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -32,14 +32,17 @@ import {
   getWorkSummaryDisplayLabel,
 } from '../../utils/displayLabels'
 import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
+import { buildManagerTimesheetListPath } from './utils/managerTimesheetFilters.js'
 
 export default function TimesheetReviewPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const location = useLocation()
   const navigate = useNavigate()
   const revalidator = useRevalidator()
   const { id } = useParams()
   const { timesheet, pendingQueue, error } = useLoaderData()
+  const returnTo = location.state?.returnTo ?? buildManagerTimesheetListPath()
 
   const [rejectionComment, setRejectionComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -72,7 +75,10 @@ export default function TimesheetReviewPage() {
           severity: 'success',
           message: 'Timesheet approved. Showing next pending timesheet.',
         })
-        navigate(`/manager/timesheets/${nextId}`, { replace: true })
+        navigate(`/manager/timesheets/${nextId}`, {
+          replace: true,
+          state: { returnTo },
+        })
       } else {
         setFeedback({ severity: 'success', message: 'Timesheet approved successfully.' })
         revalidator.revalidate()
@@ -100,7 +106,10 @@ export default function TimesheetReviewPage() {
           severity: 'info',
           message: 'Timesheet rejected. Showing next pending timesheet.',
         })
-        navigate(`/manager/timesheets/${nextId}`, { replace: true })
+        navigate(`/manager/timesheets/${nextId}`, {
+          replace: true,
+          state: { returnTo },
+        })
       } else {
         setFeedback({
           severity: 'info',
@@ -185,7 +194,7 @@ export default function TimesheetReviewPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/manager/timesheets')}
+          onClick={() => navigate(returnTo)}
         >
           Back
         </Button>
@@ -236,13 +245,12 @@ export default function TimesheetReviewPage() {
             </Stack>
           </Paper>
 
-          {timesheet.entries && timesheet.entries.length > 0 && (
-            <WeeklyMatrix
-              rows={matrixRows}
-              weekDates={weekDates}
-              totalHours={timesheet.totalHours ?? '-'}
-            />
-          )}
+          <WeeklyMatrix
+            rows={matrixRows}
+            weekDates={weekDates}
+            totalHours={timesheet.totalHours ?? '-'}
+            emptyMessage="No entries recorded for this timesheet."
+          />
 
           {timesheet.status === 'PENDING' && (
             <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>
@@ -379,12 +387,11 @@ export default function TimesheetReviewPage() {
           </Dialog>
 
           {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED') && (
-            <Alert
-              severity={timesheet.status === 'APPROVED' ? 'success' : 'info'}
-              sx={{ mt: 2 }}
-            >
+            <Alert severity={timesheet.status === 'APPROVED' ? 'success' : 'info'} sx={{ mt: 2 }}>
               {timesheet.status === 'APPROVED' ? (
-                <>This timesheet has been <strong>approved</strong>.</>
+                <>
+                  This timesheet has been <strong>approved</strong>.
+                </>
               ) : (
                 <>
                   This timesheet has been <strong>rejected</strong> and returned to the submitter

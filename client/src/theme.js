@@ -231,7 +231,7 @@ const theme = createTheme({
             transform: 'none',
             backgroundColor: palette.surfaceMuted,
             color: palette.textMuted,
-          }
+          },
         },
         contained: {
           boxShadow: palette.shadowSoft,

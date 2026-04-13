@@ -1,120 +1,95 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router"
-import Box from "@mui/material/Box"
-import Grid from "@mui/material/Grid"
-import Paper from "@mui/material/Paper"
-import Typography from "@mui/material/Typography"
-import Stack from "@mui/material/Stack"
-import Button from "@mui/material/Button"
-import Alert from "@mui/material/Alert"
-import Chip from "@mui/material/Chip"
-import Divider from "@mui/material/Divider"
-import PaymentsIcon from "@mui/icons-material/Payments"
-import TaskAltIcon from "@mui/icons-material/TaskAlt"
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"
-import LoadingSpinner from "../../components/shared/LoadingSpinner"
-import DashboardCard from "../../components/shared/DashboardCard"
-import StatusBadge from "../../components/shared/StatusBadge"
-import { getTimesheets } from "../../api/timesheets"
-import { useAuth } from "../../context/useAuth"
-import { formatWeekStart } from "../../utils/dateFormatters"
-import { getConsultantDisplayLabel } from "../../utils/displayLabels"
+import { useLoaderData, useNavigate } from 'react-router'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
+import Stack from '@mui/material/Stack'
+import Button from '@mui/material/Button'
+import Alert from '@mui/material/Alert'
+import Chip from '@mui/material/Chip'
+import Divider from '@mui/material/Divider'
+import PaymentsIcon from '@mui/icons-material/Payments'
+import TaskAltIcon from '@mui/icons-material/TaskAlt'
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
+import DashboardCard from '../../components/shared/DashboardCard'
+import StatusBadge from '../../components/shared/StatusBadge'
+import { useAuth } from '../../context/useAuth'
+import { formatWeekStart } from '../../utils/dateFormatters'
+import { getConsultantDisplayLabel } from '../../utils/displayLabels'
 
 export default function FinanceDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
+  const { timesheets, error } = useLoaderData()
 
-  const [timesheets, setTimesheets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-
-  useEffect(() => {
-    getTimesheets()
-      .then(setTimesheets)
-      .catch((err) => setError(err.message ?? "Failed to load timesheets"))
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <LoadingSpinner />
-
-  const firstName = user?.name?.split(" ")[0] || "there"
-
-  const approved = timesheets.filter((t) => t.status === "APPROVED")
-  const completed = timesheets.filter((t) => t.status === "COMPLETED")
-
-  const totalApprovedHours = approved.reduce(
-    (sum, ts) => sum + Number(ts.totalHours || 0),
-    0
-  )
-
+  const firstName = user?.name?.split(' ')[0] || 'there'
+  const approved = timesheets.filter((t) => t.status === 'APPROVED')
+  const completed = timesheets.filter((t) => t.status === 'COMPLETED')
+  const totalApprovedHours = approved.reduce((sum, ts) => sum + Number(ts.totalHours || 0), 0)
   const readyForPayment = [...approved]
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
     .slice(0, 5)
 
   return (
-    <Box sx={{ maxWidth: 1200, width: "100%" }}>
+    <Box sx={{ maxWidth: 1200, width: '100%' }}>
       <Paper
         sx={{
           p: { xs: 3, md: 4 },
           borderRadius: 3,
           mb: 4,
-          border: "1px solid",
-          borderColor: "divider",
-          animation: "dashboardHeroIn 0.45s ease both",
-          "@keyframes dashboardHeroIn": {
-            from: { opacity: 0, transform: "translateY(10px)" },
-            to: { opacity: 1, transform: "translateY(0)" },
+          border: '1px solid',
+          borderColor: 'divider',
+          animation: 'dashboardHeroIn 0.45s ease both',
+          '@keyframes dashboardHeroIn': {
+            from: { opacity: 0, transform: 'translateY(10px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
           },
         }}
       >
         <Stack
-          direction={{ xs: "column", md: "row" }}
+          direction={{ xs: 'column', md: 'row' }}
           spacing={3}
           justifyContent="space-between"
-          alignItems={{ xs: "flex-start", md: "center" }}
+          alignItems={{ xs: 'flex-start', md: 'center' }}
         >
           <Box sx={{ flex: 1 }}>
             <Typography
               sx={{
                 fontFamily: '"Instrument Serif", Georgia, serif',
-                fontSize: { xs: "2.4rem", sm: "2.8rem", md: "3.1rem" },
+                fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
-                letterSpacing: "-0.01em",
+                letterSpacing: '-0.01em',
                 mb: 1.2,
               }}
             >
               Welcome back, {firstName}
             </Typography>
 
-            <Typography
-              variant="body1"
-              color="text.secondary"
-              sx={{ mb: 2, maxWidth: 720 }}
-            >
+            <Typography variant="body1" color="text.secondary" sx={{ mb: 2, maxWidth: 720 }}>
               Review approved timesheets, process payments, and keep payroll moving smoothly.
             </Typography>
 
             <Chip
               label={
                 approved.length > 0
-                  ? `${approved.length} timesheet${approved.length > 1 ? "s" : ""} ready for payment`
-                  : "No timesheets awaiting payment"
+                  ? `${approved.length} timesheet${approved.length > 1 ? 's' : ''} ready for payment`
+                  : 'No timesheets awaiting payment'
               }
-              color={approved.length > 0 ? "warning" : "success"}
+              color={approved.length > 0 ? 'warning' : 'success'}
               variant="outlined"
             />
           </Box>
 
           <Stack
-            direction={{ xs: "column", sm: "row" }}
+            direction={{ xs: 'column', sm: 'row' }}
             spacing={2}
-            sx={{ width: { xs: "100%", md: "auto" } }}
+            sx={{ width: { xs: '100%', md: 'auto' } }}
           >
             <Button
               variant="contained"
               size="large"
               startIcon={<PaymentsIcon />}
-              onClick={() => navigate("/finance/timesheets")}
+              onClick={() => navigate('/finance/timesheets')}
               sx={{ minWidth: 220 }}
             >
               Process Payments
@@ -123,7 +98,7 @@ export default function FinanceDashboard() {
             <Button
               variant="outlined"
               size="large"
-              onClick={() => navigate("/finance/timesheets")}
+              onClick={() => navigate('/finance/timesheets')}
               sx={{ minWidth: 180 }}
             >
               View All
@@ -146,7 +121,7 @@ export default function FinanceDashboard() {
             value={approved.length}
             subtitle="Approved and ready to process"
             color="#C58A00"
-            onClick={() => navigate("/finance/timesheets")}
+            onClick={() => navigate('/finance/timesheets')}
             delay={80}
           />
         </Grid>
@@ -158,21 +133,21 @@ export default function FinanceDashboard() {
             value={completed.length}
             subtitle="Already processed"
             color="#2E7D32"
-            onClick={() => navigate("/finance/timesheets")}
+            onClick={() => navigate('/finance/timesheets')}
             delay={160}
           />
         </Grid>
 
         <Grid item xs={12} md={4}>
-            <DashboardCard
-                icon={ReceiptLongIcon}
-                label="Workload"
-                value={totalApprovedHours}
-                subtitle="Hours awaiting payment"
-                color="#1976D2"
-                onClick={() => navigate("/finance/timesheets?status=APPROVED")}
-                delay={240}
-            />
+          <DashboardCard
+            icon={ReceiptLongIcon}
+            label="Workload"
+            value={totalApprovedHours}
+            subtitle="Hours awaiting payment"
+            color="#1976D2"
+            onClick={() => navigate('/finance/timesheets?status=APPROVED')}
+            delay={240}
+          />
         </Grid>
       </Grid>
 
@@ -180,20 +155,20 @@ export default function FinanceDashboard() {
         sx={{
           p: { xs: 2.5, sm: 3 },
           borderRadius: 3,
-          border: "1px solid",
-          borderColor: "divider",
-          animation: "dashboardPanelIn 0.45s ease both",
-          animationDelay: "320ms",
-          "@keyframes dashboardPanelIn": {
-            from: { opacity: 0, transform: "translateY(10px)" },
-            to: { opacity: 1, transform: "translateY(0)" },
+          border: '1px solid',
+          borderColor: 'divider',
+          animation: 'dashboardPanelIn 0.45s ease both',
+          animationDelay: '320ms',
+          '@keyframes dashboardPanelIn': {
+            from: { opacity: 0, transform: 'translateY(10px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
           },
         }}
       >
         <Stack
-          direction={{ xs: "column", sm: "row" }}
+          direction={{ xs: 'column', sm: 'row' }}
           justifyContent="space-between"
-          alignItems={{ xs: "flex-start", sm: "center" }}
+          alignItems={{ xs: 'flex-start', sm: 'center' }}
           spacing={2}
           sx={{ mb: 2.5 }}
         >
@@ -206,11 +181,7 @@ export default function FinanceDashboard() {
             </Typography>
           </Box>
 
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => navigate("/finance/timesheets")}
-          >
+          <Button size="small" variant="outlined" onClick={() => navigate('/finance/timesheets')}>
             View all finance timesheets
           </Button>
         </Stack>
@@ -219,13 +190,13 @@ export default function FinanceDashboard() {
           <Box
             sx={{
               py: 5,
-              textAlign: "center",
+              textAlign: 'center',
               borderRadius: 2,
-              border: "1px dashed",
-              borderColor: "divider",
+              border: '1px dashed',
+              borderColor: 'divider',
             }}
           >
-            <Typography sx={{ fontSize: "1.15rem", fontWeight: 600, mb: 0.5 }}>
+            <Typography sx={{ fontSize: '1.15rem', fontWeight: 600, mb: 0.5 }}>
               Nothing waiting right now
             </Typography>
             <Typography variant="body2" color="text.secondary">
@@ -241,22 +212,23 @@ export default function FinanceDashboard() {
                 sx={{
                   p: 2,
                   borderRadius: 2,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  cursor: "pointer",
-                  transition: "background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease",
-                  "&:hover": {
-                    backgroundColor: "action.hover",
-                    borderColor: "text.primary",
-                    transform: "translateY(-1px)",
+                  border: '1px solid',
+                  borderColor: 'divider',
+                  cursor: 'pointer',
+                  transition:
+                    'background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease',
+                  '&:hover': {
+                    backgroundColor: 'action.hover',
+                    borderColor: 'text.primary',
+                    transform: 'translateY(-1px)',
                   },
                 }}
               >
                 <Stack
-                  direction={{ xs: "column", sm: "row" }}
+                  direction={{ xs: 'column', sm: 'row' }}
                   spacing={1.5}
                   justifyContent="space-between"
-                  alignItems={{ xs: "flex-start", sm: "center" }}
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
                 >
                   <Box>
                     <Typography variant="body2" fontWeight={600} sx={{ mb: 0.4 }}>
@@ -277,21 +249,14 @@ export default function FinanceDashboard() {
 
             <Divider sx={{ my: 0.5 }} />
 
-            <Stack
-              direction={{ xs: "column", sm: "row" }}
-              spacing={2}
-              justifyContent="flex-start"
-            >
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-start">
               <Button
                 variant="contained"
-                onClick={() => navigate("/finance/timesheets?status=APPROVED")}
+                onClick={() => navigate('/finance/timesheets?status=APPROVED')}
               >
                 Process approved timesheets
               </Button>
-              <Button
-                variant="text"
-                onClick={() => navigate("/finance/timesheets")}
-              >
+              <Button variant="text" onClick={() => navigate('/finance/timesheets')}>
                 Browse all finance timesheets
               </Button>
             </Stack>

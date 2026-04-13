@@ -11,11 +11,9 @@ import PageHeader from '../../components/shared/PageHeader'
 import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 
-export default function TimesheetCreatePage({
-  basePath = '/consultant/timesheets',
-}) {
+export default function TimesheetCreatePage({ basePath = '/consultant/timesheets' }) {
   const navigate = useNavigate()
-  const { weekStart } = useLoaderData()
+  const { weekStart, error: loadError } = useLoaderData()
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
 
@@ -33,49 +31,34 @@ export default function TimesheetCreatePage({
 
   return (
     <Box>
-      <PageHeader
-        title="New Timesheet"
-        subtitle={`Week of ${formatWeekStart(weekStart)}`}
-      >
-        <Button
-          variant="outlined"
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate(basePath)}
-        >
+      <PageHeader title="New Timesheet" subtitle={`Week of ${formatWeekStart(weekStart)}`}>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
           Back
         </Button>
       </PageHeader>
 
       <Paper sx={{ p: { xs: 2.5, sm: 4 }, maxWidth: 560 }}>
         <Stack spacing={3}>
-          {submitError && (
-            <Alert severity="error">
-              {submitError}
-            </Alert>
-          )}
+          {loadError && <Alert severity="warning">{loadError}</Alert>}
+
+          {submitError && <Alert severity="error">{submitError}</Alert>}
 
           <Box>
             <Typography variant="body1" sx={{ mb: 1 }}>
-              Create this week&apos;s timesheet, then add client or Internal work categories inside the editor.
+              Create this week&apos;s timesheet, then add client or Internal work categories inside
+              the editor.
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              You can split a day across multiple clients and non-client work after the draft is created.
+              You can split a day across multiple clients and non-client work after the draft is
+              created.
             </Typography>
           </Box>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Button
-              variant="contained"
-              onClick={handleCreate}
-              disabled={submitting}
-            >
+            <Button variant="contained" onClick={handleCreate} disabled={submitting}>
               {submitting ? 'Creating...' : 'Create Timesheet'}
             </Button>
-            <Button
-              variant="outlined"
-              onClick={() => navigate(basePath)}
-              disabled={submitting}
-            >
+            <Button variant="outlined" onClick={() => navigate(basePath)} disabled={submitting}>
               Cancel
             </Button>
           </Stack>

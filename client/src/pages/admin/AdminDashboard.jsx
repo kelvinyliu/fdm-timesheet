@@ -1,32 +1,28 @@
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router"
-import Box from "@mui/material/Box"
-import Grid from "@mui/material/Grid"
-import Paper from "@mui/material/Paper"
-import Typography from "@mui/material/Typography"
-import Stack from "@mui/material/Stack"
-import Alert from "@mui/material/Alert"
-import Chip from "@mui/material/Chip"
-import Divider from "@mui/material/Divider"
-import PeopleIcon from "@mui/icons-material/People"
-import SupervisorAccountIcon from "@mui/icons-material/SupervisorAccount"
-import ManageAccountsIcon from "@mui/icons-material/ManageAccounts"
-import HistoryIcon from "@mui/icons-material/History"
-import LoadingSpinner from "../../components/shared/LoadingSpinner"
-import DashboardCard from "../../components/shared/DashboardCard"
-import { getUsers } from "../../api/users"
-import { getAuditLog } from "../../api/audit"
+import { useLoaderData, useNavigate } from 'react-router'
+import Box from '@mui/material/Box'
+import Grid from '@mui/material/Grid'
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
+import Stack from '@mui/material/Stack'
+import Alert from '@mui/material/Alert'
+import Chip from '@mui/material/Chip'
+import Divider from '@mui/material/Divider'
+import PeopleIcon from '@mui/icons-material/People'
+import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount'
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
+import HistoryIcon from '@mui/icons-material/History'
+import DashboardCard from '../../components/shared/DashboardCard'
 
 function getAuditActionLabel(action) {
   switch (action) {
-    case "SUBMISSION":
-      return "Submitted"
-    case "APPROVAL":
-      return "Approved"
-    case "REJECTION":
-      return "Rejected"
-    case "PROCESSING":
-      return "Processed payment"
+    case 'SUBMISSION':
+      return 'Submitted'
+    case 'APPROVAL':
+      return 'Approved'
+    case 'REJECTION':
+      return 'Rejected'
+    case 'PROCESSING':
+      return 'Processed payment'
     default:
       return action
   }
@@ -34,48 +30,31 @@ function getAuditActionLabel(action) {
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
-  const [users, setUsers] = useState([])
-  const [auditLog, setAuditLog] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { users, auditLog, error } = useLoaderData()
 
-  useEffect(() => {
-    Promise.all([getUsers(), getAuditLog()])
-      .then(([usersData, auditData]) => {
-        setUsers(usersData)
-        setAuditLog(auditData)
-      })
-      .catch((err) => setError(err.message ?? "Failed to load admin overview"))
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <LoadingSpinner />
-
-  const consultants = users.filter((u) => u.role === "CONSULTANT").length
-  const managers = users.filter((u) => u.role === "LINE_MANAGER").length
-  const financeManagers = users.filter((u) => u.role === "FINANCE_MANAGER").length
-  const admins = users.filter((u) => u.role === "SYSTEM_ADMIN").length
-
+  const consultants = users.filter((u) => u.role === 'CONSULTANT').length
+  const managers = users.filter((u) => u.role === 'LINE_MANAGER').length
+  const financeManagers = users.filter((u) => u.role === 'FINANCE_MANAGER').length
+  const admins = users.filter((u) => u.role === 'SYSTEM_ADMIN').length
   const recentActivity = auditLog.slice(0, 5)
-
   const systemMessage =
     recentActivity.length > 0
-      ? `${recentActivity.length} recent audit event${recentActivity.length > 1 ? "s" : ""} recorded.`
-      : "No recent system activity recorded."
+      ? `${recentActivity.length} recent audit event${recentActivity.length > 1 ? 's' : ''} recorded.`
+      : 'No recent system activity recorded.'
 
   return (
-    <Box sx={{ maxWidth: 1280, width: "100%" }}>
+    <Box sx={{ maxWidth: 1280, width: '100%' }}>
       <Paper
         sx={{
           p: { xs: 3, md: 4 },
           borderRadius: 3,
           mb: 4,
-          border: "1px solid",
-          borderColor: "divider",
-          animation: "dashboardHeroIn 0.45s ease both",
-          "@keyframes dashboardHeroIn": {
-            from: { opacity: 0, transform: "translateY(10px)" },
-            to: { opacity: 1, transform: "translateY(0)" },
+          border: '1px solid',
+          borderColor: 'divider',
+          animation: 'dashboardHeroIn 0.45s ease both',
+          '@keyframes dashboardHeroIn': {
+            from: { opacity: 0, transform: 'translateY(10px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
           },
         }}
       >
@@ -83,26 +62,22 @@ export default function AdminDashboard() {
           <Typography
             sx={{
               fontFamily: '"Instrument Serif", Georgia, serif',
-              fontSize: { xs: "2.4rem", sm: "2.8rem", md: "3.1rem" },
+              fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
               lineHeight: 1.15,
-              letterSpacing: "-0.01em",
+              letterSpacing: '-0.01em',
               mb: 1.2,
             }}
           >
             Admin overview
           </Typography>
 
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            sx={{ mb: 2, maxWidth: 760 }}
-          >
+          <Typography variant="body1" color="text.secondary" sx={{ mb: 2, maxWidth: 760 }}>
             Monitor account distribution and recent system activity across the platform.
           </Typography>
 
           <Chip
             label={systemMessage}
-            color={recentActivity.length > 0 ? "warning" : "success"}
+            color={recentActivity.length > 0 ? 'warning' : 'success'}
             variant="outlined"
           />
         </Box>
@@ -123,7 +98,7 @@ export default function AdminDashboard() {
             subtitle="All active accounts"
             color="#1976D2"
             delay={80}
-            onClick={() => navigate("/admin/users")}
+            onClick={() => navigate('/admin/users')}
           />
         </Grid>
 
@@ -135,7 +110,7 @@ export default function AdminDashboard() {
             subtitle="Submitting timesheets"
             color="#2E7D32"
             delay={160}
-            onClick={() => navigate("/admin/users?role=CONSULTANT")}
+            onClick={() => navigate('/admin/users?role=CONSULTANT')}
           />
         </Grid>
 
@@ -147,7 +122,7 @@ export default function AdminDashboard() {
             subtitle="Reviewing submissions"
             color="#C58A00"
             delay={240}
-            onClick={() => navigate("/admin/users?role=LINE_MANAGER")}
+            onClick={() => navigate('/admin/users?role=LINE_MANAGER')}
           />
         </Grid>
 
@@ -159,7 +134,7 @@ export default function AdminDashboard() {
             subtitle="Tracked system actions"
             color="#6A1B9A"
             delay={320}
-            onClick={() => navigate("/admin/audit")}
+            onClick={() => navigate('/admin/audit')}
           />
         </Grid>
       </Grid>
@@ -170,9 +145,9 @@ export default function AdminDashboard() {
             sx={{
               p: 3,
               borderRadius: 3,
-              border: "1px solid",
-              borderColor: "divider",
-              height: "100%",
+              border: '1px solid',
+              borderColor: 'divider',
+              height: '100%',
             }}
           >
             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -201,11 +176,11 @@ export default function AdminDashboard() {
             sx={{
               p: 3,
               borderRadius: 3,
-              border: "1px solid",
-              borderColor: "divider",
-              height: "100%",
-              display: "flex",
-              flexDirection: "column",
+              border: '1px solid',
+              borderColor: 'divider',
+              height: '100%',
+              display: 'flex',
+              flexDirection: 'column',
             }}
           >
             <Typography variant="h6" sx={{ mb: 2 }}>
@@ -216,10 +191,10 @@ export default function AdminDashboard() {
               <Box
                 sx={{
                   py: 4,
-                  textAlign: "center",
+                  textAlign: 'center',
                   borderRadius: 2,
-                  border: "1px dashed",
-                  borderColor: "divider",
+                  border: '1px dashed',
+                  borderColor: 'divider',
                 }}
               >
                 <Typography variant="body2" color="text.secondary">
@@ -231,10 +206,10 @@ export default function AdminDashboard() {
                 {recentActivity.map((item) => (
                   <Box key={item.id} sx={{ py: 1.75 }}>
                     <Stack
-                      direction={{ xs: "column", sm: "row" }}
+                      direction={{ xs: 'column', sm: 'row' }}
                       spacing={1.5}
                       justifyContent="space-between"
-                      alignItems={{ xs: "flex-start", sm: "center" }}
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
                     >
                       <Box>
                         <Typography variant="body2" fontWeight={600} sx={{ mb: 0.35 }}>
@@ -243,21 +218,17 @@ export default function AdminDashboard() {
                         <Typography variant="body2" color="text.secondary">
                           {item.createdAt
                             ? new Date(item.createdAt).toLocaleString([], {
-                                year: "numeric",
-                                month: "short",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
                               })
-                            : "Unknown time"}
+                            : 'Unknown time'}
                         </Typography>
                       </Box>
 
-                      <Chip
-                        label={item.action}
-                        size="small"
-                        variant="outlined"
-                      />
+                      <Chip label={item.action} size="small" variant="outlined" />
                     </Stack>
                   </Box>
                 ))}

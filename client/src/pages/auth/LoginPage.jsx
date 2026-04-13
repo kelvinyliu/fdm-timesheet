@@ -29,17 +29,25 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
     try {
       const data = await loginRequest(email, password)
       const tokenPayload = decodeJwtPayload(data.token)
+
       if (!tokenPayload) {
         throw new Error('Invalid login response.')
       }
 
       const nextUser = data.user ?? tokenPayload
+      const role = nextUser?.role || tokenPayload?.role
+
+      if (!role) {
+        throw new Error('Unable to determine user role.')
+      }
+
       login(data.token, nextUser)
-      const role = nextUser?.role ?? tokenPayload.role
-      const destination = ROLE_ROUTES[role] ?? '/'
+
+      const destination = ROLE_ROUTES[role] ?? '/login'
       navigate(destination, { replace: true })
     } catch (err) {
       setError(err.message || 'Invalid email or password.')
@@ -229,10 +237,7 @@ export default function LoginPage() {
           >
             Welcome back
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: 'text.secondary', mb: 4 }}
-          >
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
             Sign in to your account to continue
           </Typography>
 

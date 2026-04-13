@@ -5,7 +5,7 @@ import {
   deleteAssignment,
 } from '../models/clientAssignmentModel.js'
 import { findUserById } from '../models/userModel.js'
-import { Role } from '../constants/roles.js'
+import { TIMESHEET_SUBMITTER_ROLES } from '../constants/roles.js'
 import { clientAssignmentDto, consultantClientAssignmentDto } from '../dtos/clientAssignmentDto.js'
 import { isUuid } from '../utils/validation.js'
 
@@ -53,10 +53,10 @@ export async function createAssignmentHandler(req, res, next) {
 
     const consultant = await findUserById(consultantId)
     if (!consultant) {
-      return res.status(404).json({ error: 'Consultant not found' })
+      return res.status(404).json({ error: 'Submitter not found' })
     }
-    if (consultant.role !== Role.CONSULTANT) {
-      return res.status(400).json({ error: 'consultantId must belong to a CONSULTANT user' })
+    if (!TIMESHEET_SUBMITTER_ROLES.has(consultant.role)) {
+      return res.status(400).json({ error: 'consultantId must belong to a CONSULTANT or LINE_MANAGER user' })
     }
 
     const assignment = await createAssignment({

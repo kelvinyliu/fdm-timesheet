@@ -4,3 +4,5 @@ export const Role = Object.freeze({
   FINANCE_MANAGER: 'FINANCE_MANAGER',
   SYSTEM_ADMIN:    'SYSTEM_ADMIN',
 })
+
+export const TIMESHEET_SUBMITTER_ROLES = new Set([Role.CONSULTANT, Role.LINE_MANAGER])

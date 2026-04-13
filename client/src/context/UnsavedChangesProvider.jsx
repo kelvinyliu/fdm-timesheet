@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useBeforeUnload, useBlocker } from 'react-router'
 import { useConfirmation } from './useConfirmation.js'
 import { UnsavedChangesContext } from './UnsavedChangesContext.jsx'
@@ -15,11 +15,10 @@ function getGuardDialogOptions(guard) {
     variant: guard.variant ?? 'warning',
     title: guard.title ?? 'Discard unsaved changes?',
     message:
-      guard.message ??
-      'You have unsaved changes on this screen. Leaving now will discard them.',
+      guard.message ?? 'You have unsaved changes on this screen. Leaving now will discard them.',
     confirmLabel: guard.discardLabel ?? 'Discard changes',
     cancelLabel: guard.stayLabel ?? 'Stay here',
-    secondaryLabel: guard.onSave ? guard.saveLabel ?? 'Save and leave' : '',
+    secondaryLabel: guard.onSave ? (guard.saveLabel ?? 'Save and leave') : '',
     summaryItems: guard.summaryItems ?? [],
   }
 }
@@ -46,22 +45,25 @@ export function UnsavedChangesProvider({ children }) {
     guardsRef.current.delete(id)
   }, [])
 
-  const resolveGuardDecision = useCallback(async (guard) => {
-    if (!guard?.isDirty) return true
+  const resolveGuardDecision = useCallback(
+    async (guard) => {
+      if (!guard?.isDirty) return true
 
-    const result = await confirm(getGuardDialogOptions(guard))
+      const result = await confirm(getGuardDialogOptions(guard))
 
-    if (result === 'confirm') {
-      return true
-    }
+      if (result === 'confirm') {
+        return true
+      }
 
-    if (result === 'secondary' && guard.onSave) {
-      const didSave = await guard.onSave()
-      return didSave !== false
-    }
+      if (result === 'secondary' && guard.onSave) {
+        const didSave = await guard.onSave()
+        return didSave !== false
+      }
 
-    return false
-  }, [confirm])
+      return false
+    },
+    [confirm]
+  )
 
   const runWithoutBlocking = useCallback(async (action) => {
     const wasNavigationAllowed = allowNavigationRef.current
@@ -74,29 +76,34 @@ export function UnsavedChangesProvider({ children }) {
     }
   }, [])
 
-  const runWithGuard = useCallback(async (action) => {
-    const guard = getLastGuard(guardsRef.current)
+  const runWithGuard = useCallback(
+    async (action) => {
+      const guard = getLastGuard(guardsRef.current)
 
-    if (!guard?.isDirty) {
-      await action?.()
+      if (!guard?.isDirty) {
+        await action?.()
+        return true
+      }
+
+      const shouldProceed = await resolveGuardDecision(guard)
+      if (!shouldProceed) return false
+
+      await runWithoutBlocking(action)
       return true
-    }
+    },
+    [resolveGuardDecision, runWithoutBlocking]
+  )
 
-    const shouldProceed = await resolveGuardDecision(guard)
-    if (!shouldProceed) return false
+  const blocker = useBlocker(
+    useCallback(({ currentLocation, nextLocation }) => {
+      if (allowNavigationRef.current) return false
 
-    await runWithoutBlocking(action)
-    return true
-  }, [resolveGuardDecision, runWithoutBlocking])
+      const guard = getLastGuard(guardsRef.current)
+      if (!guard?.isDirty) return false
 
-  const blocker = useBlocker(useCallback(({ currentLocation, nextLocation }) => {
-    if (allowNavigationRef.current) return false
-
-    const guard = getLastGuard(guardsRef.current)
-    if (!guard?.isDirty) return false
-
-    return hasLocationChanged(currentLocation, nextLocation)
-  }, []))
+      return hasLocationChanged(currentLocation, nextLocation)
+    }, [])
+  )
 
   useEffect(() => {
     if (blocker.state !== 'blocked') {
@@ -142,15 +149,14 @@ export function UnsavedChangesProvider({ children }) {
     event.returnValue = ''
   })
 
-  return (
-    <UnsavedChangesContext.Provider
-      value={{
-        registerGuard,
-        unregisterGuard,
-        runWithGuard,
-      }}
-    >
-      {children}
-    </UnsavedChangesContext.Provider>
+  const value = useMemo(
+    () => ({
+      registerGuard,
+      unregisterGuard,
+      runWithGuard,
+    }),
+    [registerGuard, unregisterGuard, runWithGuard]
   )
+
+  return <UnsavedChangesContext.Provider value={value}>{children}</UnsavedChangesContext.Provider>
 }

@@ -6,6 +6,7 @@
 import bcrypt from 'bcrypt'
 import pg from 'pg'
 import 'dotenv/config'
+import { SALT_ROUNDS } from '../src/constants/security.js'
 
 const pool = new pg.Pool({
   host: process.env.DB_HOST,
@@ -14,8 +15,6 @@ const pool = new pg.Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
 })
-
-const SALT_ROUNDS = 10
 
 function monday(weeksAgo = 0) {
   const date = new Date()

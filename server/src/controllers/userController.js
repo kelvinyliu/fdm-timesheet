@@ -8,12 +8,12 @@ import {
   findUserById,
   updateUserDefaultPayRate,
 } from '../models/userModel.js'
-import { Role } from '../constants/roles.js'
+import { Role, TIMESHEET_SUBMITTER_ROLES } from '../constants/roles.js'
+import { SALT_ROUNDS } from '../constants/security.js'
 import { userDto } from '../dtos/userDto.js'
-import { isUuid } from '../utils/validation.js'
+import { isUuid, sameUuid } from '../utils/validation.js'
 
 const VALID_ROLES = Object.values(Role)
-const SALT_ROUNDS = 10
 
 export async function listUsers(req, res, next) {
   try {
@@ -74,7 +74,7 @@ export async function updateRoleHandler(req, res, next) {
       return res.status(400).json({ error: `role must be one of: ${VALID_ROLES.join(', ')}` })
     }
 
-    if (id === req.user.userId) {
+    if (sameUuid(id, req.user.userId)) {
       return res.status(400).json({ error: 'Cannot change your own role' })
     }
 
@@ -113,8 +113,8 @@ export async function updateDefaultPayRateHandler(req, res, next) {
       return res.status(404).json({ error: 'User not found' })
     }
 
-    if (existingUser.role !== Role.CONSULTANT) {
-      return res.status(400).json({ error: 'defaultPayRate can only be set for CONSULTANT users' })
+    if (!TIMESHEET_SUBMITTER_ROLES.has(existingUser.role)) {
+      return res.status(400).json({ error: 'defaultPayRate can only be set for CONSULTANT or LINE_MANAGER users' })
     }
 
     const user = await updateUserDefaultPayRate(id, parsedDefaultPayRate)
@@ -132,7 +132,7 @@ export async function deleteUserHandler(req, res, next) {
       return res.status(400).json({ error: 'id must be a valid UUID' })
     }
 
-    if (id === req.user.userId) {
+    if (sameUuid(id, req.user.userId)) {
       return res.status(400).json({ error: 'Cannot delete your own account' })
     }
 

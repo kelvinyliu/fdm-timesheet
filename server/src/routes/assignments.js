@@ -12,7 +12,7 @@ import { Role } from '../constants/roles.js'
 const router = Router()
 
 router.get('/all', auth, requireRole(Role.SYSTEM_ADMIN), listAllAssignments)
-router.get('/', auth, requireRole(Role.CONSULTANT), listAssignments)
+router.get('/', auth, requireRole(Role.CONSULTANT, Role.LINE_MANAGER), listAssignments)
 router.post('/', auth, requireRole(Role.SYSTEM_ADMIN), createAssignmentHandler)
 router.delete('/:id', auth, requireRole(Role.SYSTEM_ADMIN), deleteAssignmentHandler)
 

@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getStoredAuthToken } from '../utils/authStorage.js'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 
@@ -18,7 +19,7 @@ function serializeBody(body) {
 }
 
 export async function apiClient(path, options = {}) {
-  const token = localStorage.getItem('token')
+  const token = getStoredAuthToken()
   const { body, headers: extraHeaders, method = 'GET', ...rest } = options
   const serializedBody = serializeBody(body)
 

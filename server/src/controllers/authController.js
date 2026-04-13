@@ -2,8 +2,7 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import { findUserByEmail, findUserByIdWithHash, updateUserPassword } from '../models/userModel.js'
 import { userDto } from '../dtos/userDto.js'
-
-const SALT_ROUNDS = 10
+import { SALT_ROUNDS } from '../constants/security.js'
 
 export async function login(req, res, next) {
   try {

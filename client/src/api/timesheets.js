@@ -11,16 +11,19 @@ function normalizeTimesheet(timesheet) {
   }
 }
 
-export async function getTimesheets() {
-  return apiClient('/api/timesheets')
+export async function getTimesheets(options = {}, requestOptions = {}) {
+  const params = new URLSearchParams()
+  if (options.scope) params.set('scope', options.scope)
+  const query = params.toString()
+  return apiClient(`/api/timesheets${query ? `?${query}` : ''}`, requestOptions)
 }
 
-export async function getEligibleWeeks() {
-  return apiClient('/api/timesheets/eligible-weeks')
+export async function getEligibleWeeks(requestOptions = {}) {
+  return apiClient('/api/timesheets/eligible-weeks', requestOptions)
 }
 
-export async function getTimesheet(id) {
-  const timesheet = await apiClient(`/api/timesheets/${id}`)
+export async function getTimesheet(id, requestOptions = {}) {
+  const timesheet = await apiClient(`/api/timesheets/${id}`, requestOptions)
   return normalizeTimesheet(timesheet)
 }
 
@@ -62,6 +65,6 @@ export async function processPayment(id, body) {
   })
 }
 
-export async function getTimesheetNotes(id) {
-  return apiClient(`/api/timesheets/${id}/notes`)
+export async function getTimesheetNotes(id, requestOptions = {}) {
+  return apiClient(`/api/timesheets/${id}/notes`, requestOptions)
 }

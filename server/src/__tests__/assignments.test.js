@@ -29,6 +29,7 @@ function token(payload) {
 }
 
 const consultantToken = token({ userId: 'consultant-1', role: 'CONSULTANT' })
+const managerToken = token({ userId: 'manager-1', role: 'LINE_MANAGER' })
 const adminToken = token({ userId: 'admin-1', role: 'SYSTEM_ADMIN' })
 
 const assignmentRow = {
@@ -68,6 +69,17 @@ describe('GET /api/assignments', () => {
 
     expect(res.status).toBe(403)
     expect(clientAssignmentModel.getAssignmentsByConsultant).not.toHaveBeenCalled()
+  })
+
+  it('line manager receives their own assignments for self-timesheets', async () => {
+    clientAssignmentModel.getAssignmentsByConsultant.mockResolvedValue([assignmentRow])
+
+    const res = await request(app)
+      .get('/api/assignments')
+      .set('Authorization', managerToken)
+
+    expect(res.status).toBe(200)
+    expect(clientAssignmentModel.getAssignmentsByConsultant).toHaveBeenCalledWith('manager-1')
   })
 })
 
@@ -142,6 +154,30 @@ describe('POST /api/assignments', () => {
       clientBillRate: 750,
     })
     expect(res.body.id).toBe(assignmentRow.assignment_id)
+  })
+
+  it('creates an assignment for a line manager submitter', async () => {
+    userModel.findUserById.mockResolvedValue({
+      user_id: CONSULTANT_ID,
+      role: 'LINE_MANAGER',
+    })
+    clientAssignmentModel.createAssignment.mockResolvedValue(assignmentRow)
+
+    const res = await request(app)
+      .post('/api/assignments')
+      .set('Authorization', adminToken)
+      .send({
+        consultantId: CONSULTANT_ID,
+        clientName: 'Acme Corp',
+        clientBillRate: 750,
+      })
+
+    expect(res.status).toBe(201)
+    expect(clientAssignmentModel.createAssignment).toHaveBeenCalledWith({
+      consultantId: CONSULTANT_ID,
+      clientName: 'Acme Corp',
+      clientBillRate: 750,
+    })
   })
 })
 

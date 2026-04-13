@@ -1,6 +1,19 @@
 const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTH_SHORT = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+]
 
 function parseUtcDate(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -48,9 +61,7 @@ export function getCurrentMonday() {
   const utcMonth = today.getUTCMonth()
   const utcDate = today.getUTCDate()
   const offset = (today.getUTCDay() + 6) % 7
-  return new Date(Date.UTC(utcYear, utcMonth, utcDate - offset))
-    .toISOString()
-    .slice(0, 10)
+  return new Date(Date.UTC(utcYear, utcMonth, utcDate - offset)).toISOString().slice(0, 10)
 }
 
 export function formatDate(dateStr) {

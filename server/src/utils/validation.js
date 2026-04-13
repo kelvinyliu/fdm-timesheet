@@ -5,6 +5,14 @@ export function isUuid(value) {
   return typeof value === 'string' && UUID_REGEX.test(value)
 }
 
+export function normaliseUuid(value) {
+  return value.toLowerCase()
+}
+
+export function sameUuid(left, right) {
+  return normaliseUuid(left) === normaliseUuid(right)
+}
+
 export function isIsoDate(value) {
   if (typeof value !== 'string' || !ISO_DATE_REGEX.test(value)) return false
   const date = new Date(value + 'T00:00:00Z')
@@ -14,4 +22,3 @@ export function isIsoDate(value) {
 export function toUtcDate(value) {
   return new Date(value + 'T00:00:00Z')
 }
-

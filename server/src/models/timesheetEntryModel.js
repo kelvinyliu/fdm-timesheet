@@ -1,5 +1,11 @@
 import pool from '../db.js'
 
+function httpError(message, status) {
+  const err = new Error(message)
+  err.status = status
+  return err
+}
+
 export async function getEntriesByTimesheet(timesheetId) {
   const { rows } = await pool.query(
     `SELECT te.entry_id,
@@ -48,6 +54,22 @@ export async function upsertEntries(timesheetId, entries) {
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    const { rows: timesheetRows } = await client.query(
+      `SELECT status
+       FROM timesheets
+       WHERE timesheet_id = $1
+       FOR UPDATE`,
+      [timesheetId]
+    )
+
+    if (timesheetRows.length === 0) {
+      throw httpError('Timesheet not found', 404)
+    }
+
+    if (timesheetRows[0].status !== 'DRAFT' && timesheetRows[0].status !== 'REJECTED') {
+      throw httpError('Only draft or rejected timesheets can be edited', 409)
+    }
+
     await client.query(
       'DELETE FROM timesheet_entries WHERE timesheet_id = $1',
       [timesheetId]

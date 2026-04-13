@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useState } from 'react'
+import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -24,76 +24,33 @@ import EditIcon from '@mui/icons-material/Edit'
 import HistoryIcon from '@mui/icons-material/History'
 import VisibilityIcon from '@mui/icons-material/Visibility'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
-import {
-  createTimesheet,
-  getEligibleWeeks,
-  getTimesheets,
-} from '../../api/timesheets'
+import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
-import {
-  getTimesheetForWeek,
-  isConsultantEditableStatus,
-} from '../../utils/timesheetWorkflow.js'
+import { getTimesheetForWeek, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 
-const EMPTY_ELIGIBILITY = {
-  currentWeekStart: getCurrentMonday(),
-  missingPastWeekStarts: [],
-}
-
-export default function TimesheetListPage() {
+export default function TimesheetListPage({
+  basePath = '/consultant/timesheets',
+  title = 'My Timesheets',
+  subtitle = 'View and manage your weekly timesheets',
+}) {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
-  const [timesheets, setTimesheets] = useState([])
-  const [eligibility, setEligibility] = useState(EMPTY_ELIGIBILITY)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [eligibilityError, setEligibilityError] = useState(null)
+  const { timesheets, eligibility, error: loadError, eligibilityError } = useLoaderData()
+  const [error, setError] = useState(loadError)
   const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
   const [creatingWeekStart, setCreatingWeekStart] = useState(null)
-
-  useEffect(() => {
-    let active = true
-
-    Promise.allSettled([getTimesheets(), getEligibleWeeks()])
-      .then(([timesheetResult, eligibilityResult]) => {
-        if (!active) return
-
-        if (timesheetResult.status === 'fulfilled') {
-          setTimesheets(timesheetResult.value)
-        } else {
-          setError(timesheetResult.reason?.message ?? 'Failed to load timesheets')
-        }
-
-        if (eligibilityResult.status === 'fulfilled') {
-          setEligibility(eligibilityResult.value)
-        } else {
-          setEligibilityError('Missing-week creation is temporarily unavailable.')
-        }
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [])
-
-  if (loading) return <LoadingSpinner />
 
   const currentMonday = eligibility.currentWeekStart || getCurrentMonday()
   const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []
   const currentWeekTimesheet = getTimesheetForWeek(timesheets, currentMonday)
   const canCreateCurrentWeek = !currentWeekTimesheet
-  const missingWeekButtonTooltip = eligibilityError
-    ?? (missingPastWeekStarts.length > 0
-      ? ''
-      : 'No missing weeks are available in the last 4 weeks.')
+  const missingWeekButtonTooltip =
+    eligibilityError ??
+    (missingPastWeekStarts.length > 0 ? '' : 'No missing weeks are available in the last 4 weeks.')
 
   async function handleCreateForWeek(weekStart) {
     setError(null)
@@ -102,7 +59,7 @@ export default function TimesheetListPage() {
     try {
       const newTimesheet = await createTimesheet({ weekStart })
       setMissingWeekDialogOpen(false)
-      navigate(`/consultant/timesheets/${newTimesheet.id}/edit`, { replace: true })
+      navigate(`${basePath}/${newTimesheet.id}/edit`, { replace: true })
     } catch (err) {
       setError(err.message ?? 'Failed to create timesheet.')
     } finally {
@@ -122,8 +79,8 @@ export default function TimesheetListPage() {
           onClick={() =>
             navigate(
               isEditable
-                ? `/consultant/timesheets/${currentWeekTimesheet.id}/edit`
-                : `/consultant/timesheets/${currentWeekTimesheet.id}`
+                ? `${basePath}/${currentWeekTimesheet.id}/edit`
+                : `${basePath}/${currentWeekTimesheet.id}`
             )
           }
         >
@@ -137,7 +94,7 @@ export default function TimesheetListPage() {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate('/consultant/timesheets/new')}
+          onClick={() => navigate(`${basePath}/new`)}
         >
           New Timesheet
         </Button>
@@ -159,7 +116,9 @@ export default function TimesheetListPage() {
     const disabled = Boolean(missingWeekButtonTooltip) || creatingWeekStart !== null
 
     return (
-      <Tooltip title={missingWeekButtonTooltip || 'Create a missing timesheet from the last 4 weeks'}>
+      <Tooltip
+        title={missingWeekButtonTooltip || 'Create a missing timesheet from the last 4 weeks'}
+      >
         <span>
           <Button
             variant="outlined"
@@ -176,7 +135,7 @@ export default function TimesheetListPage() {
 
   return (
     <Box>
-      <PageHeader title="My Timesheets" subtitle="View and manage your weekly timesheets">
+      <PageHeader title={title} subtitle={subtitle}>
         {renderPrimaryActionButton()}
         {renderMissingWeekButton()}
       </PageHeader>
@@ -217,16 +176,15 @@ export default function TimesheetListPage() {
         </Paper>
       )}
 
-      {!error && timesheets.length > 0 && (
-        isMobile ? (
+      {!error &&
+        timesheets.length > 0 &&
+        (isMobile ? (
           <Stack spacing={1.5}>
             {timesheets.map((ts) => {
               const isEditable = isConsultantEditableStatus(ts.status)
               const actionLabel = isEditable ? 'Edit Timesheet' : 'View Timesheet'
               const ActionIcon = isEditable ? EditIcon : VisibilityIcon
-              const destination = isEditable
-                ? `/consultant/timesheets/${ts.id}/edit`
-                : `/consultant/timesheets/${ts.id}`
+              const destination = isEditable ? `${basePath}/${ts.id}/edit` : `${basePath}/${ts.id}`
 
               return (
                 <Paper key={ts.id} sx={{ p: 2.5 }}>
@@ -326,7 +284,7 @@ export default function TimesheetListPage() {
                           size="small"
                           variant="outlined"
                           startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`/consultant/timesheets/${ts.id}/edit`)}
+                          onClick={() => navigate(`${basePath}/${ts.id}/edit`)}
                         >
                           Edit
                         </Button>
@@ -335,7 +293,7 @@ export default function TimesheetListPage() {
                           size="small"
                           variant="outlined"
                           startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`/consultant/timesheets/${ts.id}`)}
+                          onClick={() => navigate(`${basePath}/${ts.id}`)}
                         >
                           View
                         </Button>
@@ -346,8 +304,7 @@ export default function TimesheetListPage() {
               </TableBody>
             </Table>
           </TableContainer>
-        )
-      )}
+        ))}
 
       <Dialog
         open={missingWeekDialogOpen}

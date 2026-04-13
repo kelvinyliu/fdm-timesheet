@@ -53,6 +53,7 @@ import * as paymentModel from '../models/paymentModel.js'
 const SECRET = 'test-secret'
 const TIMESHEET_ID = '11111111-1111-4111-8111-111111111111'
 const MISSING_TIMESHEET_ID = '22222222-2222-4222-8222-222222222222'
+const MANAGER_UUID = '33333333-3333-4333-8333-333333333333'
 
 function token(payload) {
   return `Bearer ${jwt.sign(payload, SECRET)}`
@@ -60,7 +61,14 @@ function token(payload) {
 
 const consultantToken = token({ userId: 'consultant-1', role: 'CONSULTANT' })
 const managerToken   = token({ userId: 'manager-1',    role: 'LINE_MANAGER' })
+const uuidManagerToken = token({ userId: MANAGER_UUID, role: 'LINE_MANAGER' })
 const financeToken   = token({ userId: 'finance-1',    role: 'FINANCE_MANAGER' })
+
+function statusError(message, status) {
+  const err = new Error(message)
+  err.status = status
+  return err
+}
 
 const fakeTimesheet = {
   timesheet_id:  TIMESHEET_ID,
@@ -75,6 +83,12 @@ const fakeTimesheet = {
   rejection_comment: null,
   created_at:    '2025-03-24T00:00:00Z',
   updated_at:    '2025-03-24T00:00:00Z',
+}
+
+const managerSelfTimesheet = {
+  ...fakeTimesheet,
+  consultant_id: 'manager-1',
+  consultant_name: 'Lina Manager',
 }
 
 const assignedTimesheet = {
@@ -176,6 +190,20 @@ describe('GET /api/timesheets', () => {
     expect(res.body[0].consultantName).toBe('Alex Consultant')
     expect(timesheetModel.getTimesheetsForManager).toHaveBeenCalledWith('manager-1')
   })
+
+  it('line manager can request their own timesheets separately from the review queue', async () => {
+    timesheetModel.getTimesheetsByConsultant.mockResolvedValue([managerSelfTimesheet])
+    entryModel.getWorkSummariesByTimesheetIds.mockResolvedValue([])
+
+    const res = await request(app)
+      .get('/api/timesheets?scope=own')
+      .set('Authorization', managerToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body[0].consultantName).toBe('Lina Manager')
+    expect(timesheetModel.getTimesheetsByConsultant).toHaveBeenCalledWith('manager-1')
+    expect(timesheetModel.getTimesheetsForManager).not.toHaveBeenCalled()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -197,6 +225,23 @@ describe('GET /api/timesheets/eligible-weeks', () => {
       currentWeekStart: '2025-03-24',
       missingPastWeekStarts: ['2025-03-17', '2025-03-03', '2025-02-24'],
     })
+  })
+
+  it('allows a line manager to list eligible weeks for their own timesheets', async () => {
+    userModel.findUserById.mockResolvedValue({
+      user_id: 'manager-1',
+      role: 'LINE_MANAGER',
+      created_at: '2025-02-03T09:00:00Z',
+    })
+    timesheetModel.getTimesheetsByConsultant.mockResolvedValue([])
+
+    const res = await request(app)
+      .get('/api/timesheets/eligible-weeks')
+      .set('Authorization', managerToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body.currentWeekStart).toBe('2025-03-24')
+    expect(timesheetModel.getTimesheetsByConsultant).toHaveBeenCalledWith('manager-1')
   })
 
   it('does not return weeks before the consultant account existed', async () => {
@@ -304,13 +349,25 @@ describe('POST /api/timesheets', () => {
     expect(res.status).toBe(409)
   })
 
-  it('returns 403 when a line manager tries to create a timesheet', async () => {
+  it('allows a line manager to create their own timesheet', async () => {
+    userModel.findUserById.mockResolvedValue({
+      user_id: 'manager-1',
+      role: 'LINE_MANAGER',
+      created_at: '2025-02-03T09:00:00Z',
+    })
+    timesheetModel.createTimesheet.mockResolvedValue(managerSelfTimesheet)
+
     const res = await request(app)
       .post('/api/timesheets')
       .set('Authorization', managerToken)
       .send({ weekStart: '2025-03-24' })
 
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(201)
+    expect(timesheetModel.createTimesheet).toHaveBeenCalledWith({
+      consultantId: 'manager-1',
+      assignmentId: null,
+      weekStart: '2025-03-24',
+    })
   })
 })
 
@@ -428,6 +485,19 @@ describe('GET /api/timesheets/:id', () => {
 
     expect(res.status).toBe(403)
   })
+
+  it('allows a line manager to access their own timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(managerSelfTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([internalEntry])
+
+    const res = await request(app)
+      .get(`/api/timesheets/${TIMESHEET_ID}`)
+      .set('Authorization', managerToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body.consultantName).toBe('Lina Manager')
+    expect(timesheetModel.getTimesheetsForManager).not.toHaveBeenCalled()
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -517,6 +587,21 @@ describe('PUT /api/timesheets/:id/entries', () => {
       .send({ entries: validEntries })
 
     expect(res.status).toBe(409)
+  })
+
+  it('returns 409 when the timesheet becomes uneditable during save', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+    entryModel.upsertEntries.mockRejectedValue(
+      statusError('Only draft or rejected timesheets can be edited', 409)
+    )
+
+    const res = await request(app)
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
+      .set('Authorization', consultantToken)
+      .send({ entries: validEntries })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/draft or rejected/)
   })
 
   it('allows clearing all entries on a DRAFT timesheet', async () => {
@@ -621,6 +706,21 @@ describe('PUT /api/timesheets/:id/entries', () => {
       .send({ entries: validEntries })
 
     expect(res.status).toBe(403)
+  })
+
+  it('allows a line manager to save entries on their own timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(managerSelfTimesheet)
+    entryModel.upsertEntries.mockResolvedValue([internalEntry])
+
+    const res = await request(app)
+      .put(`/api/timesheets/${TIMESHEET_ID}/entries`)
+      .set('Authorization', managerToken)
+      .send({ entries: validEntries })
+
+    expect(res.status).toBe(200)
+    expect(entryModel.upsertEntries).toHaveBeenCalledWith(TIMESHEET_ID, [
+      { ...validEntries[0], assignmentId: null },
+    ])
   })
 })
 
@@ -762,6 +862,47 @@ describe('POST /api/timesheets/:id/submit', () => {
     expect(timesheetModel.updateTimesheetStatus).not.toHaveBeenCalled()
     expect(auditModel.logAction).not.toHaveBeenCalled()
   })
+
+  it('returns 409 when the timesheet becomes unsubmitable during submission', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
+    timesheetModel.updateTimesheetStatus.mockRejectedValue(
+      statusError('Only draft or rejected timesheets can be submitted', 409)
+    )
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/draft or rejected/)
+    expect(auditModel.logAction).not.toHaveBeenCalled()
+  })
+
+  it('allows a line manager to submit their own timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(managerSelfTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([internalEntry])
+    timesheetModel.updateTimesheetStatus.mockResolvedValue({
+      ...managerSelfTimesheet,
+      status: 'PENDING',
+      submitted_at: '2025-03-27T12:00:00.000Z',
+      submitted_late: false,
+    })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
+      .set('Authorization', managerToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('PENDING')
+    expect(auditModel.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'SUBMISSION',
+        performedBy: 'manager-1',
+      })
+    )
+  })
 })
 
 // ---------------------------------------------------------------------------
@@ -812,6 +953,18 @@ describe('GET /api/timesheets/:id/autofill', () => {
       .set('Authorization', consultantToken)
 
     expect(res.status).toBe(409)
+  })
+
+  it('allows a line manager to autofill their own draft timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(managerSelfTimesheet)
+    timesheetModel.getPreviousWeekEntries.mockResolvedValue([internalEntry])
+
+    const res = await request(app)
+      .get(`/api/timesheets/${TIMESHEET_ID}/autofill`)
+      .set('Authorization', managerToken)
+
+    expect(res.status).toBe(200)
+    expect(timesheetModel.getPreviousWeekEntries).toHaveBeenCalledWith('manager-1', managerSelfTimesheet.week_start)
   })
 })
 
@@ -897,6 +1050,36 @@ describe('PATCH /api/timesheets/:id/review', () => {
       .send({ action: 'APPROVE' })
 
     expect(res.status).toBe(403)
+  })
+
+  it('returns 403 when manager tries to review their own timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({ ...managerSelfTimesheet, status: 'PENDING' })
+
+    const res = await request(app)
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
+      .set('Authorization', managerToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toMatch(/own timesheet/i)
+    expect(timesheetModel.getTimesheetsForManager).not.toHaveBeenCalled()
+  })
+
+  it('returns 403 when manager tries to review their own timesheet with mixed-case UUIDs', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({
+      ...fakeTimesheet,
+      consultant_id: MANAGER_UUID.toUpperCase(),
+      status: 'PENDING',
+    })
+
+    const res = await request(app)
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
+      .set('Authorization', uuidManagerToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(403)
+    expect(res.body.error).toMatch(/own timesheet/i)
+    expect(timesheetModel.getTimesheetsForManager).not.toHaveBeenCalled()
   })
 
   it('approves a PENDING timesheet and logs an APPROVAL audit event', async () => {
@@ -1075,6 +1258,94 @@ describe('POST /api/timesheets/:id/payment', () => {
         }),
       })
     )
+  })
+
+  it('uses decimal arithmetic when calculating payment amounts', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'APPROVED' })
+    entryModel.getEntriesByTimesheet.mockResolvedValue([
+      {
+        entry_id: 'entry-a',
+        entry_date: '2025-03-24',
+        entry_kind: 'CLIENT',
+        assignment_id: '33333333-3333-4333-8333-333333333333',
+        bucket_label: 'Acme Corp',
+        hours_worked: '1.00',
+      },
+    ])
+    paymentModel.getPaymentByTimesheet.mockResolvedValue(null)
+    paymentModel.createPayment.mockResolvedValue({
+      payment_id: '44444444-4444-4444-8444-444444444444',
+      timesheet_id: TIMESHEET_ID,
+      processed_by: 'finance-1',
+      total_bill_amount: '1.01',
+      total_pay_amount: '0.34',
+      margin_amount: '0.67',
+      status: 'COMPLETED',
+      breakdowns: [],
+      created_at: '2025-03-28T10:30:00Z',
+    })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/payment`)
+      .set('Authorization', financeToken)
+      .send({
+        breakdowns: [
+          {
+            entryKind: 'CLIENT',
+            assignmentId: '33333333-3333-4333-8333-333333333333',
+            billRate: '1.005',
+            payRate: '0.335',
+          },
+        ],
+      })
+
+    expect(res.status).toBe(200)
+    expect(paymentModel.createPayment).toHaveBeenCalledWith(expect.objectContaining({
+      totalBillAmount: 1.01,
+      totalPayAmount: 0.34,
+      marginAmount: 0.67,
+      breakdowns: [
+        expect.objectContaining({
+          billAmount: 1.01,
+          payAmount: 0.34,
+          marginAmount: 0.67,
+        }),
+      ],
+    }))
+  })
+
+  it('returns 409 when the timesheet becomes unpayable during processing', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'APPROVED' })
+    entryModel.getEntriesByTimesheet.mockResolvedValue([{
+      entry_id: 'entry-a',
+      entry_date: '2025-03-24',
+      entry_kind: 'INTERNAL',
+      assignment_id: null,
+      bucket_label: 'Internal',
+      hours_worked: '1.00',
+    }])
+    paymentModel.getPaymentByTimesheet.mockResolvedValue(null)
+    paymentModel.createPayment.mockRejectedValue(
+      statusError('Only approved timesheets can be processed for payment', 409)
+    )
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/payment`)
+      .set('Authorization', financeToken)
+      .send({
+        breakdowns: [
+          {
+            entryKind: 'INTERNAL',
+            billRate: 0,
+            payRate: 25,
+          },
+        ],
+      })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/approved timesheets/)
+    expect(auditModel.logAction).not.toHaveBeenCalled()
   })
 
   it('returns 400 when payment breakdowns are missing or invalid', async () => {

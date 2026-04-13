@@ -1,11 +1,11 @@
 import { apiClient } from './apiClient.js'
 
-export async function getAssignments() {
-  return apiClient('/api/assignments')
+export async function getAssignments(requestOptions = {}) {
+  return apiClient('/api/assignments', requestOptions)
 }
 
-export async function getAllAssignments() {
-  return apiClient('/api/assignments/all')
+export async function getAllAssignments(requestOptions = {}) {
+  return apiClient('/api/assignments/all', requestOptions)
 }
 
 export async function createAssignment(body) {
@@ -21,8 +21,8 @@ export async function deleteAssignment(id) {
   })
 }
 
-export async function getManagerAssignments() {
-  return apiClient('/api/manager-assignments')
+export async function getManagerAssignments(requestOptions = {}) {
+  return apiClient('/api/manager-assignments', requestOptions)
 }
 
 export async function createManagerAssignment(body) {

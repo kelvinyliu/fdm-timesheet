@@ -8,6 +8,10 @@ export function getConsultantDisplayLabel(consultantName) {
   return hasText(consultantName) ? consultantName : 'Unknown consultant'
 }
 
+export function getSubmitterDisplayLabel(submitterName) {
+  return hasText(submitterName) ? submitterName : 'Unknown submitter'
+}
+
 export function getClientAssignmentDisplayLabel(clientName) {
   return hasText(clientName) ? clientName : 'Unknown client assignment'
 }

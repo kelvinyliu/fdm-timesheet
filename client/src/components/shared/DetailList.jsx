@@ -1,12 +1,7 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 
-export default function DetailList({
-  items,
-  labelMinWidth = 140,
-  columnGap = 2,
-  rowGap = 1.5,
-}) {
+export default function DetailList({ items, labelMinWidth = 140, columnGap = 2, rowGap = 1.5 }) {
   return (
     <Box
       sx={{

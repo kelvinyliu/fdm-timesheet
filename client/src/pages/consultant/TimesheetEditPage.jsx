@@ -443,11 +443,14 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         open={snackbar.open}
         autoHideDuration={4000}
         onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        sx={{ mt: { xs: 8, sm: 9 } }}
       >
         <Alert
           severity={snackbar.severity}
+          variant="filled"
           onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
-          sx={{ width: '100%' }}
+          sx={{ width: '100%', boxShadow: '0 8px 24px rgba(0,0,0,0.18)' }}
         >
           {snackbar.message}
         </Alert>

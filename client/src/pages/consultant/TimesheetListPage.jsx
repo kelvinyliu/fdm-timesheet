@@ -4,6 +4,8 @@ import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
 import Tooltip from '@mui/material/Tooltip'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
@@ -43,6 +45,7 @@ export default function TimesheetListPage({
   const [error, setError] = useState(loadError)
   const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
   const [creatingWeekStart, setCreatingWeekStart] = useState(null)
+  const [activeTab, setActiveTab] = useState(0)
 
   const currentMonday = eligibility.currentWeekStart || getCurrentMonday()
   const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []
@@ -140,6 +143,12 @@ export default function TimesheetListPage({
     (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
   ).length
 
+  const displayTimesheets = timesheets.filter((ts) =>
+    activeTab === 0
+      ? ts.status === 'DRAFT' || ts.status === 'PENDING' || ts.status === 'REJECTED'
+      : ts.status === 'APPROVED' || ts.status === 'COMPLETED'
+  )
+
   return (
     <Box>
       <PageHeader title={title} subtitle={subtitle}>
@@ -216,6 +225,13 @@ export default function TimesheetListPage({
         </Paper>
       )}
 
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+        <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)}>
+          <Tab label="Pending & Drafts" />
+          <Tab label="Approved & Paid" />
+        </Tabs>
+      </Box>
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
@@ -228,7 +244,7 @@ export default function TimesheetListPage({
         </Alert>
       )}
 
-      {!error && timesheets.length === 0 && (
+      {!error && displayTimesheets.length === 0 && (
         <Paper
           sx={{
             p: 6,
@@ -244,19 +260,23 @@ export default function TimesheetListPage({
               mb: 1,
             }}
           >
-            No timesheets yet
+            {timesheets.length === 0
+              ? 'No timesheets yet'
+              : activeTab === 0
+                ? 'No pending or draft timesheets'
+                : 'No approved or paid timesheets'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Create one to get started.
+            {timesheets.length === 0 ? 'Create one to get started.' : 'Nothing to see here right now.'}
           </Typography>
         </Paper>
       )}
 
       {!error &&
-        timesheets.length > 0 &&
+        displayTimesheets.length > 0 &&
         (isMobile ? (
           <Stack spacing={1.5}>
-            {timesheets.map((ts) => {
+            {displayTimesheets.map((ts) => {
               const isEditable = isConsultantEditableStatus(ts.status)
               const actionLabel = isEditable ? 'Edit Timesheet' : 'View Timesheet'
               const ActionIcon = isEditable ? EditIcon : VisibilityIcon
@@ -322,18 +342,18 @@ export default function TimesheetListPage({
           </Stack>
         ) : (
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table>
+            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Week of</TableCell>
-                  <TableCell>Work Categories</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Total Hours</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell sx={{ width: '15%' }}>Week of</TableCell>
+                  <TableCell sx={{ width: '35%' }}>Work Categories</TableCell>
+                  <TableCell sx={{ width: '20%' }}>Status</TableCell>
+                  <TableCell align="right" sx={{ width: '10%' }}>Total Hours</TableCell>
+                  <TableCell align="right" sx={{ width: '20%' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {timesheets.map((ts) => (
+                {displayTimesheets.map((ts) => (
                   <TableRow key={ts.id}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>

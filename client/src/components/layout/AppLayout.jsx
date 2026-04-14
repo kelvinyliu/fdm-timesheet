@@ -42,6 +42,11 @@ function getBreadcrumbs(pathname) {
   if (pathname.startsWith('/manager/dashboard')) return ['Dashboard']
   if (pathname.startsWith('/finance/dashboard')) return ['Dashboard']
 
+  if (/\/my-timesheets\/[^/]+\/edit/.test(pathname)) return ['My Timesheets', 'Edit']
+  if (/\/my-timesheets\/new/.test(pathname)) return ['My Timesheets', 'New']
+  if (/\/my-timesheets\/[^/]+/.test(pathname)) return ['My Timesheets', 'Detail']
+  if (pathname.includes('/my-timesheets')) return ['My Timesheets']
+
   if (/\/timesheets\/[^/]+\/edit/.test(pathname)) return ['Timesheets', 'Edit']
   if (/\/timesheets\/[^/]+\/payment/.test(pathname)) return ['Timesheets', 'Payment']
   if (/\/timesheets\/new/.test(pathname)) return ['Timesheets', 'New']

@@ -29,6 +29,12 @@ export default function FinanceDashboard() {
   const readyForPayment = [...approved]
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
     .slice(0, 5)
+  const recentlyApproved = approved.filter((t) => {
+  const date = new Date(t.updatedAt || t.createdAt)
+  const now = new Date()
+  const diffInDays = (now - date) / (1000 * 60 * 60 * 24)
+  return diffInDays <= 7
+}).length
 
   return (
     <Box sx={{ maxWidth: 1200, width: '100%' }}>
@@ -140,9 +146,9 @@ export default function FinanceDashboard() {
         <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard
             icon={ReceiptLongIcon}
-            label="Workload"
-            value={totalApprovedHours}
-            subtitle="Hours awaiting payment"
+            label="Recently Approved"
+            value={recentlyApproved}
+            subtitle="Approved in the last 7 days"
             color="#1976D2"
             onClick={() => navigate('/finance/timesheets?status=APPROVED')}
             delay={240}

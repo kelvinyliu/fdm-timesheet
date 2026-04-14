@@ -12,11 +12,11 @@ const palette = {
   textInverseMuted: 'rgba(255,255,255,0.7)',
   border: '#e6e4e0',
   borderStrong: '#d1cfcb',
-  primary: '#b2c784',
+  primary: '#c5ff00',
   primaryHover: '#9fb56b',
   primaryContrast: '#2a2a28',
   focusRing: 'rgba(178,199,132,0.4)',
-  selectionBg: 'rgba(178,199,132,0.25)',
+  selectionBg: 'rgba(71, 71, 71, 0.25)',
   sidebarBg: '#1f2118',
   sidebarBgAlt: '#161711',
   sidebarScrim: 'rgba(255,255,255,0.06)',
@@ -82,21 +82,21 @@ const theme = createTheme({
   typography: {
     fontFamily: '"Outfit", system-ui, sans-serif',
     h1: {
-      fontFamily: '"Instrument Serif", Georgia, serif',
+      fontFamily: 'Poppins, Georgia, serif',
       fontWeight: 400,
       fontSize: '2.5rem',
       lineHeight: 1.15,
       letterSpacing: '-0.02em',
     },
     h2: {
-      fontFamily: '"Instrument Serif", Georgia, serif',
+      fontFamily: 'Poppins, Georgia, serif',
       fontWeight: 400,
       fontSize: '2rem',
       lineHeight: 1.2,
       letterSpacing: '-0.01em',
     },
     h3: {
-      fontFamily: '"Instrument Serif", Georgia, serif',
+      fontFamily: 'Poppins, Georgia, serif',
       fontWeight: 400,
       fontSize: '1.75rem',
       lineHeight: 1.25,
@@ -418,7 +418,7 @@ const theme = createTheme({
     MuiDialogTitle: {
       styleOverrides: {
         root: {
-          fontFamily: '"Instrument Serif", Georgia, serif',
+          fontFamily: 'Poppins, Georgia, serif',
           fontSize: '2rem',
           fontWeight: 400,
           padding: '24px 32px 16px',

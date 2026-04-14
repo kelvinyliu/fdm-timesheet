@@ -65,7 +65,7 @@ function BrandLockup({ compact = false, collapsed = false }) {
   return (
     <Box
       sx={{
-        p: collapsed ? '18px 12px' : compact ? '18px 20px' : '28px 24px 20px',
+        p: collapsed ? '18px 12px 60px' : compact ? '18px 20px' : '28px 24px 20px',
         position: 'relative',
         borderBottom: `1px solid ${palette.sidebarScrim}`,
         display: 'flex',
@@ -427,7 +427,8 @@ export default function AppLayout() {
               onClick={() => setDesktopNavCollapsed((prev) => !prev)}
               sx={{
                 position: 'absolute',
-                top: 14,
+                top: desktopNavCollapsed? 'auto' : 14,
+                bottom: desktopNavCollapsed? 12 : 'auto',
                 right: desktopNavCollapsed ? '50%' : 14,
                 transform: desktopNavCollapsed ? 'translateX(50%)' : 'none',
                 color: palette.textInverseMuted,

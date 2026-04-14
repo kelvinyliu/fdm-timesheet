@@ -265,7 +265,11 @@ export default function ManagerDashboard() {
             <Divider sx={{ my: 0.5 }} />
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-start">
-              <Button variant="text" onClick={() => navigate('/manager/timesheets')}>
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => navigate('/manager/timesheets')}
+              >
                 Browse all timesheets
               </Button>
             </Stack>

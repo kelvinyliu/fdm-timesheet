@@ -424,7 +424,6 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
           </Button>
           <Button
             variant="contained"
-            color="primary"
             startIcon={<SendIcon />}
             onClick={() => {
               void handleSubmit()

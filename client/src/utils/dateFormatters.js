@@ -45,6 +45,13 @@ export function formatDayName(dateStr) {
   return getUtcDateParts(dateStr).weekdayLong
 }
 
+export function formatShortUkDate(dateStr) {
+  const { day } = getUtcDateParts(dateStr)
+  const date = parseUtcDate(dateStr)
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0')
+  return `${String(day).padStart(2, '0')}/${month}`
+}
+
 export function addDays(dateStr, days) {
   const date = parseUtcDate(dateStr)
   date.setUTCDate(date.getUTCDate() + days)

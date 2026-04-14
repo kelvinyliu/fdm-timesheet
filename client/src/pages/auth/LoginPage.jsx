@@ -63,7 +63,6 @@ export default function LoginPage() {
         minHeight: '100vh',
       }}
     >
-      {/* Left panel - decorative */}
       <Box
         sx={{
           display: { xs: 'none', md: 'flex' },
@@ -77,7 +76,6 @@ export default function LoginPage() {
           p: 6,
         }}
       >
-        {/* Geometric pattern */}
         <Box
           sx={{
             position: 'absolute',
@@ -105,7 +103,6 @@ export default function LoginPage() {
           }}
         />
 
-        {/* Decorative circles */}
         <Box
           sx={{
             position: 'absolute',
@@ -129,7 +126,6 @@ export default function LoginPage() {
           }}
         />
 
-        {/* Branding */}
         <Box sx={{ position: 'relative', textAlign: 'center' }}>
           <Typography
             sx={{
@@ -166,26 +162,24 @@ export default function LoginPage() {
           </Typography>
         </Box>
 
-        {/* Bottom quote */}
         <Typography
           sx={{
             position: 'absolute',
             bottom: 40,
             left: 40,
             right: 40,
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontStyle: 'italic',
+            fontFamily: 'Poppins, Georgia, serif',
+            fontWeight: 500,
             fontSize: '1.1rem',
             color: 'rgba(var(--ui-white-rgb), 0.28)',
             textAlign: 'center',
             lineHeight: 1.5,
           }}
         >
-          Track time. Manage approvals. Process payments.
+          Track Time | Manage Approvals | Process Payments
         </Typography>
       </Box>
 
-      {/* Right panel - form */}
       <Box
         sx={{
           flex: 1,
@@ -197,7 +191,6 @@ export default function LoginPage() {
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 400 }}>
-          {/* Mobile branding */}
           <Box
             sx={{
               display: { xs: 'block', md: 'none' },
@@ -207,7 +200,7 @@ export default function LoginPage() {
           >
             <Typography
               sx={{
-                fontFamily: '"Instrument Serif", Georgia, serif',
+                fontFamily: 'Poppins, Georgia, serif',
                 fontSize: '3.1rem',
                 color: palette.textPrimary,
                 lineHeight: 1,
@@ -231,16 +224,15 @@ export default function LoginPage() {
           <Typography
             variant="h1"
             sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: 'Poppins, Georgia, serif',
               color: palette.textPrimary,
               lineHeight: 1.1,
-              mb: 1,
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: 1
+              mb: 0.5,
+              fontSize: '3em',
+              fontWeight: 400,
             }}
           >
-            Welcome back
+            Welcome Back
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
             Sign in to your account to continue
@@ -297,9 +289,9 @@ export default function LoginPage() {
                   transform: 'translateY(-1px)',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
                 },
-              '&:active': {
-              transform: 'translateY(0)',
-              }
+                '&:active': {
+                  transform: 'translateY(0)',
+                },
               }}
             >
               {loading ? 'Signing in...' : 'Sign In'}

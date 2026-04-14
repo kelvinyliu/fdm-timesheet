@@ -5,7 +5,6 @@ import Button from '@mui/material/Button'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
-import Stack from '@mui/material/Stack'
 import EditIcon from '@mui/icons-material/Edit'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import PageHeader from '../../components/shared/PageHeader'
@@ -64,7 +63,7 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
             fontWeight: 700,
           }}
         >
-          {timesheet.totalHours ?? '-'}
+          {timesheet.totalHours != null ? `${timesheet.totalHours}h` : '-'}
         </Typography>
       ),
     },
@@ -101,14 +100,16 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
         </Alert>
       )}
 
-      <Paper sx={{ 
-        p: 3, 
-        borderRadius: 3, 
-        boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-        border: '1px solid rgba(0,0,0,0.05)', 
-        background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
-        mb: 3
-        }}>
+      <Paper
+        sx={{
+          p: 3,
+          borderRadius: 3,
+          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+          border: '1px solid rgba(0,0,0,0.05)',
+          background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
+          mb: 3,
+        }}
+      >
         <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
           Summary
         </Typography>
@@ -124,18 +125,18 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
             No client or Internal categories recorded for this week.
           </Typography>
         ) : (
-          <DetailList 
+          <DetailList
             items={workSummary.map((item) => ({
               key: `${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`,
               label: getWorkBucketDisplayLabel(item.bucketLabel),
               value: (
                 <Typography
                   variant="body2"
-                  sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
+                  sx={{ fontFamily: '"Outfit", system-ui, sans-serif', fontWeight: 700 }}
                 >
-                  {item.totalHours}
+                  {item.totalHours != null ? `${item.totalHours}h` : '-'}
                 </Typography>
-              )
+              ),
             }))}
             rowGap={1.25}
           />

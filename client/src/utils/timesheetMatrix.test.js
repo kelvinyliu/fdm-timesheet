@@ -109,7 +109,7 @@ describe('timesheet matrix utilities', () => {
     expect(dayCards[0]).toMatchObject({
       date: '2026-04-06',
       dayLabel: 'Monday',
-      shortDate: '04-06',
+      shortDate: '06/04',
       totalHours: 8.5,
     })
     expect(dayCards[0].categories.map((category) => category.rowId)).toEqual([

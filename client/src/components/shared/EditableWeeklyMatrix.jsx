@@ -19,7 +19,7 @@ import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import { palette } from '../../theme.js'
-import { formatDayName } from '../../utils/dateFormatters'
+import { formatDayName, formatShortUkDate } from '../../utils/dateFormatters'
 import {
   adjustHoursValue,
   buildDayCardData,
@@ -233,7 +233,7 @@ export default function EditableWeeklyMatrix({
             lineHeight: 1,
           }}
         >
-          Weekly Matrix
+          Weekly Timesheet
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
           <Typography
@@ -595,7 +595,7 @@ export default function EditableWeeklyMatrix({
                           mt: 0.5,
                         }}
                       >
-                        {date.slice(5)}
+                        {formatShortUkDate(date)}
                       </Typography>
                     </TableCell>
                   ))}

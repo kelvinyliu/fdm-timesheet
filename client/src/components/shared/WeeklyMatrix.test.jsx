@@ -34,7 +34,7 @@ describe('WeeklyMatrix', () => {
       />
     )
 
-    expect(screen.getByText('Weekly Matrix')).toBeInTheDocument()
+    expect(screen.getByText('Weekly Timesheet')).toBeInTheDocument()
     expect(screen.getByText('Total Hours')).toBeInTheDocument()
     expect(screen.getByText('Client A')).toBeInTheDocument()
     expect(screen.getAllByText('7.5').length).toBeGreaterThan(0)

@@ -82,21 +82,21 @@ const theme = createTheme({
   typography: {
     fontFamily: '"Outfit", system-ui, sans-serif',
     h1: {
-      fontFamily: '"Instrument Serif", Georgia, serif',
+      fontFamily: 'Poppins, Georgia, serif',
       fontWeight: 400,
       fontSize: '2.5rem',
       lineHeight: 1.15,
       letterSpacing: '-0.02em',
     },
     h2: {
-      fontFamily: '"Instrument Serif", Georgia, serif',
+      fontFamily: 'Poppins, Georgia, serif',
       fontWeight: 400,
       fontSize: '2rem',
       lineHeight: 1.2,
       letterSpacing: '-0.01em',
     },
     h3: {
-      fontFamily: '"Instrument Serif", Georgia, serif',
+      fontFamily: 'Poppins, Georgia, serif',
       fontWeight: 400,
       fontSize: '1.75rem',
       lineHeight: 1.25,
@@ -323,7 +323,7 @@ const theme = createTheme({
             backgroundColor: palette.surfaceMuted,
             fontFamily: '"Outfit", system-ui, sans-serif',
             fontWeight: 500,
-            fontSize: '0.8rem',
+            fontSize: '1.05em',
             letterSpacing: '0.02em',
             color: palette.textSecondary,
             borderBottom: `1px solid ${palette.border}`,
@@ -420,7 +420,7 @@ const theme = createTheme({
     MuiDialogTitle: {
       styleOverrides: {
         root: {
-          fontFamily: '"Instrument Serif", Georgia, serif',
+          fontFamily: 'Poppins, Georgia, serif',
           fontSize: '2rem',
           fontWeight: 400,
           padding: '24px 32px 16px',

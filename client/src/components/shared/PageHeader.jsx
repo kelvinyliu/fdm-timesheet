@@ -31,7 +31,7 @@ export default function PageHeader({ title, subtitle, children }) {
             variant="h4"
             component="h1"
             sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: 'Poppins, Georgia, serif',
               fontWeight: 400,
               lineHeight: 1.1,
               fontSize: { xs: '2.2rem', md: '3rem' },

@@ -1,4 +1,4 @@
-import { formatDayName } from './dateFormatters'
+import { formatDayName, formatShortUkDate } from './dateFormatters'
 
 export const INTERNAL_BUCKET_VALUE = 'INTERNAL'
 const HOURS_DECIMAL_PLACES = 2
@@ -99,7 +99,7 @@ export function buildDayCardData(rows = [], weekDates = []) {
   return getMatrixDayTotals(rows, weekDates).map(({ date, totalHours }) => ({
     date,
     dayLabel: formatDayName(date),
-    shortDate: date.slice(5),
+    shortDate: formatShortUkDate(date),
     totalHours,
     categories: rows.map((row) => ({
       rowId: row.id,

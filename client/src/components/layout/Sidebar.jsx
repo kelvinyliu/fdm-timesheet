@@ -49,7 +49,7 @@ export default function Sidebar({ onNavigate, collapsed = false }) {
       {!collapsed && (
         <Typography
           sx={{
-            fontSize: '0.6rem',
+            fontSize: '1rem',
             fontWeight: 600,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',

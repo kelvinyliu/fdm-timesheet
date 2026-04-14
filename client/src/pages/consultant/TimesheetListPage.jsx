@@ -238,7 +238,7 @@ export default function TimesheetListPage({
         >
           <Typography
             sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: 'Poppins, Georgia, serif',
               fontSize: '1.2rem',
               color: 'text.secondary',
               mb: 1,

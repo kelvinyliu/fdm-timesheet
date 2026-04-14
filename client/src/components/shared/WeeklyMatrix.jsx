@@ -12,7 +12,7 @@ import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import { palette } from '../../theme.js'
-import { formatDayName } from '../../utils/dateFormatters'
+import { formatDayName, formatShortUkDate } from '../../utils/dateFormatters'
 import { getWorkBucketDisplayLabel } from '../../utils/displayLabels'
 import {
   buildDayCardData,
@@ -97,7 +97,7 @@ export default function WeeklyMatrix({
             lineHeight: 1,
           }}
         >
-          Weekly Matrix
+          Weekly Timesheet
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
           <Typography
@@ -328,7 +328,7 @@ export default function WeeklyMatrix({
                         mt: 0.5,
                       }}
                     >
-                      {date.slice(5)}
+                      {formatShortUkDate(date)}
                     </Typography>
                   </TableCell>
                 ))}

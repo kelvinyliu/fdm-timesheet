@@ -184,7 +184,7 @@ The root path (`/`) renders `RootRedirect`, which sends authenticated users to t
 | --------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | User management | `/admin/users`       | Lists all users. Allows creating new users (name, email, password, role), changing a user's role, and deleting users.                                                                                                                                           |
 | Assignments     | `/admin/assignments` | Two sections: (1) client assignments - link a consultant to a client with start/end dates; (2) manager assignments - assign a consultant to a line manager. Client assignments support create and delete; manager assignments support create, edit, and delete. |
-| Audit log       | `/admin/audit`       | Append-only log of all significant system events (SUBMISSION, APPROVAL, REJECTION, PROCESSING). Filterable by action type, author, and date range.                                                                                                              |
+| Audit log       | `/admin/audit-log`   | Append-only log of all significant system events (SUBMISSION, APPROVAL, REJECTION, PROCESSING). Filterable by action type, author, and date range.                                                                                                              |
 
 ---
 

@@ -33,7 +33,7 @@ const NAV_LINKS = {
     { label: 'Dashboard', path: '/admin/dashboard', icon: DashboardIcon },
     { label: 'Users', path: '/admin/users', icon: PeopleIcon },
     { label: 'Assignments', path: '/admin/assignments', icon: AssignmentIndIcon },
-    { label: 'Audit Log', path: '/admin/audit', icon: HistoryIcon },
+    { label: 'Audit Log', path: '/admin/audit-log', icon: HistoryIcon },
   ],
 }
 

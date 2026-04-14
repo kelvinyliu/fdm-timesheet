@@ -4,6 +4,9 @@ import UserManagementPage from './UserManagementPage.jsx'
 
 const mocks = vi.hoisted(() => ({
   confirm: vi.fn(),
+  createUser: vi.fn(),
+  deleteUser: vi.fn(),
+  updateUserRole: vi.fn(),
   useLoaderData: vi.fn(),
   useMediaQuery: vi.fn(),
   useRevalidator: vi.fn(),
@@ -46,6 +49,12 @@ vi.mock('../../components/shared/PageHeader', () => ({
   },
 }))
 
+vi.mock('../../api/users', () => ({
+  createUser: (...args) => mocks.createUser(...args),
+  updateUserRole: (...args) => mocks.updateUserRole(...args),
+  deleteUser: (...args) => mocks.deleteUser(...args),
+}))
+
 vi.mock('./components/CreateUserDialog.jsx', () => ({
   default: function MockCreateUserDialog() {
     return null
@@ -53,7 +62,15 @@ vi.mock('./components/CreateUserDialog.jsx', () => ({
 }))
 
 vi.mock('./components/UserList.jsx', () => ({
-  default: function MockUserList({ emptyMessage, users }) {
+  default: function MockUserList({
+    emptyMessage,
+    getRoleLabel,
+    onRoleChange,
+    onSaveRole,
+    pendingRoles,
+    roles,
+    users,
+  }) {
     if (users.length === 0) {
       return <div>{emptyMessage}</div>
     }
@@ -61,7 +78,23 @@ vi.mock('./components/UserList.jsx', () => ({
     return (
       <ul>
         {users.map((user) => (
-          <li key={user.id}>{user.name}</li>
+          <li key={user.id}>
+            <span>{user.name}</span>
+            <select
+              aria-label={`Role for ${user.name}`}
+              onChange={(event) => onRoleChange(user.id, event.target.value)}
+              value={pendingRoles[user.id] ?? user.role}
+            >
+              {roles.map((role) => (
+                <option key={role} value={role}>
+                  {getRoleLabel(role)}
+                </option>
+              ))}
+            </select>
+            <button onClick={() => onSaveRole(user.id)} type="button">
+              Save role for {user.name}
+            </button>
+          </li>
         ))}
       </ul>
     )
@@ -79,6 +112,9 @@ vi.mock('../../context/useUnsavedChanges.js', () => ({
 describe('UserManagementPage', () => {
   beforeEach(() => {
     mocks.confirm.mockReset()
+    mocks.createUser.mockReset()
+    mocks.deleteUser.mockReset()
+    mocks.updateUserRole.mockReset()
     mocks.useLoaderData.mockReset()
     mocks.useMediaQuery.mockReset()
     mocks.useRevalidator.mockReset()
@@ -129,5 +165,19 @@ describe('UserManagementPage', () => {
     expect(screen.getByText('Sam Admin')).toBeInTheDocument()
     expect(window.location.search).toBe('')
     expect(replaceStateSpy).toHaveBeenLastCalledWith(window.history.state, '', '/admin/users')
+  })
+
+  it('shows success feedback after saving a role change', async () => {
+    mocks.updateUserRole.mockResolvedValue({})
+
+    render(<UserManagementPage />)
+
+    fireEvent.change(screen.getByLabelText('Role for Alice Consultant'), {
+      target: { value: 'LINE_MANAGER' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Save role for Alice Consultant' }))
+
+    expect(mocks.updateUserRole).toHaveBeenCalledWith('user-1', 'LINE_MANAGER')
+    expect(await screen.findByText('User role updated successfully.')).toBeInTheDocument()
   })
 })

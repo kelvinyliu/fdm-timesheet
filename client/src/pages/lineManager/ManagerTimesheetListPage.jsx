@@ -95,6 +95,12 @@ export default function ManagerTimesheetListPage() {
           : statusFilter === MANAGER_STATUS_FILTERS.PAID
             ? 'Paid Timesheets'
             : 'Team Timesheets'
+        const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
+        const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
+        const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
+        const approvedOrPaidCount = timesheets.filter(
+        (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
+        ).length
 
   return (
     <Box>
@@ -131,6 +137,73 @@ export default function ManagerTimesheetListPage() {
           </Select>
         </FormControl>
       </PageHeader>
+      {!error && timesheets.length > 0 && (
+        <Paper
+          elevation={0}
+          sx={{
+            mb: 4,
+            p: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            borderRadius: 3,
+            border: '1px solid rgba(0,0,0,0.08)',
+            background: 'linear-gradient(to right, rgba(255,255,255,0.7), rgba(252,252,252,0.8))',
+            backdropFilter: 'blur(10px)',
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 2, sm: 0 },
+          }}
+        >
+          {[
+            { label: 'Drafts', count: draftCount, color: 'text.secondary' },
+            { label: 'Pending', count: pendingCount, color: '#ed6c02' },
+            { label: 'Rejected', count: rejectedCount, color: '#d32f2f' },
+            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2e7d32' },
+          ].map((item, index) => (
+            <Box
+              key={item.label}
+              sx={{
+                flex: 1,
+                textAlign: 'center',
+                borderRight: {
+                  xs: 'none',
+                  sm: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
+                },
+                borderBottom: {
+                  xs: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
+                  sm: 'none',
+                },
+                pb: { xs: index !== 3 ? 2 : 0, sm: 0 },
+                width: '100%',
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  fontWeight: 700,
+                  color: 'text.secondary',
+                  textTransform: 'uppercase',
+                  letterSpacing: 1,
+                  display: 'block',
+                }}
+              >
+                {item.label}
+              </Typography>
+              <Typography
+                variant="h5"
+                sx={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontWeight: 800,
+                  color: item.color,
+                  mt: 0.5,
+                }}
+              >
+                {item.count}
+              </Typography>
+            </Box>
+          ))}
+        </Paper>
+      )}
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>

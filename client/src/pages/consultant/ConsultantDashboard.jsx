@@ -15,7 +15,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import DashboardCard from '../../components/shared/DashboardCard'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { useAuth } from '../../context/useAuth'
-import { formatWeekStart } from '../../utils/dateFormatters'
+import { formatCurrency } from '../../utils/currency'
+import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 
 export default function ConsultantDashboard() {
   const navigate = useNavigate()
@@ -23,6 +24,10 @@ export default function ConsultantDashboard() {
   const { timesheets, error } = useLoaderData()
 
   const firstName = user?.name?.split(' ')[0] || 'there'
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+  const currentWeekStart = getCurrentMonday()
 
   const drafts = timesheets.filter((t) => t.status === 'DRAFT')
   const pending = timesheets.filter((t) => t.status === 'PENDING')
@@ -49,6 +54,31 @@ export default function ConsultantDashboard() {
           label: 'View All Timesheets',
           onClick: () => navigate('/consultant/timesheets'),
         }
+
+
+  const monthlyEarnings = timesheets
+    .filter((ts) => {
+      const date = new Date(ts.weekStart)
+      return (
+        (ts.status === 'APPROVED' || ts.status === 'COMPLETED') &&
+        date.getMonth() === currentMonth &&
+        date.getFullYear() === currentYear
+      )
+    })
+    .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
+
+  const pendingPayment = timesheets
+    .filter((ts) => ts.status === 'PENDING' || ts.status === 'APPROVED')
+    .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
+
+  const currentWeekTimesheet = timesheets.find((ts) => ts.weekStart === currentWeekStart)
+  const hoursThisWeek = Number(currentWeekTimesheet?.totalHours) || 0
+  const utilizationLimit = 40
+  const utilizationPercentage = Math.min((hoursThisWeek / utilizationLimit) * 100, 100)
+
+  const ytdHours = timesheets
+    .filter((ts) => new Date(ts.weekStart).getFullYear() === currentYear)
+    .reduce((acc, ts) => acc + (Number(ts.totalHours) || 0), 0)
 
   return (
     <Box sx={{ maxWidth: 1200, width: '100%' }}>
@@ -98,6 +128,8 @@ export default function ConsultantDashboard() {
               variant="outlined"
             />
           </Box>
+          
+          
 
           <Stack
             direction={{ xs: 'column', sm: 'row' }}
@@ -116,6 +148,94 @@ export default function ConsultantDashboard() {
           </Stack>
         </Stack>
       </Paper>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Grid size={{ xs: 12, md: 8 }}>
+        <Paper
+          sx={{
+            p: 3,
+            height: '100%',
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'center'
+          }}
+        >
+          <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            Financial Health
+          </Typography>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={4} divider={<Divider orientation="vertical" flexItem />}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">Earned this Month</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: 'success.main', fontFamily: '"JetBrains Mono", monospace' }}>
+                {formatCurrency(monthlyEarnings)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">Pending Payment</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800, color: 'warning.main', fontFamily: '"JetBrains Mono", monospace' }}>
+                {formatCurrency(pendingPayment)}
+              </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">YTD Total Hours</Typography>
+              <Typography variant="h5" sx={{ fontWeight: 800, fontFamily: '"JetBrains Mono", monospace' }}>
+                {ytdHours.toFixed(1)} <span style={{ fontSize: '0.8rem', color: 'gray' }}>HRS</span>
+              </Typography>
+            </Box>
+          </Stack>
+        </Paper>
+      </Grid>
+
+      <Grid size={{ xs: 12, md: 4 }}>
+        <Paper
+          sx={{
+            p: 3,
+            height: '100%',
+            borderRadius: 3,
+            border: '1px solid',
+            borderColor: 'divider',
+          }}
+        >
+      <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        Weekly Utilization
+      </Typography>
+      <Box sx={{ mt: 2 }}>
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 1 }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, lineHeight: 1 }}>
+            {Math.round(utilizationPercentage)}%
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {hoursThisWeek} / {utilizationLimit} hrs
+          </Typography>
+        </Stack>
+        <Box
+          sx={{
+            height: 10,
+            width: '100%',
+            bgcolor: 'action.hover',
+            borderRadius: 5,
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          <Box
+            sx={{
+              height: '100%',
+              width: `${utilizationPercentage}%`,
+              bgcolor: utilizationPercentage >= 100 ? 'success.main' : 'primary.main',
+              transition: 'width 1s ease-in-out',
+            }}
+          />
+        </Box>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+          {utilizationPercentage >= 100 ? "Goal reached! Great work." : "Keep it up to reach your 40hr goal."}
+        </Typography>
+      </Box>
+    </Paper>
+  </Grid>
+</Grid>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>

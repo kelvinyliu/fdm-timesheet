@@ -120,10 +120,10 @@ describe('dashboard pages', () => {
 
     render(<AdminDashboard />)
 
-    expect(screen.getByText('Admin overview')).toBeInTheDocument()
-    expect(screen.getByText('Total Users')).toBeInTheDocument()
-    expect(screen.getByText('2')).toBeInTheDocument()
-    expect(screen.getByText('Submitted')).toBeInTheDocument()
+    expect(screen.getByText('Platform overview')).toBeInTheDocument()
+    expect(screen.getByText('Total users')).toBeInTheDocument()
+    expect(screen.getAllByText('2').length).toBeGreaterThan(0)
+    expect(screen.getByText('Timesheet submitted')).toBeInTheDocument()
   })
 
   it('renders the admin dashboard empty-users path without NaN role widths', () => {

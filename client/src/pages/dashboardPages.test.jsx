@@ -23,6 +23,14 @@ vi.mock('../context/useAuth', () => ({
   useAuth: mocks.useAuth,
 }))
 
+vi.mock('../utils/dateFormatters', async () => {
+  const actual = await vi.importActual('../utils/dateFormatters')
+  return {
+    ...actual,
+    getCurrentMonday: vi.fn(() => '2026-04-13'),
+  }
+})
+
 describe('dashboard pages', () => {
   beforeEach(() => {
     mocks.navigate.mockReset()
@@ -53,6 +61,53 @@ describe('dashboard pages', () => {
     expect(screen.getByText('8.00 hrs (Editable)')).toBeInTheDocument()
   })
 
+  it('formats consultant financial summaries in GBP and bases utilization on the current week', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-current',
+          status: 'APPROVED',
+          weekStart: '2026-04-13',
+          updatedAt: '2026-04-14T09:00:00.000Z',
+          totalHours: 32,
+          totalBillAmount: 1200,
+        },
+        {
+          id: 'ts-older-edited',
+          status: 'REJECTED',
+          weekStart: '2026-04-06',
+          updatedAt: '2026-04-15T09:00:00.000Z',
+          totalHours: 8,
+          totalBillAmount: 0,
+        },
+        {
+          id: 'ts-pending',
+          status: 'PENDING',
+          weekStart: '2026-04-20',
+          updatedAt: '2026-04-12T09:00:00.000Z',
+          totalHours: 40,
+          totalBillAmount: 500,
+        },
+        {
+          id: 'ts-paid',
+          status: 'COMPLETED',
+          weekStart: '2026-04-01',
+          updatedAt: '2026-04-02T09:00:00.000Z',
+          totalHours: 20,
+          totalBillAmount: 800,
+        },
+      ],
+      error: null,
+    })
+
+    render(<ConsultantDashboard />)
+
+    expect(screen.getByText('£2,000.00')).toBeInTheDocument()
+    expect(screen.getByText('£1,700.00')).toBeInTheDocument()
+    expect(screen.getByText('80%')).toBeInTheDocument()
+    expect(screen.getByText('32 / 40 hrs')).toBeInTheDocument()
+  })
+
   it('renders admin dashboard summary cards from loader data', () => {
     mocks.useLoaderData.mockReturnValue({
       users: [
@@ -69,6 +124,20 @@ describe('dashboard pages', () => {
     expect(screen.getByText('Total Users')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
     expect(screen.getByText('Submitted')).toBeInTheDocument()
+  })
+
+  it('renders the admin dashboard empty-users path without NaN role widths', () => {
+    mocks.useLoaderData.mockReturnValue({
+      users: [],
+      auditLog: [],
+      error: 'Users unavailable',
+    })
+
+    render(<AdminDashboard />)
+
+    expect(screen.getByText('Users unavailable')).toBeInTheDocument()
+    expect(screen.getByText('Role distribution')).toBeInTheDocument()
+    expect(document.head.innerHTML).not.toContain('NaN%')
   })
 
   it('routes the manager approved card to the combined approved filter', () => {

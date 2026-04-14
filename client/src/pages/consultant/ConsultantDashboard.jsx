@@ -15,7 +15,8 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import DashboardCard from '../../components/shared/DashboardCard'
 import StatusBadge from '../../components/shared/StatusBadge'
 import { useAuth } from '../../context/useAuth'
-import { formatWeekStart } from '../../utils/dateFormatters'
+import { formatCurrency } from '../../utils/currency'
+import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 
 export default function ConsultantDashboard() {
   const navigate = useNavigate()
@@ -23,10 +24,10 @@ export default function ConsultantDashboard() {
   const { timesheets, error } = useLoaderData()
 
   const firstName = user?.name?.split(' ')[0] || 'there'
-  const currentMonth = new Date().getMonth();
-const currentYear = new Date().getFullYear();
-
-
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+  const currentWeekStart = getCurrentMonday()
 
   const drafts = timesheets.filter((t) => t.status === 'DRAFT')
   const pending = timesheets.filter((t) => t.status === 'PENDING')
@@ -56,45 +57,45 @@ const currentYear = new Date().getFullYear();
 
 
   const monthlyEarnings = timesheets
-  .filter(ts => {
-    const date = new Date(ts.weekStart);
-    return (ts.status === 'APPROVED' || ts.status === 'COMPLETED') && 
-          date.getMonth() === currentMonth && 
-          date.getFullYear() === currentYear;
-  })
-  .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0);
-
+    .filter((ts) => {
+      const date = new Date(ts.weekStart)
+      return (
+        (ts.status === 'APPROVED' || ts.status === 'COMPLETED') &&
+        date.getMonth() === currentMonth &&
+        date.getFullYear() === currentYear
+      )
+    })
+    .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
 
   const pendingPayment = timesheets
-  .filter(ts => ts.status === 'PENDING' || ts.status === 'APPROVED')
-  .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0);
+    .filter((ts) => ts.status === 'PENDING' || ts.status === 'APPROVED')
+    .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
 
-
-  const hoursThisWeek = sortedRecent[0]?.totalHours || 0;
-  const utilizationLimit = 40;
-  const utilizationPercentage = Math.min((hoursThisWeek / utilizationLimit) * 100, 100);
-
+  const currentWeekTimesheet = timesheets.find((ts) => ts.weekStart === currentWeekStart)
+  const hoursThisWeek = Number(currentWeekTimesheet?.totalHours) || 0
+  const utilizationLimit = 40
+  const utilizationPercentage = Math.min((hoursThisWeek / utilizationLimit) * 100, 100)
 
   const ytdHours = timesheets
-  .filter(ts => new Date(ts.weekStart).getFullYear() === currentYear)
-  .reduce((acc, ts) => acc + (Number(ts.totalHours) || 0), 0);  
+    .filter((ts) => new Date(ts.weekStart).getFullYear() === currentYear)
+    .reduce((acc, ts) => acc + (Number(ts.totalHours) || 0), 0)
 
-    return (
-      <Box sx={{ maxWidth: 1200, width: '100%' }}>
-        <Paper
-          sx={{
-            p: { xs: 3, md: 4 },
-            borderRadius: 3,
-            mb: 4,
-            border: '1px solid',
-            borderColor: 'divider',
-            animation: 'dashboardHeroIn 0.45s ease both',
-            '@keyframes dashboardHeroIn': {
-              from: { opacity: 0, transform: 'translateY(10px)' },
-              to: { opacity: 1, transform: 'translateY(0)' },
-            },
-          }}
-        >
+  return (
+    <Box sx={{ maxWidth: 1200, width: '100%' }}>
+      <Paper
+        sx={{
+          p: { xs: 3, md: 4 },
+          borderRadius: 3,
+          mb: 4,
+          border: '1px solid',
+          borderColor: 'divider',
+          animation: 'dashboardHeroIn 0.45s ease both',
+          '@keyframes dashboardHeroIn': {
+            from: { opacity: 0, transform: 'translateY(10px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
+          },
+        }}
+      >
         <Stack
           direction={{ xs: 'column', md: 'row' }}
           spacing={3}
@@ -168,13 +169,13 @@ const currentYear = new Date().getFullYear();
             <Box>
               <Typography variant="caption" color="text.secondary">Earned this Month</Typography>
               <Typography variant="h5" sx={{ fontWeight: 800, color: 'success.main', fontFamily: '"JetBrains Mono", monospace' }}>
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(monthlyEarnings)}
+                {formatCurrency(monthlyEarnings)}
               </Typography>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">Pending Payment</Typography>
               <Typography variant="h5" sx={{ fontWeight: 800, color: 'warning.main', fontFamily: '"JetBrains Mono", monospace' }}>
-                {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(pendingPayment)}
+                {formatCurrency(pendingPayment)}
               </Typography>
             </Box>
             <Box>

@@ -1,0 +1,86 @@
+import { render, screen, within } from '@testing-library/react'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import FinanceTimesheetListPage from './FinanceTimesheetListPage.jsx'
+
+const mocks = vi.hoisted(() => ({
+  navigate: vi.fn(),
+  useLoaderData: vi.fn(),
+  useLocation: vi.fn(),
+  useMediaQuery: vi.fn(),
+}))
+
+vi.mock('react-router', async () => {
+  const actual = await vi.importActual('react-router')
+  return {
+    ...actual,
+    useLoaderData: mocks.useLoaderData,
+    useLocation: mocks.useLocation,
+    useNavigate: () => mocks.navigate,
+  }
+})
+
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: mocks.useMediaQuery,
+}))
+
+vi.mock('../../components/shared/PageHeader', () => ({
+  default: function MockPageHeader({ children, title, subtitle }) {
+    return (
+      <div>
+        <h1>{title}</h1>
+        <p>{subtitle}</p>
+        <div>{children}</div>
+      </div>
+    )
+  },
+}))
+
+vi.mock('../../components/shared/TimesheetStatusDisplay.jsx', () => ({
+  default: function MockTimesheetStatusDisplay({ status }) {
+    return <span>{status}</span>
+  },
+}))
+
+describe('FinanceTimesheetListPage', () => {
+  beforeEach(() => {
+    mocks.navigate.mockReset()
+    mocks.useLoaderData.mockReset()
+    mocks.useLocation.mockReset()
+    mocks.useMediaQuery.mockReset()
+
+    mocks.useMediaQuery.mockReturnValue(false)
+    mocks.useLocation.mockReturnValue({
+      pathname: '/finance/timesheets',
+      search: '',
+      state: null,
+    })
+  })
+
+  it('derives summary card counts from all timesheets while listing only approved items on the to-pay tab', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        { id: 'ts-draft', consultantName: 'Dana Draft', status: 'DRAFT', totalHours: 8, weekStart: '2026-04-06' },
+        { id: 'ts-pending', consultantName: 'Perry Pending', status: 'PENDING', totalHours: 40, weekStart: '2026-04-06' },
+        { id: 'ts-rejected', consultantName: 'Riley Rejected', status: 'REJECTED', totalHours: 32, weekStart: '2026-04-06' },
+        { id: 'ts-approved', consultantName: 'Avery Approved', status: 'APPROVED', totalHours: 37.5, weekStart: '2026-04-13' },
+        { id: 'ts-completed', consultantName: 'Casey Completed', status: 'COMPLETED', totalHours: 41, weekStart: '2026-04-20' },
+      ],
+      error: null,
+    })
+
+    render(<FinanceTimesheetListPage />)
+
+    expect(within(screen.getByText('Drafts').closest('div')).getByText('1')).toBeInTheDocument()
+    expect(within(screen.getByText('Pending').closest('div')).getByText('1')).toBeInTheDocument()
+    expect(within(screen.getByText('Rejected').closest('div')).getByText('1')).toBeInTheDocument()
+    expect(
+      within(screen.getByText('Approved / Paid').closest('div')).getByText('2')
+    ).toBeInTheDocument()
+
+    expect(screen.getByText('Avery Approved')).toBeInTheDocument()
+    expect(screen.queryByText('Dana Draft')).not.toBeInTheDocument()
+    expect(screen.queryByText('Perry Pending')).not.toBeInTheDocument()
+    expect(screen.queryByText('Riley Rejected')).not.toBeInTheDocument()
+    expect(screen.queryByText('Casey Completed')).not.toBeInTheDocument()
+  })
+})

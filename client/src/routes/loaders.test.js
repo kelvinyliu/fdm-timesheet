@@ -186,7 +186,7 @@ describe('route loaders', () => {
     })
   })
 
-  it('filters finance timesheets to payable and paid statuses', async () => {
+  it('keeps all finance timesheets so the page can derive cross-status summary counts', async () => {
     mocks.getTimesheets.mockResolvedValue([
       { id: 'draft', status: 'DRAFT' },
       { id: 'approved', status: 'APPROVED' },
@@ -197,6 +197,7 @@ describe('route loaders', () => {
       financeTimesheetListLoader({ request: createRequest('/finance/timesheets') })
     ).resolves.toEqual({
       timesheets: [
+        { id: 'draft', status: 'DRAFT' },
         { id: 'approved', status: 'APPROVED' },
         { id: 'completed', status: 'COMPLETED' },
       ],

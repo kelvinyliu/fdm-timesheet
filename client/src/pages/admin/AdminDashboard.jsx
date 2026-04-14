@@ -36,6 +36,36 @@ export default function AdminDashboard() {
   const managers = users.filter((u) => u.role === 'LINE_MANAGER').length
   const financeManagers = users.filter((u) => u.role === 'FINANCE_MANAGER').length
   const admins = users.filter((u) => u.role === 'SYSTEM_ADMIN').length
+  const totalUsers = users.length
+  const roleBreakdown = [
+    {
+      label: 'Consultants',
+      count: consultants,
+      color: '#2E7D32',
+      desc: 'Active timesheet contributors',
+    },
+    {
+      label: 'Line Managers',
+      count: managers,
+      color: '#C58A00',
+      desc: 'Approvals & team oversight',
+    },
+    {
+      label: 'Finance Managers',
+      count: financeManagers,
+      color: '#1976D2',
+      desc: 'Payroll & billing processing',
+    },
+    {
+      label: 'System Admins',
+      count: admins,
+      color: '#6A1B9A',
+      desc: 'Platform configuration',
+    },
+  ].map((role) => ({
+    ...role,
+    width: totalUsers > 0 ? `${(role.count / totalUsers) * 100}%` : '0%',
+  }))
   const recentActivity = auditLog.slice(0, 5)
   const systemMessage =
     recentActivity.length > 0
@@ -166,19 +196,13 @@ export default function AdminDashboard() {
     boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
   }}
 >
-  <Box sx={{ width: `${(consultants / users.length) * 100}%`, bgcolor: '#2E7D32', transition: '0.5s' }} />
-  <Box sx={{ width: `${(managers / users.length) * 100}%`, bgcolor: '#C58A00', transition: '0.5s' }} />
-  <Box sx={{ width: `${(financeManagers / users.length) * 100}%`, bgcolor: '#1976D2', transition: '0.5s' }} />
-  <Box sx={{ width: `${(admins / users.length) * 100}%`, bgcolor: '#6A1B9A', transition: '0.5s' }} />
+  {roleBreakdown.map((role) => (
+    <Box key={role.label} sx={{ width: role.width, bgcolor: role.color, transition: '0.5s' }} />
+  ))}
 </Box>
 
 <Stack spacing={2} sx={{ flexGrow: 1 }}>
-  {[
-    { label: 'Consultants', count: consultants, color: '#2E7D32', desc: 'Active timesheet contributors' },
-    { label: 'Line Managers', count: managers, color: '#C58A00', desc: 'Approvals & team oversight' },
-    { label: 'Finance Managers', count: financeManagers, color: '#1976D2', desc: 'Payroll & billing processing' },
-    { label: 'System Admins', count: admins, color: '#6A1B9A', desc: 'Platform configuration' },
-  ].map((role) => (
+  {roleBreakdown.map((role) => (
     <Box
       key={role.label}
       sx={{

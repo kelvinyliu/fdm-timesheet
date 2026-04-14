@@ -182,11 +182,8 @@ export async function managerTimesheetListLoader({ request }) {
 
 export async function financeTimesheetListLoader({ request }) {
   try {
-    const timesheets = await getTimesheets({}, { signal: request.signal })
     return {
-      timesheets: timesheets.filter(
-        (item) => item.status === 'APPROVED' || item.status === 'COMPLETED'
-      ),
+      timesheets: await getTimesheets({}, { signal: request.signal }),
       error: null,
     }
   } catch (err) {

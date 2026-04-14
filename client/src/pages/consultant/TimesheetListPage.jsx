@@ -266,8 +266,16 @@ export default function TimesheetListPage({
                 ? 'No pending or draft timesheets'
                 : 'No approved or paid timesheets'}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {timesheets.length === 0 ? 'Create one to get started.' : 'Nothing to see here right now.'}
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{
+              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontSize: '1.2rem',
+              mb: 1,
+            }}
+          >
+            {timesheets.length === 0 ? 'Create one to get started.' : ''}
           </Typography>
         </Paper>
       )}

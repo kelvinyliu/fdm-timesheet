@@ -127,7 +127,6 @@ export default function FinanceTimesheetListPage() {
   ).length
 
   return (
-
     <Box>
       <PageHeader title={pageTitle} subtitle="Process approved timesheets and review paid ones">
         <TextField
@@ -146,9 +145,8 @@ export default function FinanceTimesheetListPage() {
             },
           }}
         />
-        
 
-        <FormControl size="small" sx={{ minWidth: 160 }}>
+        <FormControl size="small" sx={{ minWidth: 210, width: 210 }}>
           <InputLabel id="finance-sort-label">Sort</InputLabel>
           <Select
             labelId="finance-sort-label"
@@ -231,9 +229,6 @@ export default function FinanceTimesheetListPage() {
           ))}
         </Paper>
       )}
-      
-
-      
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
@@ -378,16 +373,16 @@ export default function FinanceTimesheetListPage() {
           </Stack>
         ) : (
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table sx={{ minWidth: 860 }}>
+            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ py: 1.75 }}>Submitter</TableCell>
-                  <TableCell sx={{ minWidth: 164, py: 1.75 }}>Week of</TableCell>
-                  <TableCell sx={{ minWidth: 136, py: 1.75 }}>Status</TableCell>
-                  <TableCell align="right" sx={{ minWidth: 120, py: 1.75 }}>
+                  <TableCell sx={{ width: '35%', py: 1.75 }}>Submitter</TableCell>
+                  <TableCell sx={{ width: '15%', py: 1.75 }}>Week of</TableCell>
+                  <TableCell sx={{ width: '20%', py: 1.75 }}>Status</TableCell>
+                  <TableCell align="right" sx={{ width: '10%', py: 1.75 }}>
                     Total Hours
                   </TableCell>
-                  <TableCell align="right" sx={{ minWidth: 132, py: 1.75 }}>
+                  <TableCell align="right" sx={{ width: '20%', py: 1.75 }}>
                     Actions
                   </TableCell>
                 </TableRow>

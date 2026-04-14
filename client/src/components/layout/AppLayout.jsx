@@ -32,7 +32,7 @@ const ROLE_SHORT = {
   SYSTEM_ADMIN: 'Admin',
 }
 
-function getBreadcrumbs(pathname) {
+export function getBreadcrumbs(pathname) {
   if (pathname.startsWith('/admin/dashboard')) return ['Admin', 'Dashboard']
   if (pathname.startsWith('/admin/audit-log')) return ['Admin', 'Audit Log']
   if (pathname.startsWith('/admin/assignments')) return ['Admin', 'Assignments']
@@ -58,6 +58,8 @@ function getBreadcrumbs(pathname) {
   }
 
   if (pathname.includes('/timesheets')) return ['Timesheets']
+  if (pathname.includes('/pay-rates')) return ['Pay Rates']
+  
   return []
 }
 

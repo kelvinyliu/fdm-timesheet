@@ -42,6 +42,8 @@ export function buildManagerTimesheetListPath(statusFilter = MANAGER_STATUS_FILT
 }
 
 export function matchesManagerStatusFilter(timesheetStatus, statusFilter) {
+  if (timesheetStatus === 'DRAFT') return false
+
   if (statusFilter === MANAGER_STATUS_FILTERS.ALL) return true
   if (statusFilter === MANAGER_STATUS_FILTERS.APPROVED_GROUP) {
     return timesheetStatus === 'APPROVED' || timesheetStatus === 'COMPLETED'

@@ -14,15 +14,11 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
-import Card from '@mui/material/Card'
-import CardContent from '@mui/material/CardContent'
-import Divider from '@mui/material/Divider'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import PageHeader from '../../components/shared/PageHeader'
-import { palette } from '../../theme.js'
 import { getAuditActorDisplayLabel, getAuditTimesheetDisplayLabel } from '../../utils/displayLabels'
 import { formatTimestamp } from '../../utils/dateFormatters'
 import ActionBadge from '../../components/shared/ActionBadge'
@@ -133,7 +129,7 @@ export default function AuditLogPage() {
           </Alert>
         )}
 
-        <Paper sx={{ p: { xs: 2.5, sm: 2.5 }, mt: { xs: 1, sm: 0 }, mb: { xs: 2.5, sm: 3 } }}>
+        <Box sx={{ mb: 3, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" useFlexGap alignItems={{ xs: 'stretch', sm: 'center' }}>
             <Autocomplete
               options={ACTION_OPTIONS}
@@ -187,7 +183,7 @@ export default function AuditLogPage() {
               </Button>
             )}
           </Stack>
-        </Paper>
+        </Box>
 
         {/* Desktop View */}
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
@@ -252,7 +248,7 @@ export default function AuditLogPage() {
                         sx={{
                           fontFamily: '"JetBrains Mono", monospace',
                           fontSize: '0.72rem',
-                          color: palette.textSecondary,
+                          color: 'text.secondary',
                           whiteSpace: 'normal',
                           overflowWrap: 'anywhere',
                           wordBreak: 'break-word',
@@ -283,75 +279,18 @@ export default function AuditLogPage() {
         </Box>
 
         {/* Mobile View */}
-        <Stack spacing={2} sx={{ display: { xs: 'flex', md: 'none' } }}>
-          {filtered.map((e) => (
-            <Card key={e.id} variant="outlined" sx={{ borderRadius: 2 }}>
-              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                  <ActionBadge action={e.action} />
-                  <Typography
-                    sx={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '0.75rem',
-                      color: palette.textSecondary,
-                    }}
-                  >
-                    {formatTimestamp(e.createdAt)}
-                  </Typography>
-                </Stack>
-                
-                <Divider sx={{ mb: 2, mx: -3 }} />
-
-                <Stack spacing={1.5}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Performed By
-                    </Typography>
-                    <Typography variant="body2" fontWeight={500}>
-                      {getAuditActorDisplayLabel(e.performedByName)}
-                    </Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Timesheet
-                    </Typography>
-                    <Typography variant="body2" fontWeight={500}>
-                      {getAuditTimesheetDisplayLabel({
-                        consultantName: e.timesheetConsultantName,
-                        weekStart: e.timesheetWeekStart,
-                      })}
-                    </Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Detail
-                    </Typography>
-                    <Typography
-                      sx={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '0.8rem',
-                        color: palette.textPrimary,
-                        whiteSpace: 'normal',
-                        overflowWrap: 'anywhere',
-                        wordBreak: 'break-word',
-                        backgroundColor: palette.surfaceMuted,
-                        p: 1.5,
-                        borderRadius: 1,
-                        mt: 0.5
-                      }}
-                    >
-                      {formatDetail(e.action, e.detail)}
-                    </Typography>
-                  </Box>
-                </Stack>
-              </CardContent>
-            </Card>
-          ))}
-          {filtered.length === 0 && (
-            <Paper sx={{ p: 4, textAlign: 'center', backgroundColor: palette.surfaceMuted, borderRadius: 2 }}>
-              <Typography color="text.secondary" variant="body1" gutterBottom>
+        <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+          {filtered.length === 0 ? (
+            <Box
+              sx={{
+                py: 6,
+                textAlign: 'center',
+                borderTop: '1px dashed',
+                borderBottom: '1px dashed',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography color="text.secondary" variant="body2" gutterBottom>
                 {hasFilters ? 'No entries match your filters.' : 'No audit log entries found.'}
               </Typography>
               {hasFilters && (
@@ -359,17 +298,61 @@ export default function AuditLogPage() {
                   Clear Filters
                 </Button>
               )}
-            </Paper>
+            </Box>
+          ) : (
+            <Stack
+              divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+              spacing={0}
+            >
+              {filtered.map((e) => (
+                <Box key={e.id} sx={{ py: 2.25 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.25} spacing={1.5}>
+                    <ActionBadge action={e.action} />
+                    <Typography
+                      sx={{
+                        fontFamily: '"JetBrains Mono", monospace',
+                        fontSize: '0.7rem',
+                        color: 'text.secondary',
+                      }}
+                    >
+                      {formatTimestamp(e.createdAt)}
+                    </Typography>
+                  </Stack>
+
+                  <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
+                    {getAuditActorDisplayLabel(e.performedByName)}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    {getAuditTimesheetDisplayLabel({
+                      consultantName: e.timesheetConsultantName,
+                      weekStart: e.timesheetWeekStart,
+                    })}
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '0.75rem',
+                      color: 'text.primary',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {formatDetail(e.action, e.detail)}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
           )}
-        </Stack>
+        </Box>
 
         {filtered.length > 0 && (
           <Typography
             sx={{
-              mt: 1.5,
+              mt: 2,
               fontFamily: '"JetBrains Mono", monospace',
               fontSize: '0.7rem',
-              color: palette.textMuted,
+              color: 'text.secondary',
             }}
           >
             Showing {filtered.length} of {entries.length} entries

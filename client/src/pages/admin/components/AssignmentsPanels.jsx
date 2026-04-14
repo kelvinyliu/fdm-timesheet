@@ -36,72 +36,61 @@ export function ClientAssignmentsPanel({
 
       {isMobile ? (
         assignments.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+          <Box
+            sx={{
+              py: 6,
+              textAlign: 'center',
+              borderTop: '1px dashed',
+              borderBottom: '1px dashed',
+              borderColor: 'divider',
+            }}
+          >
             <Typography variant="body2" color="text.secondary">
               No client assignments found.
             </Typography>
-          </Paper>
+          </Box>
         ) : (
-          <Stack spacing={1.5}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+            spacing={0}
+          >
             {assignments.map((assignment) => {
               const submitterLabel = getSubmitterDisplayLabel(
                 userById.get(assignment.consultantId)?.name ?? null
               )
 
               return (
-                <Paper key={assignment.id} sx={{ p: 2.5 }}>
-                  <Stack spacing={2}>
+                <Box key={assignment.id} sx={{ py: 2.5 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5} sx={{ mb: 1.25 }}>
                     <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Submitter
-                      </Typography>
                       <Typography variant="body2" fontWeight={600}>
                         {submitterLabel}
                       </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {assignment.clientName}
+                      </Typography>
                     </Box>
-
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                        gap: 1.5,
-                      }}
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem', fontWeight: 600 }}
                     >
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Client
-                        </Typography>
-                        <Typography variant="body2">{assignment.clientName}</Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Client Bill Rate
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
-                        >
-                          {formatCurrency(assignment.clientBillRate)}
-                        </Typography>
-                      </Box>
-                    </Box>
+                      {formatCurrency(assignment.clientBillRate)}
+                    </Typography>
+                  </Stack>
 
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Created
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
-                      >
-                        {formatDate(assignment.createdAt)}
-                      </Typography>
-                    </Box>
-
+                  <Stack direction="row" justifyContent="space-between" alignItems="center">
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.72rem' }}
+                    >
+                      Created {formatDate(assignment.createdAt)}
+                    </Typography>
                     <Button
+                      size="small"
                       variant="outlined"
                       color="error"
-                      startIcon={<DeleteIcon />}
+                      startIcon={<DeleteIcon sx={{ fontSize: '0.9rem' }} />}
                       onClick={() => {
                         void onDeleteAssignment(
                           assignment.id,
@@ -109,10 +98,10 @@ export function ClientAssignmentsPanel({
                         )
                       }}
                     >
-                      Remove Assignment
+                      Remove
                     </Button>
                   </Stack>
-                </Paper>
+                </Box>
               )
             })}
           </Stack>
@@ -211,58 +200,62 @@ export function ManagerAssignmentsPanel({
 
       {isMobile ? (
         assignments.length === 0 ? (
-          <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+          <Box
+            sx={{
+              py: 6,
+              textAlign: 'center',
+              borderTop: '1px dashed',
+              borderBottom: '1px dashed',
+              borderColor: 'divider',
+            }}
+          >
             <Typography variant="body2" color="text.secondary">
               No manager assignments found.
             </Typography>
-          </Paper>
+          </Box>
         ) : (
-          <Stack spacing={1.5}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+            spacing={0}
+          >
             {assignments.map((assignment) => (
-              <Paper key={assignment.id} sx={{ p: 2.5 }}>
-                <Stack spacing={2}>
+              <Box key={assignment.id} sx={{ py: 2.5 }}>
+                <Stack spacing={1.25}>
                   <Box>
-                    <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                      Manager
-                    </Typography>
                     <Typography variant="body2" fontWeight={600}>
                       {assignment.managerName}
                     </Typography>
-                  </Box>
-
-                  <Box>
-                    <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                      Submitter
+                    <Typography variant="body2" color="text.secondary">
+                      → {assignment.consultantName}
                     </Typography>
-                    <Typography variant="body2">{assignment.consultantName}</Typography>
                   </Box>
 
-                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+                  <Stack direction="row" spacing={1} justifyContent="flex-end">
                     <Button
+                      size="small"
                       variant="outlined"
-                      startIcon={<EditIcon />}
+                      startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
                       onClick={() => onEditAssignment(assignment)}
-                      fullWidth
                     >
-                      Edit Assignment
+                      Edit
                     </Button>
                     <Button
+                      size="small"
                       variant="outlined"
                       color="error"
-                      startIcon={<DeleteIcon />}
+                      startIcon={<DeleteIcon sx={{ fontSize: '0.9rem' }} />}
                       onClick={() => {
                         void onDeleteAssignment(
                           assignment.id,
                           `${assignment.managerName} -> ${assignment.consultantName}`
                         )
                       }}
-                      fullWidth
                     >
-                      Remove Assignment
+                      Remove
                     </Button>
                   </Stack>
                 </Stack>
-              </Paper>
+              </Box>
             ))}
           </Stack>
         )

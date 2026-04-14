@@ -18,6 +18,8 @@ import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
 import InputAdornment from '@mui/material/InputAdornment'
 import TextField from '@mui/material/TextField'
+import Tabs from '@mui/material/Tabs'
+import Tab from '@mui/material/Tab'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import RateReviewIcon from '@mui/icons-material/RateReview'
@@ -51,6 +53,18 @@ export default function ManagerTimesheetListPage() {
 
     const nextPath = buildManagerTimesheetListPath(nextStatusFilter)
     window.history.replaceState(window.history.state, '', nextPath)
+  }
+
+  const activeTab = statusFilter === MANAGER_STATUS_FILTERS.PENDING ? 0 : 1;
+
+  function handleTabChange(event, newValue) {
+    if (newValue === 0) {
+      handleStatusFilterChange(MANAGER_STATUS_FILTERS.PENDING);
+    } else {
+      if (statusFilter === MANAGER_STATUS_FILTERS.PENDING) {
+        handleStatusFilterChange(MANAGER_STATUS_FILTERS.ALL);
+      }
+    }
   }
 
   function handleOpenTimesheet(timesheetId) {
@@ -117,22 +131,36 @@ export default function ManagerTimesheetListPage() {
             },
           }}
         />
-        <FormControl size="small" sx={{ minWidth: 160, width: { xs: '100%', sm: 'auto' } }}>
-          <InputLabel id="status-filter-label">Status</InputLabel>
-          <Select
-            labelId="status-filter-label"
-            value={statusFilter}
-            label="Status"
-            onChange={(e) => handleStatusFilterChange(e.target.value)}
-          >
-            <MenuItem value={MANAGER_STATUS_FILTERS.ALL}>All</MenuItem>
-            <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
-            <MenuItem value={MANAGER_STATUS_FILTERS.APPROVED_GROUP}>Approved</MenuItem>
-            <MenuItem value={MANAGER_STATUS_FILTERS.REJECTED}>Rejected</MenuItem>
-            <MenuItem value={MANAGER_STATUS_FILTERS.PAID}>Paid</MenuItem>
-          </Select>
-        </FormControl>
+        {activeTab === 1 && (
+          <FormControl size="small" sx={{ minWidth: 160, width: { xs: '100%', sm: 'auto' } }}>
+            <InputLabel id="status-filter-label">Status</InputLabel>
+            <Select
+              labelId="status-filter-label"
+              value={statusFilter}
+              label="Status"
+              onChange={(e) => handleStatusFilterChange(e.target.value)}
+            >
+              <MenuItem value={MANAGER_STATUS_FILTERS.ALL}>All</MenuItem>
+              <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
+              <MenuItem value={MANAGER_STATUS_FILTERS.APPROVED_GROUP}>Approved</MenuItem>
+              <MenuItem value={MANAGER_STATUS_FILTERS.REJECTED}>Rejected</MenuItem>
+              <MenuItem value={MANAGER_STATUS_FILTERS.PAID}>Paid</MenuItem>
+            </Select>
+          </FormControl>
+        )}
       </PageHeader>
+
+      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, mx: { xs: 0, sm: 0 } }}>
+        <Tabs 
+          value={activeTab} 
+          onChange={handleTabChange}
+          variant={isMobile ? "fullWidth" : "standard"}
+          sx={{ '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500, pb: 1.5 } }}
+        >
+          <Tab label="Pending Approval" />
+          <Tab label="All Timesheets" />
+        </Tabs>
+      </Box>
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>

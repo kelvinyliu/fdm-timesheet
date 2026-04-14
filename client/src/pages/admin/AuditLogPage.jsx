@@ -13,6 +13,10 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
+import Button from '@mui/material/Button'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Divider from '@mui/material/Divider'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
@@ -93,6 +97,13 @@ export default function AuditLogPage() {
   const [dateFrom, setDateFrom] = useState(null)
   const [dateTo, setDateTo] = useState(null)
 
+  const handleClearFilters = () => {
+    setActionFilter(null)
+    setAuthorFilter(null)
+    setDateFrom(null)
+    setDateTo(null)
+  }
+
   useEffect(() => {
     setError(loadError)
   }, [loadError])
@@ -122,14 +133,14 @@ export default function AuditLogPage() {
           </Alert>
         )}
 
-        <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 3 }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" useFlexGap>
+        <Paper sx={{ p: { xs: 2.5, sm: 2.5 }, mt: { xs: 1, sm: 0 }, mb: { xs: 2.5, sm: 3 } }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" useFlexGap alignItems={{ xs: 'stretch', sm: 'center' }}>
             <Autocomplete
               options={ACTION_OPTIONS}
               value={actionFilter}
               onChange={(_e, value) => setActionFilter(value)}
               size="small"
-              sx={{ width: { xs: '100%', sm: 200 } }}
+              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 180px' }, minWidth: { sm: 180 } }}
               renderInput={(params) => <TextField {...params} label="Action" />}
             />
             <Autocomplete
@@ -137,7 +148,7 @@ export default function AuditLogPage() {
               value={authorFilter}
               onChange={(_e, value) => setAuthorFilter(value)}
               size="small"
-              sx={{ width: { xs: '100%', sm: 220 } }}
+              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 200px' }, minWidth: { sm: 200 } }}
               renderInput={(params) => <TextField {...params} label="Performed By" />}
             />
             <DatePicker
@@ -148,7 +159,7 @@ export default function AuditLogPage() {
                 field: { clearable: true, size: 'small' },
                 textField: { size: 'small' },
               }}
-              sx={{ width: { xs: '100%', sm: 170 } }}
+              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 150px' }, minWidth: { sm: 150 } }}
             />
             <DatePicker
               label="To"
@@ -158,93 +169,199 @@ export default function AuditLogPage() {
                 field: { clearable: true, size: 'small' },
                 textField: { size: 'small' },
               }}
-              sx={{ width: { xs: '100%', sm: 170 } }}
+              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 150px' }, minWidth: { sm: 150 } }}
             />
+            {hasFilters && (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleClearFilters}
+                sx={{
+                  flex: { xs: 'none', sm: '0 0 auto' },
+                  width: { xs: '100%', sm: 'auto' },
+                  height: 40,
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
           </Stack>
         </Paper>
 
-        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-          <Table size="small" sx={{ minWidth: 900 }}>
-            <TableHead>
-              <TableRow>
-                <TableCell>Timestamp</TableCell>
-                <TableCell>Action</TableCell>
-                <TableCell>Performed By</TableCell>
-                <TableCell>Timesheet</TableCell>
-                <TableCell>Detail</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filtered.map((e) => (
-                <TableRow key={e.id}>
-                  <TableCell sx={{ whiteSpace: 'nowrap' }}>
-                    <Typography
+        {/* Desktop View */}
+        <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+            <Table size="small" sx={{ minWidth: 900 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Timestamp</TableCell>
+                  <TableCell>Action</TableCell>
+                  <TableCell>Performed By</TableCell>
+                  <TableCell>Timesheet</TableCell>
+                  <TableCell>Detail</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {filtered.map((e) => (
+                  <TableRow key={e.id}>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.75rem',
+                        }}
+                      >
+                        {formatTimestamp(e.createdAt)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <ActionBadge action={e.action} />
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                      >
+                        {getAuditActorDisplayLabel(e.performedByName)}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        fontWeight={500}
+                        sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                      >
+                        {getAuditTimesheetDisplayLabel({
+                          consultantName: e.timesheetConsultantName,
+                          weekStart: e.timesheetWeekStart,
+                        })}
+                      </Typography>
+                    </TableCell>
+                    <TableCell
                       sx={{
-                        fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '0.75rem',
+                        maxWidth: { md: 320 },
+                        whiteSpace: 'normal',
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
                       }}
+                      title={formatDetail(e.action, e.detail)}
                     >
-                      {formatTimestamp(e.createdAt)}
+                      <Typography
+                        sx={{
+                          fontFamily: '"JetBrains Mono", monospace',
+                          fontSize: '0.72rem',
+                          color: palette.textSecondary,
+                          whiteSpace: 'normal',
+                          overflowWrap: 'anywhere',
+                          wordBreak: 'break-word',
+                        }}
+                      >
+                        {formatDetail(e.action, e.detail)}
+                      </Typography>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {filtered.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
+                      <Typography color="text.secondary" variant="body1" gutterBottom>
+                        {hasFilters ? 'No entries match your filters.' : 'No audit log entries found.'}
+                      </Typography>
+                      {hasFilters && (
+                        <Button variant="outlined" size="small" onClick={handleClearFilters} sx={{ mt: 1 }}>
+                          Clear Filters
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Box>
+
+        {/* Mobile View */}
+        <Stack spacing={2} sx={{ display: { xs: 'flex', md: 'none' } }}>
+          {filtered.map((e) => (
+            <Card key={e.id} variant="outlined" sx={{ borderRadius: 2 }}>
+              <CardContent sx={{ p: 3, '&:last-child': { pb: 3 } }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={2}>
+                  <ActionBadge action={e.action} />
+                  <Typography
+                    sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '0.75rem',
+                      color: palette.textSecondary,
+                    }}
+                  >
+                    {formatTimestamp(e.createdAt)}
+                  </Typography>
+                </Stack>
+                
+                <Divider sx={{ mb: 2, mx: -3 }} />
+
+                <Stack spacing={1.5}>
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Performed By
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <ActionBadge action={e.action} />
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      fontWeight={500}
-                      sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
-                    >
+                    <Typography variant="body2" fontWeight={500}>
                       {getAuditActorDisplayLabel(e.performedByName)}
                     </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      fontWeight={500}
-                      sx={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
-                    >
+                  </Box>
+
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Timesheet
+                    </Typography>
+                    <Typography variant="body2" fontWeight={500}>
                       {getAuditTimesheetDisplayLabel({
                         consultantName: e.timesheetConsultantName,
                         weekStart: e.timesheetWeekStart,
                       })}
                     </Typography>
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      maxWidth: { xs: 220, md: 320 },
-                      whiteSpace: 'normal',
-                      overflowWrap: 'anywhere',
-                      wordBreak: 'break-word',
-                    }}
-                    title={formatDetail(e.action, e.detail)}
-                  >
+                  </Box>
+
+                  <Box>
+                    <Typography variant="caption" color="text.secondary" display="block" gutterBottom sx={{ fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      Detail
+                    </Typography>
                     <Typography
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
-                        fontSize: '0.72rem',
-                        color: palette.textSecondary,
+                        fontSize: '0.8rem',
+                        color: palette.textPrimary,
                         whiteSpace: 'normal',
                         overflowWrap: 'anywhere',
                         wordBreak: 'break-word',
+                        backgroundColor: palette.surfaceMuted,
+                        p: 1.5,
+                        borderRadius: 1,
+                        mt: 0.5
                       }}
                     >
                       {formatDetail(e.action, e.detail)}
                     </Typography>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={5} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                    {hasFilters ? 'No entries match your filters.' : 'No audit log entries found.'}
-                  </TableCell>
-                </TableRow>
+                  </Box>
+                </Stack>
+              </CardContent>
+            </Card>
+          ))}
+          {filtered.length === 0 && (
+            <Paper sx={{ p: 4, textAlign: 'center', backgroundColor: palette.surfaceMuted, borderRadius: 2 }}>
+              <Typography color="text.secondary" variant="body1" gutterBottom>
+                {hasFilters ? 'No entries match your filters.' : 'No audit log entries found.'}
+              </Typography>
+              {hasFilters && (
+                <Button variant="outlined" size="small" onClick={handleClearFilters} sx={{ mt: 1 }}>
+                  Clear Filters
+                </Button>
               )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+            </Paper>
+          )}
+        </Stack>
 
         {filtered.length > 0 && (
           <Typography

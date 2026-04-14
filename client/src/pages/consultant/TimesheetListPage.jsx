@@ -361,7 +361,7 @@ export default function TimesheetListPage() {
         fullWidth
         maxWidth="xs"
       >
-        <DialogTitle>Create Missing Week</DialogTitle>
+        <DialogTitle sx={{fontFamily : 'Poppins'}}>Create Missing Week</DialogTitle>
         <DialogContent dividers>
           {missingPastWeekStarts.length === 0 ? (
             <Typography variant="body2" color="text.secondary">
@@ -380,7 +380,7 @@ export default function TimesheetListPage() {
                     variant="outlined"
                     onClick={() => handleCreateForWeek(weekStart)}
                     disabled={creatingWeekStart !== null}
-                    sx={{ justifyContent: 'space-between' }}
+                    sx={{ justifyContent: 'space-between',color: '#000000', borderColor: '#000000', '&:hover': {backgroundColor: '#c5ff00', color: '#000000', borderColor: '#c5ff00'}}}
                   >
                     <span>{formatWeekStart(weekStart)}</span>
                     <span>{isCreating ? 'Creating...' : 'Create'}</span>
@@ -391,7 +391,7 @@ export default function TimesheetListPage() {
           )}
         </DialogContent>
         <DialogActions>
-          <Button
+          <Button sx={{color: '#000000', borderColor: '#000000', '&:hover': {backgroundColor: '#c5ff00', color: '#000000', borderColor: '#c5ff00'}}}
             onClick={() => setMissingWeekDialogOpen(false)}
             disabled={creatingWeekStart !== null}
           >

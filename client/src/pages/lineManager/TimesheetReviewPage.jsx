@@ -139,8 +139,8 @@ export default function TimesheetReviewPage() {
   const summaryItems = timesheet
     ? [
         {
-          key: 'submitter',
-          label: 'Submitter',
+          key: '"Employee"',
+          label: '"Employee"',
           value: getSubmitterDisplayLabel(timesheet.consultantName),
         },
         {

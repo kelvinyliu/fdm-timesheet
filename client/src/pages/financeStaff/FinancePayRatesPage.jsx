@@ -72,7 +72,7 @@ export default function FinancePayRatesPage() {
         prev.map((consultant) => (consultant.id === consultantId ? updated : consultant))
       )
       setPendingRates((prev) => ({ ...prev, [consultantId]: String(updated.defaultPayRate) }))
-      setFeedback('Submitter pay rate updated.')
+      setFeedback('"Employee" pay rate updated.')
     } catch (err) {
       setError(err.message || 'Failed to update submitter pay rate.')
     } finally {
@@ -106,7 +106,7 @@ export default function FinancePayRatesPage() {
   return (
     <Box>
       <PageHeader
-        title="Submitter Pay Rates"
+        title=""Employee" Pay Rates"
         subtitle="Configure default pay rates used to prefill outgoing payroll costs"
       >
         <TextField

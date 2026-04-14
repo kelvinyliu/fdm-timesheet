@@ -1,3 +1,4 @@
+import Decimal from 'decimal.js'
 import {
   getTimesheetsByConsultant,
   getTimesheetsForManager,
@@ -21,7 +22,11 @@ import { paymentDto } from '../dtos/paymentDto.js'
 import { financialNoteDto } from '../dtos/financialNoteDto.js'
 import logger from '../logger.js'
 import { formatDateOnly } from '../utils/dateOnly.js'
-import { isUuid, isIsoDate, toUtcDate } from '../utils/validation.js'
+import { isUuid, isIsoDate, sameUuid, toUtcDate } from '../utils/validation.js'
+import {
+  getCreatableTimesheetWeeks,
+  getCurrentUtcMonday,
+} from '../utils/timesheetEligibility.js'
 
 function requireUuid(res, value, fieldName) {
   if (!isUuid(value)) {
@@ -35,8 +40,45 @@ function formatDateValue(value) {
   return formatDateOnly(value)
 }
 
+async function getConsultantWeekEligibility(consultantId, now = new Date()) {
+  const [consultant, timesheets] = await Promise.all([
+    findUserById(consultantId),
+    getTimesheetsByConsultant(consultantId),
+  ])
+
+  if (!consultant) {
+    const err = new Error('Submitter not found')
+    err.status = 404
+    throw err
+  }
+
+  return getCreatableTimesheetWeeks({
+    now,
+    userCreatedAt: consultant.created_at,
+    existingWeekStarts: timesheets.map((timesheet) => timesheet.week_start),
+  })
+}
+
 function entryKey({ date, entryKind, assignmentId }) {
   return `${date}|${entryKind}|${assignmentId ?? 'internal'}`
+}
+
+function parseDecimal(value) {
+  try {
+    const decimal = new Decimal(value)
+    return decimal.isFinite() ? decimal : null
+  } catch {
+    return null
+  }
+}
+
+function decimalToNumber(value, decimalPlaces = null) {
+  const decimal = decimalPlaces == null ? value : value.toDecimalPlaces(decimalPlaces)
+  return Number(decimal.toString())
+}
+
+function moneyToNumber(value) {
+  return decimalToNumber(value, 2)
 }
 
 function summariseEntries(entries) {
@@ -142,7 +184,9 @@ export async function listTimesheets(req, res, next) {
     if (req.user.role === Role.CONSULTANT) {
       timesheets = await getTimesheetsByConsultant(req.user.userId)
     } else if (req.user.role === Role.LINE_MANAGER) {
-      timesheets = await getTimesheetsForManager(req.user.userId)
+      timesheets = req.query.scope === 'own'
+        ? await getTimesheetsByConsultant(req.user.userId)
+        : await getTimesheetsForManager(req.user.userId)
     } else if (req.user.role === Role.FINANCE_MANAGER) {
       timesheets = await getApprovedTimesheets()
     } else {
@@ -152,6 +196,18 @@ export async function listTimesheets(req, res, next) {
     res.json(
       timesheets.map((timesheet) => timesheetDto(timesheet, workSummaryMap.get(timesheet.timesheet_id) ?? []))
     )
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function listEligibleWeeks(req, res, next) {
+  try {
+    const eligibility = await getConsultantWeekEligibility(req.user.userId)
+    res.json({
+      currentWeekStart: eligibility.currentWeekStart,
+      missingPastWeekStarts: eligibility.missingPastWeekStarts,
+    })
   } catch (err) {
     next(err)
   }
@@ -171,6 +227,30 @@ export async function createTimesheetHandler(req, res, next) {
 
     if (assignmentId !== undefined && assignmentId !== null) {
       return res.status(400).json({ error: 'assignmentId is no longer set during timesheet creation' })
+    }
+
+    const eligibility = await getConsultantWeekEligibility(req.user.userId)
+    const currentWeekStart = eligibility.currentWeekStart
+    const accountCreatedWeekStart = eligibility.accountCreatedWeekStart
+
+    if (eligibility.existingWeekStartSet.has(weekStart)) {
+      return res.status(409).json({ error: 'A timesheet for this week already exists' })
+    }
+
+    if (weekStart > currentWeekStart) {
+      return res.status(400).json({ error: 'Timesheets cannot be created for future weeks' })
+    }
+
+    if (weekStart < accountCreatedWeekStart) {
+      return res.status(400).json({ error: 'Timesheets cannot be created for weeks before your account existed' })
+    }
+
+    if (weekStart < eligibility.earliestWindowWeekStart) {
+      return res.status(400).json({ error: 'Timesheets can only be created for the current week or the previous 4 weeks' })
+    }
+
+    if (!eligibility.creatableWeekStarts.includes(weekStart)) {
+      return res.status(400).json({ error: 'This week is not currently eligible for timesheet creation' })
     }
 
     const timesheet = await createTimesheet({
@@ -199,12 +279,13 @@ export async function getTimesheet(req, res, next) {
     }
 
     if (req.user.role === Role.CONSULTANT) {
-      if (timesheet.consultant_id !== req.user.userId) {
+      if (!sameUuid(timesheet.consultant_id, req.user.userId)) {
         return res.status(403).json({ error: 'Forbidden' })
       }
     } else if (req.user.role === Role.LINE_MANAGER) {
-      const managed = await getTimesheetsForManager(req.user.userId)
-      const authorised = managed.some((t) => t.timesheet_id === timesheet.timesheet_id)
+      const isOwnTimesheet = sameUuid(timesheet.consultant_id, req.user.userId)
+      const managed = isOwnTimesheet ? [] : await getTimesheetsForManager(req.user.userId)
+      const authorised = isOwnTimesheet || managed.some((t) => t.timesheet_id === timesheet.timesheet_id)
       if (!authorised) {
         return res.status(403).json({ error: 'Forbidden' })
       }
@@ -234,7 +315,7 @@ export async function updateEntries(req, res, next) {
       return res.status(404).json({ error: 'Timesheet not found' })
     }
 
-    if (timesheet.consultant_id !== req.user.userId) {
+    if (!sameUuid(timesheet.consultant_id, req.user.userId)) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
@@ -294,7 +375,7 @@ export async function updateEntries(req, res, next) {
         if (!assignment) {
           return res.status(404).json({ error: 'Assignment not found' })
         }
-        if (assignment.consultant_id !== req.user.userId) {
+        if (!sameUuid(assignment.consultant_id, req.user.userId)) {
           return res.status(400).json({ error: 'assignmentId must belong to the authenticated consultant' })
         }
 
@@ -352,7 +433,7 @@ export async function submitTimesheet(req, res, next) {
       return res.status(404).json({ error: 'Timesheet not found' })
     }
 
-    if (timesheet.consultant_id !== req.user.userId) {
+    if (!sameUuid(timesheet.consultant_id, req.user.userId)) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
@@ -365,13 +446,29 @@ export async function submitTimesheet(req, res, next) {
       return res.status(400).json({ error: 'Timesheet must include at least one entry before submission' })
     }
 
-    const updated = await updateTimesheetStatus(req.params.id, TimesheetStatus.PENDING)
+    const currentMonday = getCurrentUtcMonday()
+    const weekStart = formatDateValue(timesheet.week_start)
+    const isFirstSubmission = !timesheet.submitted_at
+    const submittedLate = isFirstSubmission
+      ? weekStart < currentMonday
+      : Boolean(timesheet.submitted_late)
+    const submittedAt = isFirstSubmission ? new Date().toISOString() : timesheet.submitted_at ?? null
+    const updated = await updateTimesheetStatus(req.params.id, TimesheetStatus.PENDING, {
+      submittedAt: isFirstSubmission ? submittedAt : null,
+      submittedLate,
+      allowedStatuses: [TimesheetStatus.DRAFT, TimesheetStatus.REJECTED],
+      conflictMessage: 'Only draft or rejected timesheets can be submitted',
+    })
 
     await tryLogAction({
       action: 'SUBMISSION',
       performedBy: req.user.userId,
       timesheetId: req.params.id,
-      detail: { previousStatus: timesheet.status },
+      detail: {
+        previousStatus: timesheet.status,
+        submittedLate,
+        submittedAt,
+      },
     }, req)
 
     res.json(timesheetDto(updated))
@@ -402,6 +499,10 @@ export async function reviewTimesheetHandler(req, res, next) {
 
     if (timesheet.status !== TimesheetStatus.PENDING) {
       return res.status(409).json({ error: 'Only pending timesheets can be reviewed' })
+    }
+
+    if (sameUuid(timesheet.consultant_id, req.user.userId)) {
+      return res.status(403).json({ error: 'You cannot review your own timesheet' })
     }
 
     const managed = await getTimesheetsForManager(req.user.userId)
@@ -436,7 +537,7 @@ export async function autofillTimesheet(req, res, next) {
       return res.status(404).json({ error: 'Timesheet not found' })
     }
 
-    if (timesheet.consultant_id !== req.user.userId) {
+    if (!sameUuid(timesheet.consultant_id, req.user.userId)) {
       return res.status(403).json({ error: 'Forbidden' })
     }
 
@@ -525,39 +626,39 @@ export async function processPaymentHandler(req, res, next) {
         return res.status(400).json({ error: 'breakdowns must match the timesheet work categories exactly' })
       }
 
-      const billRate = Number(breakdown.billRate ?? 0)
-      if (!Number.isFinite(billRate) || billRate < 0) {
+      const billRate = parseDecimal(breakdown.billRate ?? 0)
+      if (!billRate || billRate.isNegative()) {
         return res.status(400).json({ error: 'Each breakdown must include a billRate of 0 or greater' })
       }
 
-      if (summary.entry_kind === 'CLIENT' && billRate <= 0) {
+      if (summary.entry_kind === 'CLIENT' && billRate.lte(0)) {
         return res.status(400).json({ error: 'Client breakdowns must include a billRate greater than 0' })
       }
 
-      if (summary.entry_kind === 'INTERNAL' && billRate !== 0) {
+      if (summary.entry_kind === 'INTERNAL' && !billRate.isZero()) {
         return res.status(400).json({ error: 'Internal breakdowns must use a billRate of 0' })
       }
 
-      const payRate = Number(breakdown.payRate)
-      if (!Number.isFinite(payRate) || payRate <= 0) {
+      const payRate = parseDecimal(breakdown.payRate)
+      if (!payRate || payRate.lte(0)) {
         return res.status(400).json({ error: 'Each breakdown must include a payRate greater than 0' })
       }
 
-      const hoursWorked = parseFloat(summary.total_hours)
-      const billAmount = parseFloat((billRate * hoursWorked).toFixed(2))
-      const payAmount = parseFloat((payRate * hoursWorked).toFixed(2))
-      const marginAmount = parseFloat((billAmount - payAmount).toFixed(2))
+      const hoursWorked = parseDecimal(summary.total_hours)
+      const billAmount = billRate.mul(hoursWorked).toDecimalPlaces(2)
+      const payAmount = payRate.mul(hoursWorked).toDecimalPlaces(2)
+      const marginAmount = billAmount.minus(payAmount).toDecimalPlaces(2)
 
       normalisedBreakdowns.push({
         entryKind: summary.entry_kind,
         assignmentId: summary.assignment_id ?? null,
         bucketLabel: summary.bucket_label,
-        hoursWorked,
-        billRate,
-        billAmount,
-        payRate,
-        payAmount,
-        marginAmount,
+        hoursWorked: decimalToNumber(hoursWorked),
+        billRate: decimalToNumber(billRate),
+        billAmount: moneyToNumber(billAmount),
+        payRate: decimalToNumber(payRate),
+        payAmount: moneyToNumber(payAmount),
+        marginAmount: moneyToNumber(marginAmount),
       })
     }
 
@@ -565,14 +666,16 @@ export async function processPaymentHandler(req, res, next) {
       return res.status(400).json({ error: 'breakdowns must match the timesheet work categories exactly' })
     }
 
-    const totalHours = normalisedBreakdowns.reduce((sum, breakdown) => sum + breakdown.hoursWorked, 0)
-    const totalBillAmount = parseFloat(
-      normalisedBreakdowns.reduce((sum, breakdown) => sum + breakdown.billAmount, 0).toFixed(2)
+    const totalHours = decimalToNumber(
+      normalisedBreakdowns.reduce((sum, breakdown) => sum.plus(breakdown.hoursWorked), new Decimal(0))
     )
-    const totalPayAmount = parseFloat(
-      normalisedBreakdowns.reduce((sum, breakdown) => sum + breakdown.payAmount, 0).toFixed(2)
+    const totalBillAmount = moneyToNumber(
+      normalisedBreakdowns.reduce((sum, breakdown) => sum.plus(breakdown.billAmount), new Decimal(0))
     )
-    const marginAmount = parseFloat((totalBillAmount - totalPayAmount).toFixed(2))
+    const totalPayAmount = moneyToNumber(
+      normalisedBreakdowns.reduce((sum, breakdown) => sum.plus(breakdown.payAmount), new Decimal(0))
+    )
+    const marginAmount = moneyToNumber(new Decimal(totalBillAmount).minus(totalPayAmount))
     const trimmedNotes = notes?.trim()
 
     const payment = await createPayment({

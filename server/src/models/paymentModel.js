@@ -1,5 +1,11 @@
 import pool from '../db.js'
 
+function httpError(message, status) {
+  const err = new Error(message)
+  err.status = status
+  return err
+}
+
 async function getPaymentBreakdownsWithDb(db, paymentId) {
   const { rows } = await db.query(
     `SELECT entry_kind,
@@ -54,6 +60,31 @@ export async function createPayment({
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
+    const { rows: timesheetRows } = await client.query(
+      `SELECT status
+       FROM timesheets
+       WHERE timesheet_id = $1
+       FOR UPDATE`,
+      [timesheetId]
+    )
+
+    if (timesheetRows.length === 0) {
+      throw httpError('Timesheet not found', 404)
+    }
+
+    if (timesheetRows[0].status !== 'APPROVED') {
+      const { rows: paymentRows } = await client.query(
+        'SELECT payment_id FROM payments WHERE timesheet_id = $1',
+        [timesheetId]
+      )
+
+      if (paymentRows.length > 0) {
+        throw httpError('Payment has already been processed for this timesheet', 409)
+      }
+
+      throw httpError('Only approved timesheets can be processed for payment', 409)
+    }
+
     const { rows } = await client.query(
       `INSERT INTO payments (
          timesheet_id,
@@ -100,7 +131,8 @@ export async function createPayment({
 
     await client.query(
       `UPDATE timesheets SET status = 'COMPLETED', updated_at = NOW()
-       WHERE timesheet_id = $1`,
+       WHERE timesheet_id = $1
+         AND status = 'APPROVED'`,
       [timesheetId]
     )
     await client.query('COMMIT')

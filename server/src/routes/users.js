@@ -16,6 +16,7 @@ const router = Router()
 router.use(auth)
 
 router.get('/', requireRole(Role.SYSTEM_ADMIN), listUsers)
+router.get('/submitters/pay-rates', requireRole(Role.FINANCE_MANAGER, Role.SYSTEM_ADMIN), listConsultantPayRatesHandler)
 router.get('/consultants/pay-rates', requireRole(Role.FINANCE_MANAGER, Role.SYSTEM_ADMIN), listConsultantPayRatesHandler)
 router.post('/', requireRole(Role.SYSTEM_ADMIN), createUserHandler)
 router.patch('/:id/role', requireRole(Role.SYSTEM_ADMIN), updateRoleHandler)

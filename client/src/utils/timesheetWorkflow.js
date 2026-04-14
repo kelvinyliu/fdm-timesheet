@@ -63,7 +63,9 @@ export function getMostRecentClientAssignmentId(timesheets = [], currentTimeshee
     .sort((a, b) => new Date(b.weekStart) - new Date(a.weekStart))
 
   for (const timesheet of ordered) {
-    const match = (timesheet.workSummary ?? []).find((item) => item.entryKind === 'CLIENT' && item.assignmentId)
+    const match = (timesheet.workSummary ?? []).find(
+      (item) => item.entryKind === 'CLIENT' && item.assignmentId
+    )
     if (match?.assignmentId) return match.assignmentId
   }
 

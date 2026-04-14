@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router'
+import { useState } from 'react'
+import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -22,60 +22,80 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import RateReviewIcon from '@mui/icons-material/RateReview'
 import SearchIcon from '@mui/icons-material/Search'
-import StatusBadge from '../../components/shared/StatusBadge'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
-import { getTimesheets } from '../../api/timesheets'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import { formatWeekStart } from '../../utils/dateFormatters'
+import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 import {
-  getConsultantDisplayLabel,
-  getTimesheetStatusDisplayLabel,
-} from '../../utils/displayLabels'
+  buildManagerTimesheetListPath,
+  getManagerStatusFilterFromSearch,
+  getManagerStatusFilterLabel,
+  MANAGER_STATUS_FILTERS,
+  matchesManagerStatusFilter,
+} from './utils/managerTimesheetFilters.js'
 
+function getStatusFilterFromUrl() {
+  return getManagerStatusFilterFromSearch(window.location.search)
+}
 
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
-  const [timesheets, setTimesheets] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [statusFilter, setStatusFilter] = useState('ALL')
+  const { timesheets, error } = useLoaderData()
+  const [statusFilter, setStatusFilter] = useState(getStatusFilterFromUrl)
   const [searchQuery, setSearchQuery] = useState('')
 
-  useEffect(() => {
-    getTimesheets()
-      .then(setTimesheets)
-      .catch((err) => setError(err.message ?? 'Failed to load timesheets'))
-      .finally(() => setLoading(false))
-  }, [])
+  function handleStatusFilterChange(nextStatusFilter) {
+    setStatusFilter(nextStatusFilter)
 
-  if (loading) return <LoadingSpinner />
+    const nextPath = buildManagerTimesheetListPath(nextStatusFilter)
+    window.history.replaceState(window.history.state, '', nextPath)
+  }
+
+  function handleOpenTimesheet(timesheetId) {
+    navigate(`/manager/timesheets/${timesheetId}`, {
+      state: { returnTo: buildManagerTimesheetListPath(statusFilter) },
+    })
+  }
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
-  const filtered = timesheets.filter((ts) => {
-    const matchesStatus = statusFilter === 'ALL' || ts.status === statusFilter
+  const filtered = timesheets.filter((timesheet) => {
+    const matchesStatus = matchesManagerStatusFilter(timesheet.status, statusFilter)
     const matchesConsultant =
       normalizedSearchQuery.length === 0 ||
-      getConsultantDisplayLabel(ts.consultantName).toLowerCase().includes(normalizedSearchQuery)
+      getSubmitterDisplayLabel(timesheet.consultantName)
+        .toLowerCase()
+        .includes(normalizedSearchQuery)
 
     return matchesStatus && matchesConsultant
   })
 
   let emptyMessage = 'No timesheets found.'
-  if (statusFilter !== 'ALL' && normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}" with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
-  } else if (statusFilter !== 'ALL') {
-    emptyMessage = `No timesheets found with status "${getTimesheetStatusDisplayLabel(statusFilter)}".`
+  if (statusFilter !== MANAGER_STATUS_FILTERS.ALL && normalizedSearchQuery) {
+    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}" with status "${getManagerStatusFilterLabel(statusFilter)}".`
+  } else if (statusFilter !== MANAGER_STATUS_FILTERS.ALL) {
+    emptyMessage = `No timesheets found with status "${getManagerStatusFilterLabel(statusFilter)}".`
   } else if (normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for consultant "${searchQuery.trim()}".`
+    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}".`
   }
+
+  const pageTitle =
+    statusFilter === MANAGER_STATUS_FILTERS.PENDING
+      ? 'Pending Timesheets'
+      : statusFilter === MANAGER_STATUS_FILTERS.APPROVED_GROUP
+        ? 'Approved Timesheets'
+        : statusFilter === MANAGER_STATUS_FILTERS.REJECTED
+          ? 'Rejected Timesheets'
+          : statusFilter === MANAGER_STATUS_FILTERS.PAID
+            ? 'Paid Timesheets'
+            : 'Team Timesheets'
 
   return (
     <Box>
-      <PageHeader title="Team Timesheets" subtitle="View and manage your team's submissions">
+      <PageHeader title={pageTitle} subtitle="View and manage your team's submissions">
         <TextField
-          placeholder="Search consultants..."
+          placeholder="Search Timesheets..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -96,12 +116,13 @@ export default function ManagerTimesheetListPage() {
             labelId="status-filter-label"
             value={statusFilter}
             label="Status"
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
           >
-            <MenuItem value="ALL">All</MenuItem>
-            <MenuItem value="PENDING">Pending</MenuItem>
-            <MenuItem value="APPROVED">Approved</MenuItem>
-            <MenuItem value="REJECTED">Rejected</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.ALL}>All</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.APPROVED_GROUP}>Approved</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.REJECTED}>Rejected</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.PAID}>Paid</MenuItem>
           </Select>
         </FormControl>
       </PageHeader>
@@ -120,11 +141,12 @@ export default function ManagerTimesheetListPage() {
         </Paper>
       )}
 
-      {!error && filtered.length > 0 && (
-        isMobile ? (
+      {!error &&
+        filtered.length > 0 &&
+        (isMobile ? (
           <Stack spacing={1.5}>
-            {filtered.map((ts) => (
-              <Paper key={ts.id} sx={{ p: 2.5 }}>
+            {filtered.map((timesheet) => (
+              <Paper key={timesheet.id} sx={{ p: 2.5 }}>
                 <Stack spacing={2}>
                   <Box
                     sx={{
@@ -136,13 +158,16 @@ export default function ManagerTimesheetListPage() {
                   >
                     <Box>
                       <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Consultant
+                        Submitter
                       </Typography>
                       <Typography variant="body2" fontWeight={600}>
-                        {getConsultantDisplayLabel(ts.consultantName)}
+                        {getSubmitterDisplayLabel(timesheet.consultantName)}
                       </Typography>
                     </Box>
-                    <StatusBadge status={ts.status} />
+                    <TimesheetStatusDisplay
+                      status={timesheet.status}
+                      submittedLate={timesheet.submittedLate}
+                    />
                   </Box>
 
                   <Box
@@ -157,7 +182,7 @@ export default function ManagerTimesheetListPage() {
                         Week of
                       </Typography>
                       <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
+                        {formatWeekStart(timesheet.weekStart)}
                       </Typography>
                     </Box>
                     <Box>
@@ -171,7 +196,7 @@ export default function ManagerTimesheetListPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {ts.totalHours ?? '-'}
+                        {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </Box>
                   </Box>
@@ -179,7 +204,7 @@ export default function ManagerTimesheetListPage() {
                   <Button
                     variant="outlined"
                     startIcon={<RateReviewIcon sx={{ fontSize: '0.95rem' }} />}
-                    onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
+                    onClick={() => handleOpenTimesheet(timesheet.id)}
                   >
                     Open Timesheet
                   </Button>
@@ -192,7 +217,7 @@ export default function ManagerTimesheetListPage() {
             <Table>
               <TableHead>
                 <TableRow>
-                  <TableCell>Consultant</TableCell>
+                  <TableCell>Submitter</TableCell>
                   <TableCell>Week of</TableCell>
                   <TableCell>Status</TableCell>
                   <TableCell align="right">Total Hours</TableCell>
@@ -200,20 +225,23 @@ export default function ManagerTimesheetListPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.map((ts) => (
-                  <TableRow key={ts.id}>
+                {filtered.map((timesheet) => (
+                  <TableRow key={timesheet.id}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {getConsultantDisplayLabel(ts.consultantName)}
+                        {getSubmitterDisplayLabel(timesheet.consultantName)}
                       </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
+                        {formatWeekStart(timesheet.weekStart)}
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <StatusBadge status={ts.status} />
+                      <TimesheetStatusDisplay
+                        status={timesheet.status}
+                        submittedLate={timesheet.submittedLate}
+                      />
                     </TableCell>
                     <TableCell align="right">
                       <Typography
@@ -222,7 +250,7 @@ export default function ManagerTimesheetListPage() {
                           fontSize: '0.85rem',
                         }}
                       >
-                        {ts.totalHours ?? '-'}
+                        {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">
@@ -230,7 +258,7 @@ export default function ManagerTimesheetListPage() {
                         size="small"
                         variant="outlined"
                         startIcon={<RateReviewIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
+                        onClick={() => handleOpenTimesheet(timesheet.id)}
                       >
                         Open Timesheet
                       </Button>
@@ -240,8 +268,7 @@ export default function ManagerTimesheetListPage() {
               </TableBody>
             </Table>
           </TableContainer>
-        )
-      )}
+        ))}
     </Box>
   )
 }

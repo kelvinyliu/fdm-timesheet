@@ -1,14 +1,8 @@
-import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useState } from 'react'
+import { useLocation, useNavigate, useParams, useLoaderData, useRevalidator } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
@@ -25,78 +19,44 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
 import FastForwardIcon from '@mui/icons-material/FastForward'
-import StatusBadge from '../../components/shared/StatusBadge'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
-import { getTimesheet, reviewTimesheet, getTimesheets } from '../../api/timesheets'
-import { formatDayName, buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
+import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
+import { reviewTimesheet } from '../../api/timesheets'
+import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import { palette } from '../../theme.js'
 import {
-  getConsultantDisplayLabel,
+  getSubmitterDisplayLabel,
   getWorkBucketDisplayLabel,
   getWorkSummaryDisplayLabel,
 } from '../../utils/displayLabels'
-
-function getBucketValue(entryKind, assignmentId) {
-  return entryKind === 'CLIENT' ? assignmentId || '' : 'INTERNAL'
-}
-
-function entriesToMatrixRows(entries) {
-  const rowMap = new Map() // key: bucketValue
-  entries.forEach(entry => {
-    const key = getBucketValue(entry.entryKind, entry.assignmentId)
-    if (!rowMap.has(key)) {
-      rowMap.set(key, {
-        id: key,
-        entryKind: entry.entryKind,
-        assignmentId: entry.assignmentId,
-        bucketLabel: entry.bucketLabel,
-        hours: {}
-      })
-    }
-    rowMap.get(key).hours[entry.date] = entry.hoursWorked
-  })
-  return Array.from(rowMap.values())
-}
+import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
+import { buildManagerTimesheetListPath } from './utils/managerTimesheetFilters.js'
 
 export default function TimesheetReviewPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const location = useLocation()
   const navigate = useNavigate()
+  const revalidator = useRevalidator()
   const { id } = useParams()
+  const { timesheet, pendingQueue, error } = useLoaderData()
+  const returnTo = location.state?.returnTo ?? buildManagerTimesheetListPath()
 
-  const [timesheet, setTimesheet] = useState(null)
-  const [pendingQueue, setPendingQueue] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [rejectionComment, setRejectionComment] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
-  const [refreshKey, setRefreshKey] = useState(0)
-  
   const [approveDialogOpen, setApproveDialogOpen] = useState(false)
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false)
   const [isNextAction, setIsNextAction] = useState(false)
 
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-    Promise.all([getTimesheet(id), getTimesheets()])
-      .then(([ts, all]) => {
-        setTimesheet(ts)
-        setPendingQueue(all.filter(t => t.status === 'PENDING'))
-      })
-      .catch((err) => setError(err.message ?? 'Failed to load timesheet'))
-      .finally(() => setLoading(false))
-  }, [id, refreshKey])
-
   function getNextPendingId() {
-    const idx = pendingQueue.findIndex(ts => ts.id === id)
+    const idx = pendingQueue.findIndex((timesheet) => timesheet.id === id)
     if (idx !== -1 && idx + 1 < pendingQueue.length) {
       return pendingQueue[idx + 1].id
     }
-    const nextUnseen = pendingQueue.find(ts => ts.id !== id)
+    const nextUnseen = pendingQueue.find((timesheet) => timesheet.id !== id)
     return nextUnseen ? nextUnseen.id : null
   }
 
@@ -105,16 +65,23 @@ export default function TimesheetReviewPage() {
   async function handleApprove() {
     setSubmitting(true)
     setFeedback(null)
+
     try {
       await reviewTimesheet(id, { action: 'APPROVE', comment: '' })
       setApproveDialogOpen(false)
-      
+
       if (isNextAction && nextId) {
-        setFeedback({ severity: 'success', message: 'Timesheet approved. Showing next pending timesheet.' })
-        navigate(`/manager/timesheets/${nextId}`, { replace: true })
+        setFeedback({
+          severity: 'success',
+          message: 'Timesheet approved. Showing next pending timesheet.',
+        })
+        navigate(`/manager/timesheets/${nextId}`, {
+          replace: true,
+          state: { returnTo },
+        })
       } else {
         setFeedback({ severity: 'success', message: 'Timesheet approved successfully.' })
-        setRefreshKey(k => k + 1)
+        revalidator.revalidate()
       }
     } catch (err) {
       setFeedback({ severity: 'error', message: err.message ?? 'Failed to approve timesheet.' })
@@ -125,19 +92,30 @@ export default function TimesheetReviewPage() {
 
   async function handleReject() {
     if (!rejectionComment.trim()) return
+
     setSubmitting(true)
     setFeedback(null)
+
     try {
       await reviewTimesheet(id, { action: 'REJECT', comment: rejectionComment.trim() })
       setRejectDialogOpen(false)
       setRejectionComment('')
-      
+
       if (isNextAction && nextId) {
-        setFeedback({ severity: 'info', message: 'Timesheet rejected. Showing next pending timesheet.' })
-        navigate(`/manager/timesheets/${nextId}`, { replace: true })
+        setFeedback({
+          severity: 'info',
+          message: 'Timesheet rejected. Showing next pending timesheet.',
+        })
+        navigate(`/manager/timesheets/${nextId}`, {
+          replace: true,
+          state: { returnTo },
+        })
       } else {
-        setFeedback({ severity: 'info', message: 'Timesheet rejected and returned to the consultant.' })
-        setRefreshKey((k) => k + 1)
+        setFeedback({
+          severity: 'info',
+          message: 'Timesheet rejected and returned to the submitter.',
+        })
+        revalidator.revalidate()
       }
     } catch (err) {
       setFeedback({ severity: 'error', message: err.message ?? 'Failed to reject timesheet.' })
@@ -157,14 +135,12 @@ export default function TimesheetReviewPage() {
     setRejectDialogOpen(true)
   }
 
-  if (loading) return <LoadingSpinner />
-
   const summaryItems = timesheet
     ? [
         {
-          key: 'consultant',
-          label: 'Consultant',
-          value: getConsultantDisplayLabel(timesheet.consultantName),
+          key: 'submitter',
+          label: 'Submitter',
+          value: getSubmitterDisplayLabel(timesheet.consultantName),
         },
         {
           key: 'week',
@@ -174,7 +150,12 @@ export default function TimesheetReviewPage() {
         {
           key: 'status',
           label: 'Status',
-          value: <StatusBadge status={timesheet.status} />,
+          value: (
+            <TimesheetStatusDisplay
+              status={timesheet.status}
+              submittedLate={timesheet.submittedLate}
+            />
+          ),
         },
         {
           key: 'hours',
@@ -184,7 +165,7 @@ export default function TimesheetReviewPage() {
               variant="body2"
               sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
             >
-              {timesheet.totalHours ?? '-'}
+              {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
             </Typography>
           ),
         },
@@ -205,7 +186,7 @@ export default function TimesheetReviewPage() {
   }
 
   const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
-  const matrixRows = timesheet ? entriesToMatrixRows(timesheet.entries ?? []) : []
+  const matrixRows = timesheet ? entriesToReadOnlyMatrixRows(timesheet.entries ?? []) : []
 
   return (
     <Box>
@@ -213,7 +194,7 @@ export default function TimesheetReviewPage() {
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/manager/timesheets')}
+          onClick={() => navigate(returnTo)}
         >
           Back
         </Button>
@@ -233,98 +214,54 @@ export default function TimesheetReviewPage() {
 
       {timesheet && (
         <>
-          {/* Summary */}
-          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+          <Paper sx={{ 
+            p: { xs: 2.5, sm: 3 },
+            borderRadius: 3, 
+            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
+            border: '1px solid rgba(0,0,0,0.05)', 
+            background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
+            mb: 3 
+          }}>
             <Typography variant="h6" gutterBottom>
               Summary
             </Typography>
             <DetailList items={summaryItems} />
-          </Paper>
 
-          <Paper sx={{ p: { xs: 2.5, sm: 3 }, mb: 3 }}>
+            <Divider sx={{ my: 3 }} />
+
             <Typography variant="h6" gutterBottom>
               Work Summary
             </Typography>
-            <Stack spacing={1.25}>
-              {(timesheet.workSummary ?? []).map((item) => (
-                <Box
-                  key={`${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`}
-                  sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}
-                >
-                  <Typography variant="body2">
-                    {getWorkBucketDisplayLabel(item.bucketLabel)}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
-                  >
-                    {item.totalHours}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
+            {(timesheet.workSummary ?? []).length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No client or Internal categories recorded for this week.
+              </Typography>
+            ) : (
+              <DetailList
+                items={(timesheet.workSummary ?? []).map((item) => ({
+                  key: `${item.entryKind}-${item.assignmentId ?? 'INTERNAL'}`,
+                  label: getWorkBucketDisplayLabel(item.bucketLabel),
+                  value: (
+                    <Typography
+                      variant="body2"
+                      sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
+                    >
+                      {item.totalHours != null ? Number(item.totalHours).toFixed(2) : '-'}
+                    </Typography>
+                  )
+                }))}
+                rowGap={1.25}
+              />
+            )}
           </Paper>
 
-          {/* Entries */}
-          {timesheet.entries && timesheet.entries.length > 0 && (
-            <Paper sx={{ mb: 3, p: { xs: 0, sm: 0 }, overflow: 'hidden' }}>
-              <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
-                 <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
-                 <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}>
-                   {timesheet.totalHours ?? '-'}h Total
-                 </Typography>
-              </Box>
-              <TableContainer sx={{ borderTop: `2px solid ${palette.borderStrong}` }}>
-                <Table size="small" sx={{ minWidth: 800 }}>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sx={{ width: 250, borderRight: `2px solid ${palette.border}` }}>Work Category</TableCell>
-                      {weekDates.map(date => (
-                        <TableCell key={date} align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>
-                          <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: palette.textPrimary }}>
-                            {formatDayName(date).slice(0, 3)}
-                          </Typography>
-                          <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}>
-                            {date.slice(5)}
-                          </Typography>
-                        </TableCell>
-                      ))}
-                      <TableCell align="center" sx={{ width: 80 }}>Total</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {matrixRows.map(row => {
-                      const rowTotal = weekDates.reduce((sum, date) => sum + (parseFloat(row.hours[date]) || 0), 0)
-                      return (
-                        <TableRow key={row.id}>
-                          <TableCell sx={{ borderRight: `2px solid ${palette.border}`, fontWeight: 600 }}>
-                            {getWorkBucketDisplayLabel(row.bucketLabel)}
-                          </TableCell>
-                          {weekDates.map(date => {
-                            const val = row.hours[date]
-                            return (
-                              <TableCell key={date} align="center" sx={{ p: 1, borderRight: `2px solid ${palette.border}` }}>
-                                <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', color: val ? palette.textPrimary : palette.textMuted }}>
-                                  {val || '-'}
-                                </Typography>
-                              </TableCell>
-                            )
-                          })}
-                          <TableCell align="center">
-                            <Typography sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}>
-                              {rowTotal.toFixed(2)}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </Paper>
-          )}
+          <WeeklyMatrix
+            rows={matrixRows}
+            weekDates={weekDates}
+            totalHours={timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
+            emptyMessage="No entries recorded for this timesheet."
+          />
 
-          {/* Actions */}
           {timesheet.status === 'PENDING' && (
             <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>
               <Typography variant="h6" gutterBottom>
@@ -361,7 +298,7 @@ export default function TimesheetReviewPage() {
 
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     color="error"
                     startIcon={<CancelIcon />}
                     onClick={() => openRejectDialog(false)}
@@ -372,13 +309,16 @@ export default function TimesheetReviewPage() {
                   </Button>
                   {nextId && (
                     <Button
-                      variant="outlined"
+                      variant="contained"
                       color="error"
                       startIcon={<FastForwardIcon />}
                       onClick={() => openRejectDialog(true)}
                       disabled={submitting}
                       fullWidth={isMobile}
-                      sx={{ borderColor: palette.error, color: palette.error, '&:hover': { backgroundColor: palette.errorBg } }}
+                      sx={{
+                        backgroundColor: '#b22a25',
+                        '&:hover': { backgroundColor: '#8a201c' },
+                      }}
                     >
                       Reject & Next
                     </Button>
@@ -399,7 +339,7 @@ export default function TimesheetReviewPage() {
               <DialogContentText>
                 Approving this timesheet will mark it as approved and make it available to finance
                 for payment processing.
-                {isNextAction && nextId && " You will be taken to the next pending timesheet."}
+                {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
             </DialogContent>
             <DialogActions>
@@ -412,7 +352,7 @@ export default function TimesheetReviewPage() {
                 variant="contained"
                 disabled={submitting}
               >
-                {submitting ? 'Approving...' : (isNextAction ? 'Approve & Next' : 'Confirm approval')}
+                {submitting ? 'Approving...' : isNextAction ? 'Approve & Next' : 'Confirm approval'}
               </Button>
             </DialogActions>
           </Dialog>
@@ -426,8 +366,8 @@ export default function TimesheetReviewPage() {
             <DialogTitle>Reject timesheet?</DialogTitle>
             <DialogContent>
               <DialogContentText sx={{ mb: 2 }}>
-                Rejecting this timesheet will return it to the consultant for changes.
-                {isNextAction && nextId && " You will be taken to the next pending timesheet."}
+                Rejecting this timesheet will return it to the submitter for changes.
+                {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
               <TextField
                 label="Rejection Comment"
@@ -450,14 +390,30 @@ export default function TimesheetReviewPage() {
                 variant="contained"
                 disabled={submitting || !rejectionComment.trim()}
               >
-                {submitting ? 'Rejecting...' : (isNextAction ? 'Reject & Next' : 'Confirm rejection')}
+                {submitting ? 'Rejecting...' : isNextAction ? 'Reject & Next' : 'Confirm rejection'}
               </Button>
             </DialogActions>
           </Dialog>
 
+          {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED') && (
+            <Alert severity={timesheet.status === 'APPROVED' ? 'success' : 'info'} sx={{ mt: 2 }}>
+              {timesheet.status === 'APPROVED' ? (
+                <>
+                  This timesheet has been <strong>approved</strong>.
+                </>
+              ) : (
+                <>
+                  This timesheet has been <strong>rejected</strong> and returned to the submitter
+                  for changes.
+                </>
+              )}
+              {timesheet.status === 'REJECTED' && timesheet.rejectionComment && (
+                <> Reason: {timesheet.rejectionComment}</>
+              )}
+            </Alert>
+          )}
         </>
       )}
     </Box>
   )
 }
-

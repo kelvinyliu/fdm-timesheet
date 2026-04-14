@@ -1,56 +1,34 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState } from 'react'
+import { useLoaderData, useRevalidator } from 'react-router'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Table from '@mui/material/Table'
-import TableBody from '@mui/material/TableBody'
-import TableCell from '@mui/material/TableCell'
-import TableContainer from '@mui/material/TableContainer'
-import TableHead from '@mui/material/TableHead'
-import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
-import IconButton from '@mui/material/IconButton'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
 import TextField from '@mui/material/TextField'
 import InputAdornment from '@mui/material/InputAdornment'
-import Autocomplete from '@mui/material/Autocomplete'
 import Tabs from '@mui/material/Tabs'
 import Tab from '@mui/material/Tab'
-import Alert from '@mui/material/Alert'
-import Tooltip from '@mui/material/Tooltip'
-import Stack from '@mui/material/Stack'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
-import DeleteIcon from '@mui/icons-material/Delete'
-import EditIcon from '@mui/icons-material/Edit'
 import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
+import { useConfirmation } from '../../context/useConfirmation.js'
+import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import {
-  getAllAssignments,
   createAssignment,
   deleteAssignment,
-  getManagerAssignments,
   createManagerAssignment,
   updateManagerAssignment,
   deleteManagerAssignment,
 } from '../../api/assignments'
-import { getUsers } from '../../api/users'
-import { getConsultantDisplayLabel } from '../../utils/displayLabels'
-import { formatDate } from '../../utils/dateFormatters'
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
+import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
+import {
+  ClientAssignmentDialog,
+  ManagerAssignmentDialog,
+} from './components/AssignmentsDialogs.jsx'
+import { ClientAssignmentsPanel, ManagerAssignmentsPanel } from './components/AssignmentsPanels.jsx'
+import { useSyncedErrorState } from './hooks/useSyncedErrorState.js'
+import { attemptCloseAdminDialog } from './utils/adminDialogs.js'
+import { executeAdminMutation } from './utils/adminMutations.js'
 
 const EMPTY_CLIENT_FORM = { consultantId: '', clientName: '', clientBillRate: '' }
 const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
@@ -58,119 +36,129 @@ const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
 export default function AssignmentsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const [users, setUsers] = useState([])
-
+  const revalidator = useRevalidator()
+  const {
+    users,
+    clientAssignments,
+    managerAssignments,
+    clientError: loadedClientError,
+    managerError: loadedManagerError,
+  } = useLoaderData()
   const [activeTab, setActiveTab] = useState(0)
   const [searchQuery, setSearchQuery] = useState('')
-
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState({ id: null, type: null })
-
-  const [clientAssignments, setClientAssignments] = useState([])
-  const [clientLoading, setClientLoading] = useState(true)
-  const [clientError, setClientError] = useState('')
-
-  const [managerAssignments, setManagerAssignments] = useState([])
-  const [managerLoading, setManagerLoading] = useState(true)
-  const [managerError, setManagerError] = useState('')
-
+  const [clientError, setClientError] = useSyncedErrorState(loadedClientError)
+  const [managerError, setManagerError] = useSyncedErrorState(loadedManagerError)
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
   const [clientForm, setClientForm] = useState(EMPTY_CLIENT_FORM)
   const [clientFormError, setClientFormError] = useState('')
   const [clientFormLoading, setClientFormLoading] = useState(false)
-
   const [managerDialogOpen, setManagerDialogOpen] = useState(false)
   const [managerDialogMode, setManagerDialogMode] = useState('create')
   const [managerEditingId, setManagerEditingId] = useState(null)
   const [managerForm, setManagerForm] = useState(EMPTY_MANAGER_FORM)
+  const [managerInitialForm, setManagerInitialForm] = useState(EMPTY_MANAGER_FORM)
   const [managerFormError, setManagerFormError] = useState('')
   const [managerFormLoading, setManagerFormLoading] = useState(false)
+  const { confirm } = useConfirmation()
 
-  const consultants = users.filter((u) => u.role === 'CONSULTANT')
-  const managers = users.filter((u) => u.role === 'LINE_MANAGER')
+  const isClientDialogDirty =
+    clientDialogOpen &&
+    (Boolean(clientForm.consultantId) ||
+      Boolean(clientForm.clientName) ||
+      Boolean(clientForm.clientBillRate))
+  const isManagerDialogDirty =
+    managerDialogOpen &&
+    (managerForm.managerId !== managerInitialForm.managerId ||
+      managerForm.consultantId !== managerInitialForm.consultantId)
 
-  async function fetchClientAssignments() {
-    setClientLoading(true)
-    setClientError('')
-    try {
-      const data = await getAllAssignments()
-      setClientAssignments(data)
-    } catch (err) {
-      setClientError(err.message || 'Failed to load client assignments.')
-    } finally {
-      setClientLoading(false)
-    }
-  }
+  useUnsavedChangesGuard({
+    isDirty: isClientDialogDirty,
+    title: 'Discard this client assignment draft?',
+    message: 'The client assignment form has unsaved values.',
+    variant: 'warning',
+    discardLabel: 'Discard draft',
+    stayLabel: 'Keep editing',
+  })
 
-  async function fetchManagerAssignments() {
-    setManagerLoading(true)
-    setManagerError('')
-    try {
-      const data = await getManagerAssignments()
-      setManagerAssignments(data)
-    } catch (err) {
-      setManagerError(err.message || 'Failed to load manager assignments.')
-    } finally {
-      setManagerLoading(false)
-    }
-  }
+  useUnsavedChangesGuard({
+    isDirty: isManagerDialogDirty,
+    title:
+      managerDialogMode === 'edit'
+        ? 'Discard manager assignment changes?'
+        : 'Discard this manager assignment draft?',
+    message:
+      managerDialogMode === 'edit'
+        ? 'The manager assignment changes have not been saved yet.'
+        : 'The manager assignment form has unsaved values.',
+    variant: 'warning',
+    discardLabel: managerDialogMode === 'edit' ? 'Discard changes' : 'Discard draft',
+    stayLabel: 'Keep editing',
+  })
 
-  useEffect(() => {
-    fetchClientAssignments()
-    fetchManagerAssignments()
-    getUsers().then(setUsers).catch(() => {})
-  }, [])
+  const userById = new Map(users.map((user) => [user.id, user]))
+  const submitters = users.filter(
+    (user) => user.role === 'CONSULTANT' || user.role === 'LINE_MANAGER'
+  )
+  const managers = users.filter((user) => user.role === 'LINE_MANAGER')
+  const assignmentQuery = searchQuery.toLowerCase()
+  const filteredClientAssignments = clientAssignments.filter((assignment) => {
+    const submitterName = getSubmitterDisplayLabel(
+      userById.get(assignment.consultantId)?.name ?? null
+    ).toLowerCase()
 
-  const filteredClientAssignments = useMemo(() => {
-    return clientAssignments.filter((a) => {
-      const q = searchQuery.toLowerCase()
-      const consultantName = getConsultantDisplayLabel(
-        users.find((u) => u.id === a.consultantId)?.name ?? null
-      ).toLowerCase()
-      return a.clientName.toLowerCase().includes(q) || consultantName.includes(q)
+    return (
+      assignment.clientName.toLowerCase().includes(assignmentQuery) ||
+      submitterName.includes(assignmentQuery)
+    )
+  })
+  const filteredManagerAssignments = managerAssignments.filter(
+    (assignment) =>
+      assignment.managerName.toLowerCase().includes(assignmentQuery) ||
+      assignment.consultantName.toLowerCase().includes(assignmentQuery)
+  )
+
+  async function handleDeleteClientAssignment(id, assignmentLabel) {
+    const result = await confirm({
+      variant: 'danger',
+      title: 'Remove this client assignment?',
+      message: 'This action cannot be undone.',
+      confirmLabel: 'Delete assignment',
+      cancelLabel: 'Keep assignment',
+      summaryItems: assignmentLabel
+        ? [{ key: 'assignment', label: 'Assignment', value: assignmentLabel }]
+        : [],
     })
-  }, [clientAssignments, searchQuery, users])
 
-  const filteredManagerAssignments = useMemo(() => {
-    return managerAssignments.filter((a) => {
-      const q = searchQuery.toLowerCase()
-      return (
-        a.managerName.toLowerCase().includes(q) ||
-        a.consultantName.toLowerCase().includes(q)
-      )
+    if (result !== 'confirm') return
+
+    await executeAdminMutation({
+      mutation: () => deleteAssignment(id),
+      revalidator,
+      onSuccess: () => setClientError(''),
+      onError: (err) => setClientError(err.message || 'Failed to delete assignment.'),
     })
-  }, [managerAssignments, searchQuery])
-
-  function handleDeleteClientAssignment(id) {
-    setDeleteTarget({ id, type: 'client' })
-    setDeleteDialogOpen(true)
   }
 
-  function handleDeleteManagerAssignment(id) {
-    setDeleteTarget({ id, type: 'manager' })
-    setDeleteDialogOpen(true)
-  }
+  async function handleDeleteManagerAssignment(id, assignmentLabel) {
+    const result = await confirm({
+      variant: 'danger',
+      title: 'Remove this manager assignment?',
+      message: 'This action cannot be undone.',
+      confirmLabel: 'Delete assignment',
+      cancelLabel: 'Keep assignment',
+      summaryItems: assignmentLabel
+        ? [{ key: 'assignment', label: 'Assignment', value: assignmentLabel }]
+        : [],
+    })
 
-  async function confirmDeletion() {
-    if (!deleteTarget.id || !deleteTarget.type) return
+    if (result !== 'confirm') return
 
-    try {
-      if (deleteTarget.type === 'client') {
-        await deleteAssignment(deleteTarget.id)
-        await fetchClientAssignments()
-      } else {
-        await deleteManagerAssignment(deleteTarget.id)
-        await fetchManagerAssignments()
-      }
-      setDeleteDialogOpen(false)
-    } catch (err) {
-      if (deleteTarget.type === 'client') {
-        setClientError(err.message || 'Failed to delete assignment.')
-      } else {
-        setManagerError(err.message || 'Failed to delete assignment.')
-      }
-      setDeleteDialogOpen(false)
-    }
+    await executeAdminMutation({
+      mutation: () => deleteManagerAssignment(id),
+      revalidator,
+      onSuccess: () => setManagerError(''),
+      onError: (err) => setManagerError(err.message || 'Failed to delete assignment.'),
+    })
   }
 
   function openClientDialog() {
@@ -185,7 +173,7 @@ export default function AssignmentsPage() {
     const parsedClientBillRate = Number(clientBillRate)
 
     if (!consultantId || !clientName || !clientBillRate) {
-      setClientFormError('Consultant, Client Name, and Client Bill Rate are required.')
+      setClientFormError('Submitter, Client Name, and Client Bill Rate are required.')
       return
     }
 
@@ -195,21 +183,24 @@ export default function AssignmentsPage() {
     }
 
     setClientFormLoading(true)
-    try {
-      await createAssignment({ consultantId, clientName, clientBillRate: parsedClientBillRate })
-      setClientDialogOpen(false)
-      await fetchClientAssignments()
-    } catch (err) {
-      setClientFormError(err.message || 'Failed to create assignment.')
-    } finally {
-      setClientFormLoading(false)
-    }
+    await executeAdminMutation({
+      mutation: () =>
+        createAssignment({ consultantId, clientName, clientBillRate: parsedClientBillRate }),
+      revalidator,
+      onSuccess: () => {
+        setClientDialogOpen(false)
+        setClientError('')
+      },
+      onError: (err) => setClientFormError(err.message || 'Failed to create assignment.'),
+    })
+    setClientFormLoading(false)
   }
 
   function openManagerDialog() {
     setManagerDialogMode('create')
     setManagerEditingId(null)
     setManagerForm(EMPTY_MANAGER_FORM)
+    setManagerInitialForm(EMPTY_MANAGER_FORM)
     setManagerFormError('')
     setManagerDialogOpen(true)
   }
@@ -218,6 +209,10 @@ export default function AssignmentsPage() {
     setManagerDialogMode('edit')
     setManagerEditingId(assignment.id)
     setManagerForm({
+      managerId: assignment.managerId ?? '',
+      consultantId: assignment.consultantId ?? '',
+    })
+    setManagerInitialForm({
       managerId: assignment.managerId ?? '',
       consultantId: assignment.consultantId ?? '',
     })
@@ -230,40 +225,86 @@ export default function AssignmentsPage() {
     setManagerFormError('')
   }
 
+  async function attemptCloseClientDialog() {
+    await attemptCloseAdminDialog({
+      isDirty: isClientDialogDirty,
+      isBusy: clientFormLoading,
+      confirm,
+      onClose: () => setClientDialogOpen(false),
+      confirmOptions: {
+        variant: 'warning',
+        title: 'Discard this client assignment draft?',
+        message: 'Closing now will discard the values you have entered.',
+        confirmLabel: 'Discard draft',
+        cancelLabel: 'Keep editing',
+      },
+    })
+  }
+
+  async function attemptCloseManagerDialog() {
+    await attemptCloseAdminDialog({
+      isDirty: isManagerDialogDirty,
+      isBusy: managerFormLoading,
+      confirm,
+      onClose: closeManagerDialog,
+      confirmOptions: {
+        variant: 'warning',
+        title:
+          managerDialogMode === 'edit'
+            ? 'Discard manager assignment changes?'
+            : 'Discard this manager assignment draft?',
+        message: 'Closing now will discard the current values in this form.',
+        confirmLabel: managerDialogMode === 'edit' ? 'Discard changes' : 'Discard draft',
+        cancelLabel: 'Keep editing',
+      },
+    })
+  }
+
+  function handleClientFormChange(field, value) {
+    setClientForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  function handleManagerFormChange(field, value) {
+    setManagerForm((prev) => ({ ...prev, [field]: value }))
+  }
+
   async function handleSubmitManagerAssignment() {
     setManagerFormError('')
     const { managerId, consultantId } = managerForm
     if (!managerId || !consultantId) {
-      setManagerFormError('Both Manager and Consultant are required.')
+      setManagerFormError('Both Manager and Submitter are required.')
       return
     }
+
     setManagerFormLoading(true)
-    try {
-      if (managerDialogMode === 'edit' && managerEditingId) {
-        await updateManagerAssignment(managerEditingId, { managerId, consultantId })
-      } else {
-        await createManagerAssignment({ managerId, consultantId })
-      }
-      closeManagerDialog()
-      await fetchManagerAssignments()
-    } catch (err) {
-      setManagerFormError(
-        err.message || `Failed to ${managerDialogMode === 'edit' ? 'update' : 'create'} assignment.`
-      )
-    } finally {
-      setManagerFormLoading(false)
-    }
+    await executeAdminMutation({
+      mutation: () =>
+        managerDialogMode === 'edit' && managerEditingId
+          ? updateManagerAssignment(managerEditingId, { managerId, consultantId })
+          : createManagerAssignment({ managerId, consultantId }),
+      revalidator,
+      onSuccess: () => {
+        closeManagerDialog()
+        setManagerError('')
+      },
+      onError: (err) =>
+        setManagerFormError(
+          err.message ||
+            `Failed to ${managerDialogMode === 'edit' ? 'update' : 'create'} assignment.`
+        ),
+    })
+    setManagerFormLoading(false)
   }
 
   return (
-    <Box>
+    <>
       <PageHeader
         title="Assignments"
-        subtitle="Manage client and manager-consultant assignments"
+        subtitle="Manage client assignments and manager approval ownership"
       />
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={(e, newValue) => setActiveTab(newValue)}>
+        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
           <Tab label="Client Assignments" />
           <Tab label="Manager Assignments" />
         </Tabs>
@@ -288,445 +329,65 @@ export default function AssignmentsPage() {
         />
         <Box sx={{ flexGrow: 1 }} />
         {activeTab === 0 ? (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openClientDialog}
-          >
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openClientDialog}>
             Add Client Assignment
           </Button>
         ) : (
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={openManagerDialog}
-          >
+          <Button variant="contained" startIcon={<AddIcon />} onClick={openManagerDialog}>
             Add Manager Assignment
           </Button>
         )}
       </Box>
 
-      {/* Client Assignments Tab */}
-      {activeTab === 0 && (
-        <Box>
-          {clientError && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setClientError('')}>
-              {clientError}
-            </Alert>
-          )}
-
-          {clientLoading ? (
-            <LoadingSpinner />
-          ) : isMobile ? (
-            filteredClientAssignments.length === 0 ? (
-              <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
-                <Typography variant="body2" color="text.secondary">
-                  No client assignments found.
-                </Typography>
-              </Paper>
-            ) : (
-              <Stack spacing={1.5}>
-                {filteredClientAssignments.map((a) => (
-                  <Paper key={a.id} sx={{ p: 2.5 }}>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Consultant
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {getConsultantDisplayLabel(
-                            users.find((u) => u.id === a.consultantId)?.name ?? null
-                          )}
-                        </Typography>
-                      </Box>
-
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                          gap: 1.5,
-                        }}
-                      >
-                        <Box>
-                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                            Client
-                          </Typography>
-                          <Typography variant="body2">{a.clientName}</Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                            Client Bill Rate
-                          </Typography>
-                          <Typography
-                            variant="body2"
-                            sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
-                          >
-                            {formatCurrency(a.clientBillRate)}
-                          </Typography>
-                        </Box>
-                      </Box>
-
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Created
-                        </Typography>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
-                        >
-                          {formatDate(a.createdAt)}
-                        </Typography>
-                      </Box>
-
-                      <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<DeleteIcon />}
-                        onClick={() => handleDeleteClientAssignment(a.id)}
-                      >
-                        Remove Assignment
-                      </Button>
-                    </Stack>
-                  </Paper>
-                ))}
-              </Stack>
-            )
-          ) : (
-            <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Consultant</TableCell>
-                    <TableCell>Client Name</TableCell>
-                    <TableCell>Client Bill Rate</TableCell>
-                    <TableCell>Created</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredClientAssignments.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2" fontWeight={500}>
-                            {getConsultantDisplayLabel(
-                              users.find((u) => u.id === a.consultantId)?.name ?? null
-                            )}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{a.clientName}</TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
-                        >
-                          {formatCurrency(a.clientBillRate)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography
-                          variant="body2"
-                          sx={{ fontFamily: '"JetBrains Mono", monospace', fontSize: '0.78rem' }}
-                        >
-                          {formatDate(a.createdAt)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Remove assignment">
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => handleDeleteClientAssignment(a.id)}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredClientAssignments.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        align="center"
-                        sx={{ py: 4, color: 'text.secondary' }}
-                      >
-                        No client assignments found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Box>
+      {activeTab === 0 ? (
+        <ClientAssignmentsPanel
+          assignments={filteredClientAssignments}
+          isMobile={isMobile}
+          userById={userById}
+          error={clientError}
+          onDismissError={() => setClientError('')}
+          onDeleteAssignment={handleDeleteClientAssignment}
+        />
+      ) : (
+        <ManagerAssignmentsPanel
+          assignments={filteredManagerAssignments}
+          isMobile={isMobile}
+          error={managerError}
+          onDismissError={() => setManagerError('')}
+          onEditAssignment={openEditManagerDialog}
+          onDeleteAssignment={handleDeleteManagerAssignment}
+        />
       )}
 
-      {/* Manager Assignments Tab */}
-      {activeTab === 1 && (
-        <Box>
-          {managerError && (
-            <Alert severity="error" sx={{ mb: 2 }} onClose={() => setManagerError('')}>
-              {managerError}
-            </Alert>
-          )}
-
-          {managerLoading ? (
-            <LoadingSpinner />
-          ) : isMobile ? (
-            filteredManagerAssignments.length === 0 ? (
-              <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
-                <Typography variant="body2" color="text.secondary">
-                  No manager assignments found.
-                </Typography>
-              </Paper>
-            ) : (
-              <Stack spacing={1.5}>
-                {filteredManagerAssignments.map((a) => (
-                  <Paper key={a.id} sx={{ p: 2.5 }}>
-                    <Stack spacing={2}>
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Manager
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {a.managerName}
-                        </Typography>
-                      </Box>
-
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Consultant
-                        </Typography>
-                        <Typography variant="body2">{a.consultantName}</Typography>
-                      </Box>
-
-                      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-                        <Button
-                          variant="outlined"
-                          startIcon={<EditIcon />}
-                          onClick={() => openEditManagerDialog(a)}
-                          fullWidth
-                        >
-                          Edit Assignment
-                        </Button>
-                        <Button
-                          variant="outlined"
-                          color="error"
-                          startIcon={<DeleteIcon />}
-                          onClick={() => handleDeleteManagerAssignment(a.id)}
-                          fullWidth
-                        >
-                          Remove Assignment
-                        </Button>
-                      </Stack>
-                    </Stack>
-                  </Paper>
-                ))}
-              </Stack>
-            )
-          ) : (
-            <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Manager</TableCell>
-                    <TableCell>Consultant</TableCell>
-                    <TableCell align="right">Actions</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {filteredManagerAssignments.map((a) => (
-                    <TableRow key={a.id}>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={500}>
-                          {a.managerName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={500}>
-                          {a.consultantName}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="right">
-                        <Stack direction="row" spacing={0.5} justifyContent="flex-end">
-                          <Tooltip title="Edit assignment">
-                            <IconButton size="small" onClick={() => openEditManagerDialog(a)}>
-                              <EditIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Remove assignment">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => handleDeleteManagerAssignment(a.id)}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredManagerAssignments.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        align="center"
-                        sx={{ py: 4, color: 'text.secondary' }}
-                      >
-                        No manager assignments found.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </Box>
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)}>
-        <DialogTitle>Confirm Deletion</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Are you sure you want to remove this assignment? This action cannot be undone.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button variant="contained" color="error" onClick={confirmDeletion}>
-            Delete
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Add Client Assignment Dialog */}
-      <Dialog
+      <ClientAssignmentDialog
         open={clientDialogOpen}
-        onClose={() => setClientDialogOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle>Add Client Assignment</DialogTitle>
-        <DialogContent>
-          {clientFormError && (
-            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
-              {clientFormError}
-            </Alert>
-          )}
-          <Box sx={{ mt: 1, mb: 2 }}>
-            <Autocomplete
-              options={consultants}
-              getOptionLabel={(option) => option.name || ''}
-              value={consultants.find((u) => u.id === clientForm.consultantId) || null}
-              onChange={(e, newValue) => {
-                setClientForm((p) => ({ ...p, consultantId: newValue ? newValue.id : '' }))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Consultant" required />
-              )}
-            />
-          </Box>
-          <TextField
-            label="Client Name"
-            value={clientForm.clientName}
-            onChange={(e) => setClientForm((p) => ({ ...p, clientName: e.target.value }))}
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Client Bill Rate"
-            type="number"
-            value={clientForm.clientBillRate}
-            onChange={(e) => setClientForm((p) => ({ ...p, clientBillRate: e.target.value }))}
-            fullWidth
-            required
-            sx={{ mb: 2 }}
-            slotProps={{ htmlInput: { min: '0.01', step: '0.01' } }}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setClientDialogOpen(false)} disabled={clientFormLoading}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleCreateClientAssignment}
-            disabled={clientFormLoading}
-          >
-            {clientFormLoading ? 'Adding...' : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        form={clientForm}
+        submitters={submitters}
+        isMobile={isMobile}
+        error={clientFormError}
+        loading={clientFormLoading}
+        onClose={() => {
+          void attemptCloseClientDialog()
+        }}
+        onChange={handleClientFormChange}
+        onSubmit={handleCreateClientAssignment}
+      />
 
-      {/* Add Manager Assignment Dialog */}
-      <Dialog
+      <ManagerAssignmentDialog
         open={managerDialogOpen}
-        onClose={closeManagerDialog}
-        maxWidth="xs"
-        fullWidth
-        fullScreen={isMobile}
-      >
-        <DialogTitle>
-          {managerDialogMode === 'edit' ? 'Edit Manager Assignment' : 'Add Manager Assignment'}
-        </DialogTitle>
-        <DialogContent>
-          {managerFormError && (
-            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
-              {managerFormError}
-            </Alert>
-          )}
-          <Box sx={{ mt: 1, mb: 2 }}>
-            <Autocomplete
-              options={managers}
-              getOptionLabel={(option) => option.name || ''}
-              value={managers.find((u) => u.id === managerForm.managerId) || null}
-              onChange={(e, newValue) => {
-                setManagerForm((p) => ({ ...p, managerId: newValue ? newValue.id : '' }))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Manager" required />
-              )}
-            />
-          </Box>
-          <Box sx={{ mb: 2 }}>
-            <Autocomplete
-              options={consultants}
-              getOptionLabel={(option) => option.name || ''}
-              value={consultants.find((u) => u.id === managerForm.consultantId) || null}
-              onChange={(e, newValue) => {
-                setManagerForm((p) => ({ ...p, consultantId: newValue ? newValue.id : '' }))
-              }}
-              renderInput={(params) => (
-                <TextField {...params} label="Consultant" required />
-              )}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeManagerDialog} disabled={managerFormLoading}>
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleSubmitManagerAssignment}
-            disabled={managerFormLoading}
-          >
-            {managerFormLoading
-              ? managerDialogMode === 'edit'
-                ? 'Saving...'
-                : 'Adding...'
-              : managerDialogMode === 'edit'
-                ? 'Save'
-                : 'Add'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+        mode={managerDialogMode}
+        form={managerForm}
+        managers={managers}
+        submitters={submitters}
+        isMobile={isMobile}
+        error={managerFormError}
+        loading={managerFormLoading}
+        onClose={() => {
+          void attemptCloseManagerDialog()
+        }}
+        onChange={handleManagerFormChange}
+        onSubmit={handleSubmitManagerAssignment}
+      />
+    </>
   )
 }

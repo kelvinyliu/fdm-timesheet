@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLoaderData } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -17,46 +18,41 @@ import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
 import SearchIcon from '@mui/icons-material/Search'
 import InputAdornment from '@mui/material/InputAdornment'
-import LoadingSpinner from '../../components/shared/LoadingSpinner'
 import PageHeader from '../../components/shared/PageHeader'
-import { getConsultantPayRates, updateDefaultPayRate } from '../../api/users'
+import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
+import { updateDefaultPayRate } from '../../api/users'
 import { formatDate } from '../../utils/dateFormatters'
 
 export default function FinancePayRatesPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const [consultants, setConsultants] = useState([])
+  const { consultants: loadedConsultants, error: loadError } = useLoaderData()
+  const [consultants, setConsultants] = useState(loadedConsultants)
   const [searchQuery, setSearchQuery] = useState('')
-  const [pendingRates, setPendingRates] = useState({})
+  const [pendingRates, setPendingRates] = useState(() =>
+    Object.fromEntries(
+      loadedConsultants.map((consultant) => [
+        consultant.id,
+        consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
+      ])
+    )
+  )
   const [savingById, setSavingById] = useState({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [error, setError] = useState(loadError)
   const [feedback, setFeedback] = useState('')
 
-  async function fetchConsultants() {
-    setLoading(true)
-    setError('')
-    try {
-      const data = await getConsultantPayRates()
-      setConsultants(data)
-      setPendingRates(
-        Object.fromEntries(
-          data.map((consultant) => [
-            consultant.id,
-            consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
-          ])
-        )
-      )
-    } catch (err) {
-      setError(err.message || 'Failed to load consultant pay rates.')
-    } finally {
-      setLoading(false)
-    }
-  }
-
   useEffect(() => {
-    fetchConsultants()
-  }, [])
+    setConsultants(loadedConsultants)
+    setPendingRates(
+      Object.fromEntries(
+        loadedConsultants.map((consultant) => [
+          consultant.id,
+          consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
+        ])
+      )
+    )
+    setError(loadError)
+  }, [loadedConsultants, loadError])
 
   async function handleSave(consultantId) {
     const nextRate = pendingRates[consultantId]
@@ -72,33 +68,49 @@ export default function FinancePayRatesPage() {
     setFeedback('')
     try {
       const updated = await updateDefaultPayRate(consultantId, parsedRate)
-      setConsultants((prev) => prev.map((consultant) => (
-        consultant.id === consultantId ? updated : consultant
-      )))
+      setConsultants((prev) =>
+        prev.map((consultant) => (consultant.id === consultantId ? updated : consultant))
+      )
       setPendingRates((prev) => ({ ...prev, [consultantId]: String(updated.defaultPayRate) }))
-      setFeedback('Consultant pay rate updated.')
+      setFeedback('Submitter pay rate updated.')
     } catch (err) {
-      setError(err.message || 'Failed to update consultant pay rate.')
+      setError(err.message || 'Failed to update submitter pay rate.')
     } finally {
       setSavingById((prev) => ({ ...prev, [consultantId]: false }))
     }
   }
 
-  if (loading) return <LoadingSpinner />
+  const hasUnsavedRateChanges = consultants.some(
+    (consultant) =>
+      (pendingRates[consultant.id] ?? '') !==
+      (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
+  )
+
+  useUnsavedChangesGuard({
+    isDirty: hasUnsavedRateChanges,
+    title: 'Leave with unsaved pay-rate edits?',
+    message: 'Some submitter pay-rate fields have been edited locally but not saved yet.',
+    variant: 'warning',
+    discardLabel: 'Discard edits',
+    stayLabel: 'Keep editing',
+  })
 
   const filteredConsultants = consultants.filter((consultant) => {
     const q = searchQuery.toLowerCase()
-    return (consultant.name || '').toLowerCase().includes(q) || (consultant.email || '').toLowerCase().includes(q)
+    return (
+      (consultant.name || '').toLowerCase().includes(q) ||
+      (consultant.email || '').toLowerCase().includes(q)
+    )
   })
 
   return (
     <Box>
       <PageHeader
-        title="Consultant Pay Rates"
-        subtitle="Configure the default consultant pay rate used to prefill outgoing payroll costs"
+        title="Submitter Pay Rates"
+        subtitle="Configure default pay rates used to prefill outgoing payroll costs"
       >
         <TextField
-          placeholder="Search consultants..."
+          placeholder="Search submitters..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -130,14 +142,16 @@ export default function FinancePayRatesPage() {
       {filteredConsultants.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
           <Typography variant="body2" color="text.secondary">
-            No consultants found.
+            No submitters found.
           </Typography>
         </Paper>
       ) : isMobile ? (
         <Stack spacing={1.5}>
           {filteredConsultants.map((consultant) => {
             const currentRate = pendingRates[consultant.id] ?? ''
-            const isDirty = currentRate !== (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
+            const isDirty =
+              currentRate !==
+              (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
 
             return (
               <Paper key={consultant.id} sx={{ p: 2.5 }}>
@@ -162,12 +176,18 @@ export default function FinancePayRatesPage() {
                     label="Default Pay Rate (£/hr)"
                     type="number"
                     value={currentRate}
-                    onChange={(event) => setPendingRates((prev) => ({
-                      ...prev,
-                      [consultant.id]: event.target.value,
-                    }))}
+                    onChange={(event) =>
+                      setPendingRates((prev) => ({
+                        ...prev,
+                        [consultant.id]: event.target.value,
+                      }))
+                    }
                     slotProps={{ htmlInput: { min: '0.01', step: '0.01' } }}
-                    helperText={consultant.defaultPayRate == null ? 'No default set yet.' : `Current default saved on ${formatDate(consultant.createdAt)}`}
+                    helperText={
+                      consultant.defaultPayRate == null
+                        ? 'No default set yet.'
+                        : `Current default saved on ${formatDate(consultant.createdAt)}`
+                    }
                     fullWidth
                   />
 
@@ -189,7 +209,7 @@ export default function FinancePayRatesPage() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Consultant</TableCell>
+                <TableCell>Submitter</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Default Pay Rate</TableCell>
                 <TableCell align="right">Actions</TableCell>
@@ -198,7 +218,9 @@ export default function FinancePayRatesPage() {
             <TableBody>
               {filteredConsultants.map((consultant) => {
                 const currentRate = pendingRates[consultant.id] ?? ''
-                const isDirty = currentRate !== (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
+                const isDirty =
+                  currentRate !==
+                  (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
 
                 return (
                   <TableRow key={consultant.id}>
@@ -224,10 +246,12 @@ export default function FinancePayRatesPage() {
                         label="£/hr"
                         type="number"
                         value={currentRate}
-                        onChange={(event) => setPendingRates((prev) => ({
-                          ...prev,
-                          [consultant.id]: event.target.value,
-                        }))}
+                        onChange={(event) =>
+                          setPendingRates((prev) => ({
+                            ...prev,
+                            [consultant.id]: event.target.value,
+                          }))
+                        }
                         slotProps={{ htmlInput: { min: '0.01', step: '0.01' } }}
                         fullWidth
                       />

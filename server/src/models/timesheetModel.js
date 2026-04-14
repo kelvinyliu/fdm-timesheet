@@ -1,9 +1,15 @@
 import pool from '../db.js'
 
+function httpError(message, status) {
+  const err = new Error(message)
+  err.status = status
+  return err
+}
+
 const TIMESHEET_SELECT = `
   SELECT t.timesheet_id, t.consultant_id, consultant.name AS consultant_name,
          t.assignment_id, assignment.client_name AS assignment_client_name,
-         t.week_start, t.status,
+         t.week_start, t.status, t.submitted_at, t.submitted_late,
          t.created_at, t.updated_at,
          p.total_bill_amount,
          p.total_pay_amount,
@@ -79,14 +85,35 @@ export async function createTimesheet({ consultantId, assignmentId, weekStart })
   return getTimesheetById(rows[0].timesheet_id)
 }
 
-export async function updateTimesheetStatus(id, status) {
+export async function updateTimesheetStatus(id, status, options = {}) {
+  const submittedAt = options.submittedAt ?? null
+  const submittedLate = options.submittedLate ?? null
+  const allowedStatuses = options.allowedStatuses ?? null
+  const statusCondition = allowedStatuses
+    ? 'AND status = ANY($5::timesheet_status[])'
+    : ''
+  const params = allowedStatuses
+    ? [status, id, submittedAt, submittedLate, allowedStatuses]
+    : [status, id, submittedAt, submittedLate]
   const { rows } = await pool.query(
-    `UPDATE timesheets SET status = $1, updated_at = NOW()
+    `UPDATE timesheets
+     SET status = $1,
+         submitted_at = COALESCE($3, submitted_at),
+         submitted_late = COALESCE($4, submitted_late),
+         updated_at = NOW()
      WHERE timesheet_id = $2
+       ${statusCondition}
      RETURNING timesheet_id`,
-    [status, id]
+    params
   )
-  if (rows.length === 0) return null
+
+  if (rows.length === 0) {
+    if (allowedStatuses) {
+      throw httpError(options.conflictMessage ?? 'Timesheet status has changed', 409)
+    }
+    return null
+  }
+
   return getTimesheetById(rows[0].timesheet_id)
 }
 
@@ -102,9 +129,7 @@ export async function reviewTimesheet(id, reviewerId, decision, comment) {
     )
 
     if (rows.length === 0) {
-      const err = new Error('Only pending timesheets can be reviewed')
-      err.status = 409
-      throw err
+      throw httpError('Only pending timesheets can be reviewed', 409)
     }
 
     await client.query(

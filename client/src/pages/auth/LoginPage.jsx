@@ -29,17 +29,25 @@ export default function LoginPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
+
     try {
       const data = await loginRequest(email, password)
       const tokenPayload = decodeJwtPayload(data.token)
+
       if (!tokenPayload) {
         throw new Error('Invalid login response.')
       }
 
       const nextUser = data.user ?? tokenPayload
+      const role = nextUser?.role || tokenPayload?.role
+
+      if (!role) {
+        throw new Error('Unable to determine user role.')
+      }
+
       login(data.token, nextUser)
-      const role = nextUser?.role ?? tokenPayload.role
-      const destination = ROLE_ROUTES[role] ?? '/'
+
+      const destination = ROLE_ROUTES[role] ?? '/login'
       navigate(destination, { replace: true })
     } catch (err) {
       setError(err.message || 'Invalid email or password.')
@@ -55,7 +63,6 @@ export default function LoginPage() {
         minHeight: '100vh',
       }}
     >
-      {/* Left panel - decorative */}
       <Box
         sx={{
           display: { xs: 'none', md: 'flex' },
@@ -69,7 +76,6 @@ export default function LoginPage() {
           p: 6,
         }}
       >
-        {/* Geometric pattern */}
         <Box
           sx={{
             position: 'absolute',
@@ -97,7 +103,6 @@ export default function LoginPage() {
           }}
         />
 
-        {/* Decorative circles */}
         <Box
           sx={{
             position: 'absolute',
@@ -121,7 +126,6 @@ export default function LoginPage() {
           }}
         />
 
-        {/* Branding */}
         <Box sx={{ position: 'relative', textAlign: 'center' }}>
           <Typography
             sx={{
@@ -158,26 +162,24 @@ export default function LoginPage() {
           </Typography>
         </Box>
 
-        {/* Bottom quote */}
         <Typography
           sx={{
             position: 'absolute',
             bottom: 40,
             left: 40,
             right: 40,
-            fontFamily: '"Instrument Serif", Georgia, serif',
-            fontStyle: 'italic',
+            fontFamily: 'Poppins, Georgia, serif',
+            fontWeight: 500,
             fontSize: '1.1rem',
             color: 'rgba(var(--ui-white-rgb), 0.28)',
             textAlign: 'center',
             lineHeight: 1.5,
           }}
         >
-          Track time. Manage approvals. Process payments.
+          Track Time | Manage Approvals | Process Payments
         </Typography>
       </Box>
 
-      {/* Right panel - form */}
       <Box
         sx={{
           flex: 1,
@@ -189,7 +191,6 @@ export default function LoginPage() {
         }}
       >
         <Box sx={{ width: '100%', maxWidth: 400 }}>
-          {/* Mobile branding */}
           <Box
             sx={{
               display: { xs: 'block', md: 'none' },
@@ -199,7 +200,7 @@ export default function LoginPage() {
           >
             <Typography
               sx={{
-                fontFamily: '"Instrument Serif", Georgia, serif',
+                fontFamily: 'Poppins, Georgia, serif',
                 fontSize: '3.1rem',
                 color: palette.textPrimary,
                 lineHeight: 1,
@@ -221,18 +222,19 @@ export default function LoginPage() {
           </Box>
 
           <Typography
-            variant="h4"
+            variant="h1"
             sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
+              fontFamily: 'Poppins, Georgia, serif',
+              color: palette.textPrimary,
+              lineHeight: 1.1,
               mb: 0.5,
+              fontSize: '3em',
+              fontWeight: 400,
             }}
           >
-            Welcome back
+            Welcome Back
           </Typography>
-          <Typography
-            variant="body2"
-            sx={{ color: 'text.secondary', mb: 4 }}
-          >
+          <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
             Sign in to your account to continue
           </Typography>
 
@@ -284,6 +286,11 @@ export default function LoginPage() {
                   backgroundColor: palette.primary,
                   color: palette.primaryContrast,
                   borderColor: palette.primary,
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                },
+                '&:active': {
+                  transform: 'translateY(0)',
                 },
               }}
             >

@@ -54,7 +54,7 @@ export async function getConsultantPayRates() {
   const { rows } = await pool.query(
     `SELECT user_id, name, email, role, default_pay_rate, created_at
      FROM users
-     WHERE role = 'CONSULTANT'
+     WHERE role IN ('CONSULTANT', 'LINE_MANAGER')
      ORDER BY name ASC, created_at DESC`
   )
   return rows

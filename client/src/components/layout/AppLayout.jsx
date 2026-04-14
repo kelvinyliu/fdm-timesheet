@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useState } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -6,25 +6,23 @@ import IconButton from '@mui/material/IconButton'
 import AppBar from '@mui/material/AppBar'
 import Drawer from '@mui/material/Drawer'
 import Toolbar from '@mui/material/Toolbar'
-import Dialog from '@mui/material/Dialog'
-import DialogTitle from '@mui/material/DialogTitle'
-import DialogContent from '@mui/material/DialogContent'
-import DialogActions from '@mui/material/DialogActions'
-import TextField from '@mui/material/TextField'
-import Alert from '@mui/material/Alert'
 import Tooltip from '@mui/material/Tooltip'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import LogoutIcon from '@mui/icons-material/Logout'
 import LockResetIcon from '@mui/icons-material/LockReset'
 import MenuIcon from '@mui/icons-material/Menu'
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft'
+import ChevronRightIcon from '@mui/icons-material/ChevronRight'
 import { Outlet, useLocation } from 'react-router'
 import Sidebar from './Sidebar.jsx'
+import PasswordDialog from './PasswordDialog.jsx'
 import { useAuth } from '../../context/useAuth.js'
-import { changePassword } from '../../api/auth.js'
+import { useUnsavedChangesController } from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
 
 const SIDEBAR_WIDTH = 260
+const SIDEBAR_COLLAPSED_WIDTH = 84
 const MOBILE_DRAWER_WIDTH = 320
 
 const ROLE_SHORT = {
@@ -35,33 +33,50 @@ const ROLE_SHORT = {
 }
 
 function getBreadcrumbs(pathname) {
-  if (pathname.startsWith('/admin/audit')) return ['Admin', 'Audit Log']
+  if (pathname.startsWith('/admin/dashboard')) return ['Admin', 'Dashboard']
+  if (pathname.startsWith('/admin/audit-log')) return ['Admin', 'Audit Log']
   if (pathname.startsWith('/admin/assignments')) return ['Admin', 'Assignments']
   if (pathname.startsWith('/admin/users')) return ['Admin', 'Users']
+
+  if (pathname.startsWith('/consultant/dashboard')) return ['Dashboard']
+  if (pathname.startsWith('/manager/dashboard')) return ['Dashboard']
+  if (pathname.startsWith('/finance/dashboard')) return ['Dashboard']
+
+  if (/\/my-timesheets\/[^/]+\/edit/.test(pathname)) return ['My Timesheets', 'Edit']
+  if (/\/my-timesheets\/new/.test(pathname)) return ['My Timesheets', 'New']
+  if (/\/my-timesheets\/[^/]+/.test(pathname)) return ['My Timesheets', 'Detail']
+  if (pathname.includes('/my-timesheets')) return ['My Timesheets']
+
   if (/\/timesheets\/[^/]+\/edit/.test(pathname)) return ['Timesheets', 'Edit']
   if (/\/timesheets\/[^/]+\/payment/.test(pathname)) return ['Timesheets', 'Payment']
   if (/\/timesheets\/new/.test(pathname)) return ['Timesheets', 'New']
-  if (/\/timesheets\/[^/]+/.test(pathname))
+
+  if (/\/timesheets\/[^/]+/.test(pathname)) {
     return pathname.startsWith('/manager')
       ? ['Timesheets', 'Open Timesheet']
       : ['Timesheets', 'Detail']
+  }
+
   if (pathname.includes('/timesheets')) return ['Timesheets']
   return []
 }
 
-function BrandLockup({ compact = false }) {
+function BrandLockup({ compact = false, collapsed = false }) {
   return (
     <Box
       sx={{
-        p: compact ? '18px 20px' : '28px 24px 20px',
+        p: collapsed ? '18px 12px' : compact ? '18px 20px' : '28px 24px 20px',
         position: 'relative',
         borderBottom: `1px solid ${palette.sidebarScrim}`,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: collapsed ? 'center' : 'flex-start',
       }}
     >
       <Typography
         sx={{
           fontFamily: '"Instrument Serif", Georgia, serif',
-          fontSize: compact ? '2.35rem' : '5rem',
+          fontSize: collapsed ? '2.6rem' : compact ? '2.35rem' : '5rem',
           color: palette.textInverse,
           letterSpacing: '-0.01em',
           lineHeight: 1,
@@ -69,28 +84,32 @@ function BrandLockup({ compact = false }) {
       >
         FDM
       </Typography>
-      <Typography
-        sx={{
-          fontFamily: '"Outfit", sans-serif',
-          fontSize: compact ? '0.62rem' : '0.65rem',
-          letterSpacing: compact ? '0.18em' : '0.2em',
-          textTransform: 'uppercase',
-          color: palette.textInverseMuted,
-          mt: 0.5,
-        }}
-      >
-        Timesheets
-      </Typography>
+
+      {!collapsed && (
+        <Typography
+          sx={{
+            fontFamily: '"Outfit", sans-serif',
+            fontSize: compact ? '0.62rem' : '0.65rem',
+            letterSpacing: compact ? '0.18em' : '0.2em',
+            textTransform: 'uppercase',
+            color: palette.textInverseMuted,
+            mt: 0.5,
+          }}
+        >
+          Timesheets
+        </Typography>
+      )}
     </Box>
   )
 }
 
-function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned = false }) {
+function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapsed = false }) {
   if (mobile) {
     return (
       <Box
         sx={{
           p: 2.5,
+          mt: 2,
           borderTop: `1px solid ${palette.sidebarScrim}`,
         }}
       >
@@ -112,6 +131,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           >
             {user?.name?.[0]?.toUpperCase() ?? '?'}
           </Box>
+
           <Box sx={{ minWidth: 0 }}>
             <Typography
               sx={{
@@ -125,6 +145,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
             >
               {user?.name ?? 'User'}
             </Typography>
+
             <Typography
               sx={{
                 fontSize: '0.65rem',
@@ -161,14 +182,78 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           >
             Password
           </Button>
-          <Button
-            variant="contained"
-            startIcon={<LogoutIcon />}
-            onClick={onLogout}
-          >
+
+          <Button variant="contained" startIcon={<LogoutIcon />} onClick={onLogout}>
             Sign out
           </Button>
         </Box>
+      </Box>
+    )
+  }
+
+  if (collapsed) {
+    return (
+      <Box
+        sx={{
+          p: '16px 10px',
+          mt: 2,
+          borderTop: `1px solid ${palette.sidebarScrim}`,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 1,
+          flexShrink: 0,
+        }}
+      >
+        <Box
+          sx={{
+            width: 36,
+            height: 36,
+            borderRadius: '10px',
+            background: `linear-gradient(135deg, ${palette.primary} 0%, ${palette.primaryHover} 100%)`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '0.8rem',
+            fontWeight: 700,
+            color: palette.primaryContrast,
+            flexShrink: 0,
+          }}
+        >
+          {user?.name?.[0]?.toUpperCase() ?? '?'}
+        </Box>
+
+        <Tooltip title="Change password">
+          <IconButton
+            size="small"
+            onClick={onChangePassword}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.textInverse,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LockResetIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Sign out">
+          <IconButton
+            size="small"
+            onClick={onLogout}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.primary,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LogoutIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
       </Box>
     )
   }
@@ -177,16 +262,8 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
     <Box
       sx={{
         p: '16px 20px',
+        mt: 2,
         borderTop: `1px solid ${palette.sidebarScrim}`,
-        position: pinned ? 'fixed' : 'relative',
-        left: pinned ? 0 : 'auto',
-        right: pinned ? 'auto' : 'auto',
-        bottom: pinned ? 0 : 'auto',
-        width: pinned ? SIDEBAR_WIDTH : 'auto',
-        zIndex: pinned ? 1201 : 'auto',
-        background: pinned
-          ? `linear-gradient(180deg, ${palette.sidebarBgAlt} 0%, ${palette.sidebarBg} 100%)`
-          : 'transparent',
         display: 'flex',
         alignItems: 'center',
         gap: 1,
@@ -210,6 +287,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
       >
         {user?.name?.[0]?.toUpperCase() ?? '?'}
       </Box>
+
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography
           sx={{
@@ -223,6 +301,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
         >
           {user?.name ?? 'User'}
         </Typography>
+
         <Typography
           sx={{
             fontSize: '0.65rem',
@@ -234,30 +313,40 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           {user?.role?.replace(/_/g, ' ')}
         </Typography>
       </Box>
-      <Tooltip title="Change password">
-        <IconButton
-          size="small"
-          onClick={onChangePassword}
-          sx={{
-            color: palette.textInverseMuted,
-            '&:hover': { color: palette.textInverse, backgroundColor: palette.overlayWhiteSoft },
-          }}
-        >
-          <LockResetIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-      <Tooltip title="Sign out">
-        <IconButton
-          size="small"
-          onClick={onLogout}
-          sx={{
-            color: palette.textInverseMuted,
-            '&:hover': { color: palette.primary, backgroundColor: palette.overlayWhiteSoft },
-          }}
-        >
-          <LogoutIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Tooltip title="Change password">
+          <IconButton
+            size="small"
+            onClick={onChangePassword}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.textInverse,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LockResetIcon />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title="Sign out">
+          <IconButton
+            size="small"
+            onClick={onLogout}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.primary,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LogoutIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Box>
   )
 }
@@ -266,52 +355,26 @@ export default function AppLayout() {
   const theme = useTheme()
   const location = useLocation()
   const { logout, user } = useAuth()
+  const { runWithGuard } = useUnsavedChangesController()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const isSmallScreen = useMediaQuery(theme.breakpoints.down('sm'))
 
   const [pwOpen, setPwOpen] = useState(false)
-  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' })
-  const [pwError, setPwError] = useState('')
-  const [pwSuccess, setPwSuccess] = useState(false)
-  const [pwLoading, setPwLoading] = useState(false)
-  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false)
+  const [mobileNavState, setMobileNavState] = useState({
+    open: false,
+    pathname: location.pathname,
+  })
+
   const crumbs = getBreadcrumbs(location.pathname)
+  const mobileNavOpen = mobileNavState.open && mobileNavState.pathname === location.pathname
+  const desktopSidebarWidth = desktopNavCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH
 
-  useEffect(() => {
-    setMobileNavOpen(false)
-  }, [location.pathname])
-
-  function closeDialog() {
-    setPwOpen(false)
-    setPwError('')
-    setPwSuccess(false)
-    setPwForm({ current: '', next: '', confirm: '' })
+  function openMobileNav() {
+    setMobileNavState({ open: true, pathname: location.pathname })
   }
 
-  async function handleChangePassword() {
-    setPwError('')
-    if (!pwForm.current || !pwForm.next || !pwForm.confirm) {
-      setPwError('All fields are required.')
-      return
-    }
-    if (pwForm.next.length < 8) {
-      setPwError('New password must be at least 8 characters.')
-      return
-    }
-    if (pwForm.next !== pwForm.confirm) {
-      setPwError('New passwords do not match.')
-      return
-    }
-    setPwLoading(true)
-    try {
-      await changePassword(pwForm.current, pwForm.next)
-      setPwSuccess(true)
-      setPwForm({ current: '', next: '', confirm: '' })
-    } catch (err) {
-      setPwError(err.message || 'Failed to change password.')
-    } finally {
-      setPwLoading(false)
-    }
+  function closeMobileNav() {
+    setMobileNavState({ open: false, pathname: location.pathname })
   }
 
   const todayLabel = new Date().toLocaleDateString('en-GB', {
@@ -333,45 +396,62 @@ export default function AppLayout() {
       left: 0,
       right: 0,
       bottom: 0,
-      background: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'0.02\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")',
+      background:
+        "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
       pointerEvents: 'none',
     },
   }
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', alignItems: 'stretch' }}>
       {!isMobile && (
         <Box
           component="nav"
           sx={{
-            width: SIDEBAR_WIDTH,
+            width: desktopSidebarWidth,
             flexShrink: 0,
             display: 'grid',
-            gridTemplateRows: 'auto minmax(0, 1fr) auto',
-            position: 'fixed',
+            gridTemplateRows: 'auto 1fr auto',
+            height: '100vh',
             top: 0,
-            left: 0,
-            bottom: 0,
             overflow: 'hidden',
-            zIndex: 1200,
+            transition: 'width 0.2s ease',
             ...navShellStyles,
+            position: 'sticky',
           }}
         >
-          <BrandLockup />
-          <Box
-            sx={{
-              minHeight: 0,
-              overflow: 'auto',
-              position: 'relative',
-            }}
-          >
-            <Sidebar />
+          <Box sx={{ position: 'relative' }}>
+            <BrandLockup collapsed={desktopNavCollapsed} />
+
+            <IconButton
+              onClick={() => setDesktopNavCollapsed((prev) => !prev)}
+              sx={{
+                position: 'absolute',
+                top: 14,
+                right: desktopNavCollapsed ? '50%' : 14,
+                transform: desktopNavCollapsed ? 'translateX(50%)' : 'none',
+                color: palette.textInverseMuted,
+                border: `1px solid ${palette.sidebarScrim}`,
+                backgroundColor: palette.overlayWhiteSoft,
+                '&:hover': {
+                  color: palette.textInverse,
+                  backgroundColor: palette.overlayWhiteMuted,
+                },
+              }}
+            >
+              {desktopNavCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+            </IconButton>
           </Box>
+
+          <Box sx={{ minHeight: 0, overflow: 'auto', position: 'relative' }}>
+            <Sidebar collapsed={desktopNavCollapsed} />
+          </Box>
+
           <UserFooter
             user={user}
-            pinned
+            collapsed={desktopNavCollapsed}
             onChangePassword={() => setPwOpen(true)}
-            onLogout={logout}
+            onLogout={() => runWithGuard(logout)}
           />
         </Box>
       )}
@@ -398,7 +478,7 @@ export default function AppLayout() {
             >
               <IconButton
                 edge="start"
-                onClick={() => setMobileNavOpen(true)}
+                onClick={openMobileNav}
                 sx={{
                   color: palette.textPrimary,
                   border: `1px solid ${palette.border}`,
@@ -467,7 +547,7 @@ export default function AppLayout() {
 
           <Drawer
             open={mobileNavOpen}
-            onClose={() => setMobileNavOpen(false)}
+            onClose={closeMobileNav}
             ModalProps={{ keepMounted: true }}
             slotProps={{
               paper: {
@@ -485,22 +565,21 @@ export default function AppLayout() {
           >
             <BrandLockup compact />
             <Box sx={{ minHeight: 0, overflow: 'auto', position: 'relative' }}>
-              <Sidebar onNavigate={() => setMobileNavOpen(false)} />
+              <Sidebar onNavigate={closeMobileNav} />
             </Box>
             <UserFooter
               user={user}
               mobile
               onChangePassword={() => {
-                setMobileNavOpen(false)
+                closeMobileNav()
                 setPwOpen(true)
               }}
-              onLogout={logout}
+              onLogout={() => runWithGuard(logout)}
             />
           </Drawer>
         </>
       )}
 
-      {/* Main content */}
       <Box
         component="main"
         sx={{
@@ -508,7 +587,7 @@ export default function AppLayout() {
           minHeight: '100vh',
           display: 'flex',
           flexDirection: 'column',
-          width: { xs: '100%', md: `calc(100% - ${SIDEBAR_WIDTH}px)` },
+          minWidth: 0,
         }}
       >
         {isMobile && (
@@ -519,7 +598,6 @@ export default function AppLayout() {
           />
         )}
 
-        {/* Top bar */}
         <Box
           sx={{
             px: { md: 3, lg: 4 },
@@ -537,7 +615,6 @@ export default function AppLayout() {
             gap: 2,
           }}
         >
-          {/* Breadcrumb */}
           <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, overflow: 'hidden' }}>
             {crumbs.map((crumb, i) => (
               <Fragment key={crumb + i}>
@@ -570,7 +647,6 @@ export default function AppLayout() {
             ))}
           </Box>
 
-          {/* Right: date + divider + user pill */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexShrink: 0 }}>
             <Typography
               sx={{
@@ -585,74 +661,20 @@ export default function AppLayout() {
           </Box>
         </Box>
 
-        {/* Page content */}
         <Box
           className="page-enter"
           sx={{
             flex: 1,
             p: { xs: 2, sm: 3, md: 4 },
-            maxWidth: 1200,
             width: '100%',
-            mx: 'auto',
+            minWidth: 0,
           }}
         >
           <Outlet />
         </Box>
       </Box>
 
-      {/* Change Password Dialog */}
-      <Dialog
-        open={pwOpen}
-        onClose={closeDialog}
-        maxWidth="xs"
-        fullWidth
-        fullScreen={isSmallScreen}
-      >
-        <DialogTitle>Change Password</DialogTitle>
-        <DialogContent>
-          {pwError && (
-            <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
-              {pwError}
-            </Alert>
-          )}
-          {pwSuccess && (
-            <Alert severity="success" sx={{ mb: 2, mt: 1 }}>
-              Password changed successfully.
-            </Alert>
-          )}
-          <TextField
-            label="Current Password"
-            type="password"
-            value={pwForm.current}
-            onChange={(e) => setPwForm((p) => ({ ...p, current: e.target.value }))}
-            fullWidth
-            sx={{ mt: 1, mb: 2 }}
-          />
-          <TextField
-            label="New Password"
-            type="password"
-            value={pwForm.next}
-            onChange={(e) => setPwForm((p) => ({ ...p, next: e.target.value }))}
-            fullWidth
-            sx={{ mb: 2 }}
-          />
-          <TextField
-            label="Confirm New Password"
-            type="password"
-            value={pwForm.confirm}
-            onChange={(e) => setPwForm((p) => ({ ...p, confirm: e.target.value }))}
-            fullWidth
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeDialog} disabled={pwLoading}>
-            Cancel
-          </Button>
-          <Button variant="contained" onClick={handleChangePassword} disabled={pwLoading}>
-            {pwLoading ? 'Saving...' : 'Save'}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PasswordDialog open={pwOpen} onClose={() => setPwOpen(false)} />
     </Box>
   )
 }

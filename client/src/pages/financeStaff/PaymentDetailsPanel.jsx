@@ -4,7 +4,6 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Divider from '@mui/material/Divider'
 import InputAdornment from '@mui/material/InputAdornment'
-import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
@@ -13,6 +12,16 @@ import PaymentIcon from '@mui/icons-material/Payment'
 import { palette } from '../../theme.js'
 import { getWorkBucketDisplayLabel } from '../../utils/displayLabels.js'
 import { getWorkBucketKey } from '../../utils/timesheetMatrix.js'
+
+const overlineSx = {
+  fontFamily: '"Outfit", system-ui, sans-serif',
+  fontSize: '0.72rem',
+  fontWeight: 500,
+  textTransform: 'uppercase',
+  letterSpacing: '0.2em',
+  color: 'text.secondary',
+  mb: 2,
+}
 
 export default function PaymentDetailsPanel({
   isMobile,
@@ -30,10 +39,9 @@ export default function PaymentDetailsPanel({
   formatCurrency,
 }) {
   return (
-    <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>
-      <Typography variant="h6" gutterBottom>
-        Payment Details
-      </Typography>
+    <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+      <Typography sx={overlineSx}>Payment Details</Typography>
+
       <Alert severity="info" sx={{ mb: 4 }}>
         Rates are pre-filled from client assignments and submitter defaults. Overrides only affect
         this payment processing.
@@ -42,10 +50,7 @@ export default function PaymentDetailsPanel({
       <Box
         sx={{
           display: 'grid',
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: '1fr 160px 160px',
-          },
+          gridTemplateColumns: { xs: '1fr', sm: '1fr 160px 160px' },
           columnGap: 2,
           rowGap: { xs: 4, sm: 3 },
           alignItems: 'start',
@@ -55,33 +60,36 @@ export default function PaymentDetailsPanel({
           <>
             <Typography
               variant="caption"
-              fontWeight={700}
               sx={{
-                color: palette.textPrimary,
+                color: 'text.secondary',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.18em',
+                fontWeight: 500,
+                fontSize: '0.68rem',
               }}
             >
               Work Category
             </Typography>
             <Typography
               variant="caption"
-              fontWeight={700}
               sx={{
-                color: palette.textPrimary,
+                color: 'text.secondary',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.18em',
+                fontWeight: 500,
+                fontSize: '0.68rem',
               }}
             >
               Client Bill Rate
             </Typography>
             <Typography
               variant="caption"
-              fontWeight={700}
               sx={{
-                color: palette.textPrimary,
+                color: 'text.secondary',
                 textTransform: 'uppercase',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.18em',
+                fontWeight: 500,
+                fontSize: '0.68rem',
               }}
             >
               Submitter Pay Rate
@@ -98,7 +106,7 @@ export default function PaymentDetailsPanel({
           return (
             <Fragment key={bucketKey}>
               <Box sx={{ pt: { sm: 1 } }}>
-                <Typography variant="body2" fontWeight={700}>
+                <Typography variant="body2" fontWeight={600}>
                   {getWorkBucketDisplayLabel(item.bucketLabel)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -162,92 +170,80 @@ export default function PaymentDetailsPanel({
 
       <Box
         sx={{
-          p: 3,
           mt: 5,
-          borderTop: `4px solid ${palette.textPrimary}`,
-          borderBottom: `4px solid ${palette.textPrimary}`,
-          backgroundColor: palette.surface,
+          pt: 3,
+          pb: 3,
+          borderTop: '1px solid',
+          borderBottom: '1px solid',
+          borderColor: 'divider',
         }}
       >
-        <Typography
-          variant="subtitle2"
-          sx={{ mb: 2, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}
-        >
-          Finance Totals
-        </Typography>
+        <Typography sx={{ ...overlineSx, mb: 3 }}>Finance Totals</Typography>
         <Box
           sx={{
             display: 'grid',
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-            gap: 3,
+            gap: { xs: 3, sm: 4 },
             mb: computedBuckets.length > 0 ? 4 : 0,
           }}
         >
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}
-            >
-              MONEY IN
-            </Typography>
-            <Typography
-              sx={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '1.8rem',
-                fontWeight: 800,
-                color: isPaymentReady ? palette.success : palette.textPrimary,
-                lineHeight: 1,
-              }}
-            >
-              {isPaymentReady ? formatCurrency(totals.incoming) : '-'}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}
-            >
-              MONEY OUT
-            </Typography>
-            <Typography
-              sx={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '1.8rem',
-                fontWeight: 800,
-                color: isPaymentReady ? palette.error : palette.textPrimary,
-                lineHeight: 1,
-              }}
-            >
-              {isPaymentReady ? formatCurrency(totals.outgoing) : '-'}
-            </Typography>
-          </Box>
-          <Box>
-            <Typography
-              variant="caption"
-              sx={{ color: palette.textMuted, display: 'block', mb: 0.5, fontWeight: 700 }}
-            >
-              NET MARGIN
-            </Typography>
-            <Typography
-              sx={{
-                fontFamily: '"JetBrains Mono", monospace',
-                fontSize: '1.8rem',
-                fontWeight: 800,
-                color: isPaymentReady
-                  ? netMargin >= 0
-                    ? palette.success
-                    : palette.error
-                  : palette.textPrimary,
-                lineHeight: 1,
-              }}
-            >
-              {isPaymentReady ? formatCurrency(netMargin) : '-'}
-            </Typography>
-          </Box>
+          {[
+            {
+              label: 'Money In',
+              value: isPaymentReady ? formatCurrency(totals.incoming) : '-',
+              color: isPaymentReady ? palette.success : 'text.primary',
+            },
+            {
+              label: 'Money Out',
+              value: isPaymentReady ? formatCurrency(totals.outgoing) : '-',
+              color: isPaymentReady ? palette.error : 'text.primary',
+            },
+            {
+              label: 'Net Margin',
+              value: isPaymentReady ? formatCurrency(netMargin) : '-',
+              color: isPaymentReady
+                ? netMargin >= 0
+                  ? palette.success
+                  : palette.error
+                : 'text.primary',
+            },
+          ].map((item) => (
+            <Box key={item.label}>
+              <Typography
+                sx={{
+                  fontSize: '0.72rem',
+                  fontWeight: 500,
+                  color: 'text.secondary',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.18em',
+                  mb: 1,
+                }}
+              >
+                {item.label}
+              </Typography>
+              <Typography
+                sx={{
+                  fontFamily: 'Poppins, Georgia, serif',
+                  fontWeight: 400,
+                  fontSize: { xs: '1.9rem', sm: '2.2rem' },
+                  lineHeight: 1,
+                  letterSpacing: '-0.03em',
+                  color: item.color,
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                {item.value}
+              </Typography>
+            </Box>
+          ))}
         </Box>
 
         {computedBuckets.length > 0 && (
-          <Stack spacing={1} sx={{ pt: 2, borderTop: `2px solid ${palette.border}` }}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px dashed', borderColor: 'divider' }} />}
+            spacing={0}
+            sx={{ pt: 2, borderTop: '1px solid', borderColor: 'divider' }}
+          >
             {computedBuckets.map((item) => {
               const itemMargin = (item.billAmount ?? 0) - (item.payAmount ?? 0)
 
@@ -259,26 +255,27 @@ export default function PaymentDetailsPanel({
                     flexWrap: 'wrap',
                     alignItems: 'center',
                     gap: 1,
+                    py: 1.25,
                     fontFamily: '"JetBrains Mono", monospace',
                     fontSize: '0.725rem',
                   }}
                 >
                   <Typography
                     variant="inherit"
-                    sx={{ fontWeight: 600, color: palette.textSecondary, minWidth: 120 }}
+                    sx={{ fontWeight: 600, color: 'text.primary', minWidth: 120 }}
                   >
                     {getWorkBucketDisplayLabel(item.bucketLabel)}:
                   </Typography>
-                  <Typography variant="inherit" sx={{ color: palette.textMuted }}>
+                  <Typography variant="inherit" sx={{ color: 'text.secondary' }}>
                     {Number(item.hours).toFixed(2)}h
                   </Typography>
-                  <Typography variant="inherit" sx={{ color: palette.border }}>
+                  <Typography variant="inherit" sx={{ color: 'divider' }}>
                     |
                   </Typography>
                   <Typography variant="inherit" sx={{ color: palette.success, fontWeight: 500 }}>
                     In {item.hasValidBillRate ? formatCurrency(item.billAmount ?? 0) : '-'}
                   </Typography>
-                  <Typography variant="inherit" sx={{ color: palette.border }}>
+                  <Typography variant="inherit" sx={{ color: 'divider' }}>
                     |
                   </Typography>
                   <Typography variant="inherit" sx={{ color: palette.error, fontWeight: 500 }}>
@@ -286,7 +283,7 @@ export default function PaymentDetailsPanel({
                   </Typography>
                   {item.hasValidBillRate && item.hasValidPayRate && (
                     <>
-                      <Typography variant="inherit" sx={{ color: palette.border }}>
+                      <Typography variant="inherit" sx={{ color: 'divider' }}>
                         |
                       </Typography>
                       <Typography
@@ -320,7 +317,7 @@ export default function PaymentDetailsPanel({
       </Box>
 
       <Box sx={{ mt: 3 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
           <Button
             variant="contained"
             color="primary"
@@ -351,6 +348,6 @@ export default function PaymentDetailsPanel({
           )}
         </Stack>
       </Box>
-    </Paper>
+    </Box>
   )
 }

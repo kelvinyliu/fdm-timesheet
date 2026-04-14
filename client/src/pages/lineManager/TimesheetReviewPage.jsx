@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams, useLoaderData, useRevalidator } fr
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Divider from '@mui/material/Divider'
@@ -26,7 +25,6 @@ import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDispl
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { reviewTimesheet } from '../../api/timesheets'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
-import { palette } from '../../theme.js'
 import {
   getSubmitterDisplayLabel,
   getWorkBucketDisplayLabel,
@@ -215,22 +213,35 @@ export default function TimesheetReviewPage() {
 
       {timesheet && (
         <>
-          <Paper sx={{ 
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 3, 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            border: '1px solid rgba(0,0,0,0.05)', 
-            background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
-            mb: 3 
-          }}>
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ mb: 4, pb: 4, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Summary
             </Typography>
             <DetailList items={summaryItems} />
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography variant="h6" gutterBottom>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Work Summary
             </Typography>
             {(timesheet.workSummary ?? []).length === 0 ? (
@@ -254,7 +265,7 @@ export default function TimesheetReviewPage() {
                 rowGap={1.25}
               />
             )}
-          </Paper>
+          </Box>
 
           <WeeklyMatrix
             rows={matrixRows}
@@ -264,9 +275,19 @@ export default function TimesheetReviewPage() {
           />
 
           {timesheet.status === 'PENDING' && (
-            <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>
-              <Typography variant="h6" gutterBottom>
-                Actions
+            <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Typography
+                sx={{
+                  fontFamily: '"Outfit", system-ui, sans-serif',
+                  fontSize: '0.72rem',
+                  fontWeight: 500,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.2em',
+                  color: 'text.secondary',
+                  mb: 2,
+                }}
+              >
+                Decision
               </Typography>
               <Stack spacing={3}>
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -326,7 +347,7 @@ export default function TimesheetReviewPage() {
                   )}
                 </Stack>
               </Stack>
-            </Paper>
+            </Box>
           )}
 
           <Dialog

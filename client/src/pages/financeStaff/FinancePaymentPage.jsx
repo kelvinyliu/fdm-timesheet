@@ -3,9 +3,7 @@ import { useLoaderData, useLocation, useNavigate, useParams, useRevalidator } fr
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
@@ -317,22 +315,35 @@ export default function FinancePaymentPage() {
 
       {timesheet && (
         <>
-          <Paper sx={{ 
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 3, 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            border: '1px solid rgba(0,0,0,0.05)', 
-            background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
-            mb: 3 
-          }}>
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ mb: 4, pb: 4, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Summary
             </Typography>
             <DetailList items={summaryItems} />
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography variant="h6" gutterBottom>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Work Summary
             </Typography>
             {(workSummary ?? []).length === 0 ? (
@@ -356,7 +367,7 @@ export default function FinancePaymentPage() {
                 rowGap={1.25}
               />
             )}
-          </Paper>
+          </Box>
 
           <WeeklyMatrix
             rows={matrixRows}

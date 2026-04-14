@@ -140,13 +140,24 @@ export default function FinancePayRatesPage() {
       )}
 
       {filteredConsultants.length === 0 ? (
-        <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
+        <Box
+          sx={{
+            py: 6,
+            textAlign: 'center',
+            borderTop: '1px dashed',
+            borderBottom: '1px dashed',
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             No submitters found.
           </Typography>
-        </Paper>
+        </Box>
       ) : isMobile ? (
-        <Stack spacing={1.5}>
+        <Stack
+          divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+          spacing={0}
+        >
           {filteredConsultants.map((consultant) => {
             const currentRate = pendingRates[consultant.id] ?? ''
             const isDirty =
@@ -154,7 +165,7 @@ export default function FinancePayRatesPage() {
               (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
 
             return (
-              <Paper key={consultant.id} sx={{ p: 2.5 }}>
+              <Box key={consultant.id} sx={{ py: 2.5 }}>
                 <Stack spacing={2}>
                   <Box>
                     <Typography variant="body2" fontWeight={600}>
@@ -196,11 +207,12 @@ export default function FinancePayRatesPage() {
                     startIcon={<SaveIcon />}
                     disabled={!isDirty || savingById[consultant.id]}
                     onClick={() => handleSave(consultant.id)}
+                    sx={{ alignSelf: 'flex-end' }}
                   >
                     {savingById[consultant.id] ? 'Saving...' : 'Save Pay Rate'}
                   </Button>
                 </Stack>
-              </Paper>
+              </Box>
             )
           })}
         </Stack>

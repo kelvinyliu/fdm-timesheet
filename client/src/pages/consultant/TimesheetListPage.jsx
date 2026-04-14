@@ -156,73 +156,53 @@ export default function TimesheetListPage({
         {renderMissingWeekButton()}
       </PageHeader>
 
-      {/* Compact status summary from ui-tweak1, kept above the existing list/table views. */}
       {!error && timesheets.length > 0 && (
-        <Paper
-          elevation={0}
+        <Box
           sx={{
             mb: 4,
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            borderRadius: 3,
-            border: '1px solid rgba(0,0,0,0.08)',
-            background: 'linear-gradient(to right, rgba(255,255,255,0.7), rgba(252,252,252,0.8))',
-            backdropFilter: 'blur(10px)',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 },
+            pb: 3,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gap: { xs: 3, sm: 4 },
           }}
         >
           {[
-            { label: 'Drafts', count: draftCount, color: 'text.secondary' },
-            { label: 'Pending', count: pendingCount, color: '#ed6c02' },
-            { label: 'Rejected', count: rejectedCount, color: '#d32f2f' },
-            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2e7d32' },
-          ].map((item, index) => (
-            <Box
-              key={item.label}
-              sx={{
-                flex: 1,
-                textAlign: 'center',
-                borderRight: {
-                  xs: 'none',
-                  sm: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                },
-                borderBottom: {
-                  xs: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                  sm: 'none',
-                },
-                pb: { xs: index !== 3 ? 2 : 0, sm: 0 },
-                width: '100%',
-              }}
-            >
+            { label: 'Drafts', count: draftCount, color: 'text.primary' },
+            { label: 'Pending', count: pendingCount, color: '#8a5a00' },
+            { label: 'Rejected', count: rejectedCount, color: '#e55c58' },
+            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2f6b36' },
+          ].map((item) => (
+            <Box key={item.label}>
               <Typography
-                variant="caption"
                 sx={{
-                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  fontWeight: 500,
                   color: 'text.secondary',
                   textTransform: 'uppercase',
-                  letterSpacing: 1,
-                  display: 'block',
+                  letterSpacing: '0.18em',
+                  mb: 1,
                 }}
               >
                 {item.label}
               </Typography>
               <Typography
-                variant="h5"
                 sx={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontWeight: 800,
+                  fontFamily: 'Poppins, Georgia, serif',
+                  fontWeight: 400,
+                  fontSize: { xs: '2.2rem', sm: '2.6rem' },
+                  lineHeight: 1,
+                  letterSpacing: '-0.03em',
                   color: item.color,
-                  mt: 0.5,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {item.count}
               </Typography>
             </Box>
           ))}
-        </Paper>
+        </Box>
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -245,19 +225,21 @@ export default function TimesheetListPage({
       )}
 
       {!error && displayTimesheets.length === 0 && (
-        <Paper
+        <Box
           sx={{
-            p: 6,
+            py: 6,
             textAlign: 'center',
-            borderStyle: 'dashed',
+            borderTop: '1px dashed',
+            borderBottom: '1px dashed',
+            borderColor: 'divider',
           }}
         >
           <Typography
             sx={{
               fontFamily: 'Poppins, Georgia, serif',
-              fontSize: '1.2rem',
-              color: 'text.secondary',
-              mb: 1,
+              fontSize: '1.3rem',
+              color: 'text.primary',
+              mb: 0.5,
             }}
           >
             {timesheets.length === 0
@@ -266,85 +248,69 @@ export default function TimesheetListPage({
                 ? 'No pending or draft timesheets'
                 : 'No approved or paid timesheets'}
           </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
-              fontSize: '1.2rem',
-              mb: 1,
-            }}
-          >
-            {timesheets.length === 0 ? 'Create one to get started.' : ''}
-          </Typography>
-        </Paper>
+          {timesheets.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              Create one to get started.
+            </Typography>
+          )}
+        </Box>
       )}
 
       {!error &&
         displayTimesheets.length > 0 &&
         (isMobile ? (
-          <Stack spacing={1.5}>
+          <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />} spacing={0}>
             {displayTimesheets.map((ts) => {
               const isEditable = isConsultantEditableStatus(ts.status)
-              const actionLabel = isEditable ? 'Edit Timesheet' : 'View Timesheet'
+              const actionLabel = isEditable ? 'Edit' : 'View'
               const ActionIcon = isEditable ? EditIcon : VisibilityIcon
               const destination = isEditable ? `${basePath}/${ts.id}/edit` : `${basePath}/${ts.id}`
 
               return (
-                <Paper key={ts.id} sx={{ p: 2.5 }}>
-                  <Stack spacing={2}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: 1.5,
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Week of
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {formatWeekStart(ts.weekStart)}
-                        </Typography>
-                      </Box>
+                <Box
+                  key={ts.id}
+                  onClick={() => navigate(destination)}
+                  sx={{
+                    py: 2.25,
+                    px: 1,
+                    mx: -1,
+                    borderRadius: 1.5,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': { backgroundColor: 'action.hover' },
+                  }}
+                >
+                  <Stack spacing={1.25}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {formatWeekStart(ts.weekStart)}
+                      </Typography>
                       <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
-                    </Box>
-
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Work Categories
-                      </Typography>
-                      <Typography variant="body2" fontWeight={500}>
-                        {getWorkSummaryDisplayLabel(ts.workSummary, 2)}
-                      </Typography>
-                    </Box>
-
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Total Hours
-                      </Typography>
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      {getWorkSummaryDisplayLabel(ts.workSummary, 2)}
+                    </Typography>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
                       <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '1rem',
-                          fontWeight: 600,
+                        variant="body2"
+                        sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}
+                      >
+                        {ts.totalHours != null ? `${Number(ts.totalHours).toFixed(2)} hrs` : '-'}
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ActionIcon sx={{ fontSize: '0.9rem' }} />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(destination)
                         }}
                       >
-                        {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
-                      </Typography>
-                    </Box>
-
-                    <Button
-                      variant="outlined"
-                      startIcon={<ActionIcon sx={{ fontSize: '0.95rem' }} />}
-                      onClick={() => navigate(destination)}
-                    >
-                      {actionLabel}
-                    </Button>
+                        {actionLabel}
+                      </Button>
+                    </Stack>
                   </Stack>
-                </Paper>
+                </Box>
               )
             })}
           </Stack>

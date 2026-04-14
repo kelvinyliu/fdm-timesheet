@@ -3,7 +3,6 @@ import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
-import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -37,10 +36,9 @@ export default function TimesheetCreatePage({ basePath = '/consultant/timesheets
         </Button>
       </PageHeader>
 
-      <Paper sx={{ p: { xs: 2.5, sm: 4 }, maxWidth: 560 }}>
+      <Box sx={{ maxWidth: 560 }}>
         <Stack spacing={3}>
           {loadError && <Alert severity="warning">{loadError}</Alert>}
-
           {submitError && <Alert severity="error">{submitError}</Alert>}
 
           <Box>
@@ -63,7 +61,7 @@ export default function TimesheetCreatePage({ basePath = '/consultant/timesheets
             </Button>
           </Stack>
         </Stack>
-      </Paper>
+      </Box>
     </Box>
   )
 }

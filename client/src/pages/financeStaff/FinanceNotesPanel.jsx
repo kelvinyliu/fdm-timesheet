@@ -1,36 +1,38 @@
 import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
-import { palette } from '../../theme.js'
 import { formatTimestamp } from '../../utils/dateFormatters.js'
 
 export default function FinanceNotesPanel({ notes }) {
   if (notes.length === 0) return null
 
   return (
-    <Paper sx={{ p: 3, mt: 2 }}>
-      <Typography variant="h6" gutterBottom>
+    <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
+      <Typography
+        sx={{
+          fontFamily: '"Outfit", system-ui, sans-serif',
+          fontSize: '0.72rem',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+          letterSpacing: '0.2em',
+          color: 'text.secondary',
+          mb: 2,
+        }}
+      >
         Finance Notes
       </Typography>
-      <Stack spacing={2}>
+      <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />} spacing={0}>
         {notes.map((note) => (
-          <Box
-            key={note.id}
-            sx={{
-              p: 2,
-              borderRadius: 0,
-              backgroundColor: palette.surfaceMuted,
-              border: `2px solid ${palette.border}`,
-            }}
-          >
-            <Typography variant="body2">{note.note}</Typography>
+          <Box key={note.id} sx={{ py: 2 }}>
+            <Typography variant="body2" sx={{ mb: 0.75 }}>
+              {note.note}
+            </Typography>
             <Typography
               variant="caption"
               sx={{
                 fontFamily: '"JetBrains Mono", monospace',
                 fontSize: '0.65rem',
-                mt: 0.5,
+                color: 'text.secondary',
                 display: 'block',
               }}
             >
@@ -39,6 +41,6 @@ export default function FinanceNotesPanel({ notes }) {
           </Box>
         ))}
       </Stack>
-    </Paper>
+    </Box>
   )
 }

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from 'react'
 import { useLoaderData, useNavigate, useParams, useLocation } from 'react-router'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
 import Stack from '@mui/material/Stack'
@@ -16,7 +15,6 @@ import { useConfirmation } from '../../context/useConfirmation.js'
 import { useGuardedNavigate, useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
-import { palette } from '../../theme.js'
 import { buildAutofillEntries, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import {
   entriesToEditableMatrixRows,
@@ -414,7 +412,14 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         onRowHoursChange={handleRowHoursChange}
       />
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mt: 3, backgroundColor: palette.surfaceRaised }}>
+      <Box
+        sx={{
+          mt: 4,
+          pt: 3,
+          borderTop: '1px solid',
+          borderColor: 'divider',
+        }}
+      >
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
           <Button
             variant="outlined"
@@ -437,7 +442,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
             {submitting ? 'Submitting...' : 'Submit for Review'}
           </Button>
         </Stack>
-      </Paper>
+      </Box>
 
       <Snackbar
         open={snackbar.open}

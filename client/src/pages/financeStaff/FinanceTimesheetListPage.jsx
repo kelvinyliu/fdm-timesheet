@@ -163,71 +163,52 @@ export default function FinanceTimesheetListPage() {
       </PageHeader>
 
       {!error && timesheets.length > 0 && (
-        <Paper
-          elevation={0}
+        <Box
           sx={{
             mb: 4,
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            borderRadius: 3,
-            border: '1px solid rgba(0,0,0,0.08)',
-            background: 'linear-gradient(to right, rgba(255,255,255,0.7), rgba(252,252,252,0.8))',
-            backdropFilter: 'blur(10px)',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 },
+            pb: 3,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gap: { xs: 3, sm: 4 },
           }}
         >
           {[
-            { label: 'Drafts', count: draftCount, color: 'text.secondary' },
-            { label: 'Pending', count: pendingCount, color: '#ed6c02' },
-            { label: 'Rejected', count: rejectedCount, color: '#d32f2f' },
-            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2e7d32' },
-          ].map((item, index) => (
-            <Box
-              key={item.label}
-              sx={{
-                flex: 1,
-                textAlign: 'center',
-                borderRight: {
-                  xs: 'none',
-                  sm: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                },
-                borderBottom: {
-                  xs: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                  sm: 'none',
-                },
-                pb: { xs: index !== 3 ? 2 : 0, sm: 0 },
-                width: '100%',
-              }}
-            >
+            { label: 'Drafts', count: draftCount, color: 'text.primary' },
+            { label: 'Pending', count: pendingCount, color: '#8a5a00' },
+            { label: 'Rejected', count: rejectedCount, color: '#e55c58' },
+            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2f6b36' },
+          ].map((item) => (
+            <Box key={item.label}>
               <Typography
-                variant="caption"
                 sx={{
-                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  fontWeight: 500,
                   color: 'text.secondary',
                   textTransform: 'uppercase',
-                  letterSpacing: 1,
-                  display: 'block',
+                  letterSpacing: '0.18em',
+                  mb: 1,
                 }}
               >
                 {item.label}
               </Typography>
               <Typography
-                variant="h5"
                 sx={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontWeight: 800,
+                  fontFamily: 'Poppins, Georgia, serif',
+                  fontWeight: 400,
+                  fontSize: { xs: '2.2rem', sm: '2.6rem' },
+                  lineHeight: 1,
+                  letterSpacing: '-0.03em',
                   color: item.color,
-                  mt: 0.5,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {item.count}
               </Typography>
             </Box>
           ))}
-        </Paper>
+        </Box>
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
@@ -244,130 +225,81 @@ export default function FinanceTimesheetListPage() {
       )}
 
       {!error && sortedTimesheets.length === 0 && (
-        <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
+        <Box
+          sx={{
+            py: 6,
+            textAlign: 'center',
+            borderTop: '1px dashed',
+            borderBottom: '1px dashed',
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             {emptyMessage}
           </Typography>
-        </Paper>
+        </Box>
       )}
 
       {!error &&
         sortedTimesheets.length > 0 &&
         (isMobile ? (
-          <Stack spacing={1.5}>
+          <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />} spacing={0}>
             {sortedTimesheets.map((timesheet) => {
               const ActionIcon = getActionButtonIcon(timesheet.status)
 
               return (
-                <Paper key={timesheet.id} sx={{ p: 2.5 }}>
-                  <Stack spacing={2}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: 1.5,
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Submitter
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {getSubmitterDisplayLabel(timesheet.consultantName)}
-                        </Typography>
-                      </Box>
+                <Box
+                  key={timesheet.id}
+                  onClick={() => handleOpenTimesheet(timesheet.id)}
+                  sx={{
+                    py: 2.25,
+                    px: 1,
+                    mx: -1,
+                    borderRadius: 1.5,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': { backgroundColor: 'action.hover' },
+                  }}
+                >
+                  <Stack spacing={1.25}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                      <Typography variant="body2" fontWeight={600}>
+                        {getSubmitterDisplayLabel(timesheet.consultantName)}
+                      </Typography>
                       <TimesheetStatusDisplay
                         status={timesheet.status}
                         submittedLate={timesheet.submittedLate}
                       />
-                    </Box>
-
-                    <Box
-                      sx={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                        gap: 1.5,
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Week of
-                        </Typography>
-                        <Typography variant="body2" fontWeight={500}>
-                          {formatWeekStart(timesheet.weekStart)}
-                        </Typography>
-                      </Box>
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Total Hours
-                        </Typography>
-                        <Typography
-                          sx={{
-                            fontFamily: '"JetBrains Mono", monospace',
-                            fontSize: '0.95rem',
-                            fontWeight: 600,
-                          }}
-                        >
-                          {timesheet.totalHours != null
-                            ? Number(timesheet.totalHours).toFixed(2)
-                            : '-'}
-                        </Typography>
-                      </Box>
-                    </Box>
-
+                    </Stack>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatWeekStart(timesheet.weekStart)}
+                      {timesheet.totalHours != null && ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}
+                    </Typography>
                     {timesheet.status === 'COMPLETED' && (
-                      <Box
-                        sx={{
-                          display: 'grid',
-                          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                          gap: 1.5,
+                      <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+                        {timesheet.totalBillAmount != null
+                          ? `Received ${formatCurrency(timesheet.totalBillAmount)}`
+                          : ''}
+                        {timesheet.totalPayAmount != null
+                          ? ` · Paid ${formatCurrency(timesheet.totalPayAmount)}`
+                          : ''}
+                      </Typography>
+                    )}
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<ActionIcon sx={{ fontSize: '0.9rem' }} />}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleOpenTimesheet(timesheet.id)
                         }}
                       >
-                        <Box>
-                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                            Money Received
-                          </Typography>
-                          <Typography
-                            sx={{
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '0.9rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {timesheet.totalBillAmount != null
-                              ? formatCurrency(timesheet.totalBillAmount)
-                              : '-'}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                            Paid Out
-                          </Typography>
-                          <Typography
-                            sx={{
-                              fontFamily: '"JetBrains Mono", monospace',
-                              fontSize: '0.9rem',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {timesheet.totalPayAmount != null
-                              ? formatCurrency(timesheet.totalPayAmount)
-                              : '-'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
-
-                    <Button
-                      variant="outlined"
-                      startIcon={<ActionIcon sx={{ fontSize: '0.95rem' }} />}
-                      onClick={() => handleOpenTimesheet(timesheet.id)}
-                    >
-                      {getActionButtonLabel(timesheet.status)}
-                    </Button>
+                        {getActionButtonLabel(timesheet.status)}
+                      </Button>
+                    </Box>
                   </Stack>
-                </Paper>
+                </Box>
               )
             })}
           </Stack>

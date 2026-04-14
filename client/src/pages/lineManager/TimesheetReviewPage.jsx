@@ -19,6 +19,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CancelIcon from '@mui/icons-material/Cancel'
 import FastForwardIcon from '@mui/icons-material/FastForward'
+import BlockIcon from '@mui/icons-material/Block'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
@@ -395,11 +396,15 @@ export default function TimesheetReviewPage() {
             </DialogActions>
           </Dialog>
 
-          {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED') && (
-            <Alert severity={timesheet.status === 'APPROVED' ? 'success' : 'info'} sx={{ mt: 2 }}>
+          {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED' || timesheet.status === 'COMPLETED') && (
+            <Alert severity={timesheet.status === 'APPROVED' ? 'success' : timesheet.status === 'REJECTED' ? 'error' : 'info'} icon={timesheet.status === 'REJECTED' ? <BlockIcon /> : undefined} sx={{ mt: 2 }}>
               {timesheet.status === 'APPROVED' ? (
                 <>
                   This timesheet has been <strong>approved</strong>.
+                </>
+              ) : timesheet.status === 'COMPLETED' ? (
+                <>
+                  This timesheet has been <strong>paid</strong>.
                 </>
               ) : (
                 <>

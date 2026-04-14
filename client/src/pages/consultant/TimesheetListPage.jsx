@@ -189,7 +189,7 @@ export default function TimesheetListPage({
               </Typography>
               <Typography
                 sx={{
-                  fontFamily: 'Poppins, Georgia, serif',
+                  fontFamily: '"Outfit", system-ui, sans-serif',
                   fontWeight: 400,
                   fontSize: { xs: '2.2rem', sm: '2.6rem' },
                   lineHeight: 1,
@@ -236,7 +236,7 @@ export default function TimesheetListPage({
         >
           <Typography
             sx={{
-              fontFamily: 'Poppins, Georgia, serif',
+              fontFamily: '"Outfit", system-ui, sans-serif',
               fontSize: '1.3rem',
               color: 'text.primary',
               mb: 0.5,
@@ -315,20 +315,42 @@ export default function TimesheetListPage({
             })}
           </Stack>
         ) : (
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
+          <TableContainer component={Paper}>
+            <Table sx={{ tableLayout: 'auto' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '15%' }}>Week of</TableCell>
-                  <TableCell sx={{ width: '35%' }}>Work Categories</TableCell>
-                  <TableCell sx={{ width: '20%' }}>Status</TableCell>
-                  <TableCell align="right" sx={{ width: '10%' }}>Total Hours</TableCell>
-                  <TableCell align="right" sx={{ width: '20%' }}>Actions</TableCell>
+                  <TableCell>Week of</TableCell>
+                  <TableCell>Work Categories</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Total Hours</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {displayTimesheets.map((ts) => (
-                  <TableRow key={ts.id}>
+                {displayTimesheets.map((ts) => {
+                  const editable = isConsultantEditableStatus(ts.status)
+                  const destination = editable ? `${basePath}/${ts.id}/edit` : `${basePath}/${ts.id}`
+                  return (
+                  <TableRow
+                    key={ts.id}
+                    hover
+                    tabIndex={0}
+                    onClick={() => navigate(destination)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        navigate(destination)
+                      }
+                    }}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      },
+                    }}
+                  >
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
                         {formatWeekStart(ts.weekStart)}
@@ -348,8 +370,8 @@ export default function TimesheetListPage({
                         {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell align="right">
-                      {isConsultantEditableStatus(ts.status) ? (
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                      {editable ? (
                         <Button
                           size="small"
                           variant="outlined"
@@ -370,7 +392,8 @@ export default function TimesheetListPage({
                       )}
                     </TableCell>
                   </TableRow>
-                ))}
+                  )
+                })}
               </TableBody>
             </Table>
           </TableContainer>

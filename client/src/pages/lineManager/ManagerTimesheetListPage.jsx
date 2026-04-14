@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
+import useQueryState from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -30,40 +31,32 @@ import { formatWeekStart } from '../../utils/dateFormatters'
 import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 import {
   buildManagerTimesheetListPath,
-  getManagerStatusFilterFromSearch,
   getManagerStatusFilterLabel,
   MANAGER_STATUS_FILTERS,
   matchesManagerStatusFilter,
 } from './utils/managerTimesheetFilters.js'
 
-function getStatusFilterFromUrl() {
-  return getManagerStatusFilterFromSearch(window.location.search)
-}
+const LEGACY_STATUS_ALIASES = { APPROVED: MANAGER_STATUS_FILTERS.APPROVED_GROUP }
+const VALID_STATUS_FILTERS = new Set(Object.values(MANAGER_STATUS_FILTERS))
 
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
   const { timesheets, error } = useLoaderData()
-  const [statusFilter, setStatusFilter] = useState(getStatusFilterFromUrl)
+  const [rawStatus, setRawStatus] = useQueryState('status', MANAGER_STATUS_FILTERS.ALL)
+  const statusFilter = VALID_STATUS_FILTERS.has(rawStatus)
+    ? rawStatus
+    : (LEGACY_STATUS_ALIASES[rawStatus] ?? MANAGER_STATUS_FILTERS.ALL)
   const [searchQuery, setSearchQuery] = useState('')
-
-  function handleStatusFilterChange(nextStatusFilter) {
-    setStatusFilter(nextStatusFilter)
-
-    const nextPath = buildManagerTimesheetListPath(nextStatusFilter)
-    window.history.replaceState(window.history.state, '', nextPath)
-  }
 
   const activeTab = statusFilter === MANAGER_STATUS_FILTERS.PENDING ? 0 : 1;
 
   function handleTabChange(event, newValue) {
     if (newValue === 0) {
-      handleStatusFilterChange(MANAGER_STATUS_FILTERS.PENDING);
-    } else {
-      if (statusFilter === MANAGER_STATUS_FILTERS.PENDING) {
-        handleStatusFilterChange(MANAGER_STATUS_FILTERS.ALL);
-      }
+      setRawStatus(MANAGER_STATUS_FILTERS.PENDING);
+    } else if (statusFilter === MANAGER_STATUS_FILTERS.PENDING) {
+      setRawStatus(MANAGER_STATUS_FILTERS.ALL);
     }
   }
 
@@ -142,7 +135,7 @@ export default function ManagerTimesheetListPage() {
               labelId="status-filter-label"
               value={statusFilter}
               label="Status"
-              onChange={(e) => handleStatusFilterChange(e.target.value)}
+              onChange={(e) => setRawStatus(e.target.value)}
             >
               <MenuItem value={MANAGER_STATUS_FILTERS.ALL}>All</MenuItem>
               <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
@@ -186,7 +179,7 @@ export default function ManagerTimesheetListPage() {
               </Typography>
               <Typography
                 sx={{
-                  fontFamily: 'Poppins, Georgia, serif',
+                  fontFamily: '"Outfit", system-ui, sans-serif',
                   fontWeight: 400,
                   fontSize: { xs: '2.2rem', sm: '2.6rem' },
                   lineHeight: 1,
@@ -286,20 +279,39 @@ export default function ManagerTimesheetListPage() {
             ))}
           </Stack>
         ) : (
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
+          <TableContainer component={Paper}>
+            <Table sx={{ tableLayout: 'auto' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '35%' }}>Submitter</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Week of</TableCell>
-                  <TableCell sx={{ width: '20%' }}>Status</TableCell>
-                  <TableCell align="right" sx={{ width: '10%' }}>Total Hours</TableCell>
-                  <TableCell align="right" sx={{ width: '20%' }}>Actions</TableCell>
+                  <TableCell>Submitter</TableCell>
+                  <TableCell>Week of</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Total Hours</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filtered.map((timesheet) => (
-                  <TableRow key={timesheet.id}>
+                  <TableRow
+                    key={timesheet.id}
+                    hover
+                    tabIndex={0}
+                    onClick={() => handleOpenTimesheet(timesheet.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleOpenTimesheet(timesheet.id)
+                      }
+                    }}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      },
+                    }}
+                  >
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
                         {getSubmitterDisplayLabel(timesheet.consultantName)}
@@ -326,7 +338,7 @@ export default function ManagerTimesheetListPage() {
                         {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="small"
                         variant="outlined"

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useLoaderData } from 'react-router'
+import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
@@ -14,16 +15,24 @@ import TableRow from '@mui/material/TableRow'
 import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
+import Badge from '@mui/material/Badge'
+import useMediaQuery from '@mui/material/useMediaQuery'
+import { useTheme } from '@mui/material/styles'
+import TuneIcon from '@mui/icons-material/Tune'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import PageHeader from '../../components/shared/PageHeader'
+import FilterBottomSheet from '../../components/shared/FilterBottomSheet.jsx'
 import { getAuditActorDisplayLabel, getAuditTimesheetDisplayLabel } from '../../utils/displayLabels'
 import { formatTimestamp } from '../../utils/dateFormatters'
 import ActionBadge from '../../components/shared/ActionBadge'
 
 const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING']
+
+const FILTER_CONFIG = { action: '', author: '', from: '', to: '' }
+const DATE_FORMAT = 'YYYY-MM-DD'
 
 function formatDetail(action, detail) {
   if (detail === null || detail === undefined) return '-'
@@ -86,18 +95,20 @@ function formatDetail(action, detail) {
 }
 
 export default function AuditLogPage() {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const { entries, error: loadError } = useLoaderData()
   const [error, setError] = useState(loadError)
-  const [actionFilter, setActionFilter] = useState(null)
-  const [authorFilter, setAuthorFilter] = useState(null)
-  const [dateFrom, setDateFrom] = useState(null)
-  const [dateTo, setDateTo] = useState(null)
+  const [filterValues, setFilterValues] = useQueryStateObject(FILTER_CONFIG)
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+
+  const actionFilter = filterValues.action || null
+  const authorFilter = filterValues.author || null
+  const dateFrom = filterValues.from ? dayjs(filterValues.from) : null
+  const dateTo = filterValues.to ? dayjs(filterValues.to) : null
 
   const handleClearFilters = () => {
-    setActionFilter(null)
-    setAuthorFilter(null)
-    setDateFrom(null)
-    setDateTo(null)
+    setFilterValues({ action: '', author: '', from: '', to: '' })
   }
 
   useEffect(() => {
@@ -108,7 +119,53 @@ export default function AuditLogPage() {
     ...new Set(entries.map((e) => getAuditActorDisplayLabel(e.performedByName))),
   ].sort()
 
-  const hasFilters = actionFilter || authorFilter || dateFrom || dateTo
+  const hasFilters = Boolean(actionFilter || authorFilter || dateFrom || dateTo)
+  const activeFilterCount = [actionFilter, authorFilter, dateFrom, dateTo].filter(Boolean).length
+
+  const filterInputs = (
+    <>
+      <Autocomplete
+        options={ACTION_OPTIONS}
+        value={actionFilter}
+        onChange={(_e, value) => setFilterValues({ action: value ?? '' })}
+        size="small"
+        sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 180px' }, minWidth: { sm: 180 } }}
+        renderInput={(params) => <TextField {...params} label="Action" />}
+      />
+      <Autocomplete
+        options={authorOptions}
+        value={authorFilter}
+        onChange={(_e, value) => setFilterValues({ author: value ?? '' })}
+        size="small"
+        sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 200px' }, minWidth: { sm: 200 } }}
+        renderInput={(params) => <TextField {...params} label="Performed By" />}
+      />
+      <DatePicker
+        label="From"
+        value={dateFrom}
+        onChange={(value) =>
+          setFilterValues({ from: value && value.isValid() ? value.format(DATE_FORMAT) : '' })
+        }
+        slotProps={{
+          field: { clearable: true, size: 'small' },
+          textField: { size: 'small' },
+        }}
+        sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 150px' }, minWidth: { sm: 150 } }}
+      />
+      <DatePicker
+        label="To"
+        value={dateTo}
+        onChange={(value) =>
+          setFilterValues({ to: value && value.isValid() ? value.format(DATE_FORMAT) : '' })
+        }
+        slotProps={{
+          field: { clearable: true, size: 'small' },
+          textField: { size: 'small' },
+        }}
+        sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 150px' }, minWidth: { sm: 150 } }}
+      />
+    </>
+  )
 
   const filtered = entries.filter((e) => {
     if (actionFilter && e.action !== actionFilter) return false
@@ -130,65 +187,49 @@ export default function AuditLogPage() {
         )}
 
         <Box sx={{ mb: 3, pb: 3, borderBottom: '1px solid', borderColor: 'divider' }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap" useFlexGap alignItems={{ xs: 'stretch', sm: 'center' }}>
-            <Autocomplete
-              options={ACTION_OPTIONS}
-              value={actionFilter}
-              onChange={(_e, value) => setActionFilter(value)}
-              size="small"
-              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 180px' }, minWidth: { sm: 180 } }}
-              renderInput={(params) => <TextField {...params} label="Action" />}
-            />
-            <Autocomplete
-              options={authorOptions}
-              value={authorFilter}
-              onChange={(_e, value) => setAuthorFilter(value)}
-              size="small"
-              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 200px' }, minWidth: { sm: 200 } }}
-              renderInput={(params) => <TextField {...params} label="Performed By" />}
-            />
-            <DatePicker
-              label="From"
-              value={dateFrom}
-              onChange={setDateFrom}
-              slotProps={{
-                field: { clearable: true, size: 'small' },
-                textField: { size: 'small' },
-              }}
-              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 150px' }, minWidth: { sm: 150 } }}
-            />
-            <DatePicker
-              label="To"
-              value={dateTo}
-              onChange={setDateTo}
-              slotProps={{
-                field: { clearable: true, size: 'small' },
-                textField: { size: 'small' },
-              }}
-              sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 150px' }, minWidth: { sm: 150 } }}
-            />
-            {hasFilters && (
+          {isMobile ? (
+            <Badge badgeContent={activeFilterCount} color="primary" sx={{ '& .MuiBadge-badge': { right: 8, top: 8 } }}>
               <Button
                 variant="outlined"
-                color="primary"
-                onClick={handleClearFilters}
-                sx={{
-                  flex: { xs: 'none', sm: '0 0 auto' },
-                  width: { xs: '100%', sm: 'auto' },
-                  height: 40,
-                  whiteSpace: 'nowrap'
-                }}
+                startIcon={<TuneIcon />}
+                onClick={() => setFilterSheetOpen(true)}
+                fullWidth
               >
-                Clear Filters
+                Filters
               </Button>
-            )}
-          </Stack>
+            </Badge>
+          ) : (
+            <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap alignItems="center">
+              {filterInputs}
+              {hasFilters && (
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={handleClearFilters}
+                  sx={{ flex: '0 0 auto', height: 40, whiteSpace: 'nowrap' }}
+                >
+                  Clear Filters
+                </Button>
+              )}
+            </Stack>
+          )}
         </Box>
+
+        <FilterBottomSheet
+          open={filterSheetOpen}
+          onClose={() => setFilterSheetOpen(false)}
+          title="Filters"
+          onClear={hasFilters ? handleClearFilters : undefined}
+          clearLabel="Clear"
+          applyLabel="Done"
+        >
+          {filterInputs}
+        </FilterBottomSheet>
 
         {/* Desktop View */}
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table size="small" sx={{ minWidth: 900 }}>
+          <TableContainer component={Paper}>
+            <Table size="small" sx={{ tableLayout: 'auto' }}>
               <TableHead>
                 <TableRow>
                   <TableCell>Timestamp</TableCell>

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { useLocation, useNavigate, useLoaderData } from 'react-router'
+import { useNavigate, useLoaderData } from 'react-router'
+import useQueryState from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -57,26 +58,21 @@ const TAB_KEYS = {
   PAID: 'paid',
 }
 
-function getActiveTabKey(search) {
-  const tab = new URLSearchParams(search).get('tab')
-  return tab === TAB_KEYS.PAID ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY
-}
-
 function buildListPath(tabKey) {
-  return `/finance/timesheets?tab=${tabKey}`
+  return tabKey === TAB_KEYS.PAID ? `/finance/timesheets?tab=${tabKey}` : '/finance/timesheets'
 }
 
 export default function FinanceTimesheetListPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
-  const location = useLocation()
   const navigate = useNavigate()
   const { timesheets, error } = useLoaderData()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('latest')
 
-  const activeTabKey = getActiveTabKey(location.search)
+  const [tab, setTab] = useQueryState('tab', TAB_KEYS.TO_PAY)
+  const activeTabKey = tab === TAB_KEYS.PAID ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY
   const activeTab = activeTabKey === TAB_KEYS.PAID ? 1 : 0
 
   const displayTimesheets = timesheets.filter((timesheet) =>
@@ -101,8 +97,7 @@ export default function FinanceTimesheetListPage() {
   })
 
   function handleTabChange(_event, newValue) {
-    const nextTabKey = newValue === 1 ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY
-    navigate(buildListPath(nextTabKey), { replace: true })
+    setTab(newValue === 1 ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY)
   }
 
   function handleOpenTimesheet(timesheetId) {
@@ -195,7 +190,7 @@ export default function FinanceTimesheetListPage() {
               </Typography>
               <Typography
                 sx={{
-                  fontFamily: 'Poppins, Georgia, serif',
+                  fontFamily: '"Outfit", system-ui, sans-serif',
                   fontWeight: 400,
                   fontSize: { xs: '2.2rem', sm: '2.6rem' },
                   lineHeight: 1,
@@ -304,19 +299,15 @@ export default function FinanceTimesheetListPage() {
             })}
           </Stack>
         ) : (
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
+          <TableContainer component={Paper}>
+            <Table sx={{ tableLayout: 'auto' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '35%', py: 1.75 }}>Submitter</TableCell>
-                  <TableCell sx={{ width: '15%', py: 1.75 }}>Week of</TableCell>
-                  <TableCell sx={{ width: '20%', py: 1.75 }}>Status</TableCell>
-                  <TableCell align="right" sx={{ width: '10%', py: 1.75 }}>
-                    Total Hours
-                  </TableCell>
-                  <TableCell align="right" sx={{ width: '20%', py: 1.75 }}>
-                    Actions
-                  </TableCell>
+                  <TableCell sx={{ py: 1.75 }}>Submitter</TableCell>
+                  <TableCell sx={{ py: 1.75 }}>Week of</TableCell>
+                  <TableCell sx={{ py: 1.75 }}>Status</TableCell>
+                  <TableCell align="right" sx={{ py: 1.75 }}>Total Hours</TableCell>
+                  <TableCell align="right" sx={{ py: 1.75 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -324,7 +315,26 @@ export default function FinanceTimesheetListPage() {
                   const ActionIcon = getActionButtonIcon(timesheet.status)
 
                   return (
-                    <TableRow key={timesheet.id}>
+                    <TableRow
+                      key={timesheet.id}
+                      hover
+                      tabIndex={0}
+                      onClick={() => handleOpenTimesheet(timesheet.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleOpenTimesheet(timesheet.id)
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        },
+                      }}
+                    >
                       <TableCell sx={{ py: 1.75 }}>
                         <Typography variant="body2" fontWeight={500}>
                           {getSubmitterDisplayLabel(timesheet.consultantName)}
@@ -353,7 +363,7 @@ export default function FinanceTimesheetListPage() {
                             : '-'}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right" sx={{ py: 1.75 }}>
+                      <TableCell align="right" sx={{ py: 1.75 }} onClick={(e) => e.stopPropagation()}>
                         <Button
                           size="small"
                           variant="outlined"

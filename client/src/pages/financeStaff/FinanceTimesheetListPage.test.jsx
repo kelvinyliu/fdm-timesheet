@@ -1,11 +1,11 @@
 import { render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import FinanceTimesheetListPage from './FinanceTimesheetListPage.jsx'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   useLoaderData: vi.fn(),
-  useLocation: vi.fn(),
   useMediaQuery: vi.fn(),
 }))
 
@@ -14,7 +14,6 @@ vi.mock('react-router', async () => {
   return {
     ...actual,
     useLoaderData: mocks.useLoaderData,
-    useLocation: mocks.useLocation,
     useNavigate: () => mocks.navigate,
   }
 })
@@ -45,15 +44,9 @@ describe('FinanceTimesheetListPage', () => {
   beforeEach(() => {
     mocks.navigate.mockReset()
     mocks.useLoaderData.mockReset()
-    mocks.useLocation.mockReset()
     mocks.useMediaQuery.mockReset()
 
     mocks.useMediaQuery.mockReturnValue(false)
-    mocks.useLocation.mockReturnValue({
-      pathname: '/finance/timesheets',
-      search: '',
-      state: null,
-    })
   })
 
   it('derives summary card counts from all timesheets while listing only approved items on the to-pay tab', () => {
@@ -68,7 +61,11 @@ describe('FinanceTimesheetListPage', () => {
       error: null,
     })
 
-    render(<FinanceTimesheetListPage />)
+    render(
+      <MemoryRouter initialEntries={['/finance/timesheets']}>
+        <FinanceTimesheetListPage />
+      </MemoryRouter>
+    )
 
     expect(within(screen.getByText('Drafts').closest('div')).getByText('1')).toBeInTheDocument()
     expect(within(screen.getByText('Pending').closest('div')).getByText('1')).toBeInTheDocument()

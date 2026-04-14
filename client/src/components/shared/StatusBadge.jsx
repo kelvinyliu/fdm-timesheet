@@ -38,23 +38,16 @@ export default function StatusBadge({ status }) {
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 0.6,
         px: 1.2,
         py: 0.35,
+        minWidth: 90,
         borderRadius: '6px',
         border: `1px solid ${style.border}`,
         backgroundColor: style.bg,
       }}
     >
-      <Box
-        sx={{
-          width: 6,
-          height: 6,
-          borderRadius: '50%',
-          backgroundColor: style.color,
-          flexShrink: 0,
-        }}
-      />
       <Typography
         component="span"
         sx={{

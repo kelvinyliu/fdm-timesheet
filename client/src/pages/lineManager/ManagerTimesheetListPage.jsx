@@ -87,13 +87,15 @@ export default function ManagerTimesheetListPage() {
         ? 'Approved Timesheets'
         : statusFilter === MANAGER_STATUS_FILTERS.REJECTED
           ? 'Rejected Timesheets'
-          : 'Team Timesheets'
+          : statusFilter === MANAGER_STATUS_FILTERS.PAID
+            ? 'Paid Timesheets'
+            : 'Team Timesheets'
 
   return (
     <Box>
       <PageHeader title={pageTitle} subtitle="View and manage your team's submissions">
         <TextField
-          placeholder="Search submitters..."
+          placeholder="Search Timesheets..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -120,6 +122,7 @@ export default function ManagerTimesheetListPage() {
             <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
             <MenuItem value={MANAGER_STATUS_FILTERS.APPROVED_GROUP}>Approved</MenuItem>
             <MenuItem value={MANAGER_STATUS_FILTERS.REJECTED}>Rejected</MenuItem>
+            <MenuItem value={MANAGER_STATUS_FILTERS.PAID}>Paid</MenuItem>
           </Select>
         </FormControl>
       </PageHeader>

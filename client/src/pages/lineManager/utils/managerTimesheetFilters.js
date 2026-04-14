@@ -5,6 +5,7 @@ export const MANAGER_STATUS_FILTERS = {
   PENDING: 'PENDING',
   APPROVED_GROUP: 'APPROVED_GROUP',
   REJECTED: 'REJECTED',
+  PAID: 'COMPLETED',
 }
 
 const LEGACY_STATUS_ALIASES = {
@@ -19,6 +20,8 @@ function getCanonicalStatusQueryValue(statusFilter) {
       return 'APPROVED_GROUP'
     case MANAGER_STATUS_FILTERS.REJECTED:
       return 'REJECTED'
+    case MANAGER_STATUS_FILTERS.PAID:
+      return 'COMPLETED'
     default:
       return null
   }
@@ -41,7 +44,7 @@ export function buildManagerTimesheetListPath(statusFilter = MANAGER_STATUS_FILT
 export function matchesManagerStatusFilter(timesheetStatus, statusFilter) {
   if (statusFilter === MANAGER_STATUS_FILTERS.ALL) return true
   if (statusFilter === MANAGER_STATUS_FILTERS.APPROVED_GROUP) {
-    return timesheetStatus === 'APPROVED' || timesheetStatus === 'COMPLETED'
+    return timesheetStatus === 'APPROVED'
   }
 
   return timesheetStatus === statusFilter

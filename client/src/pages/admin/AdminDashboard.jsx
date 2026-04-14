@@ -139,36 +139,103 @@ export default function AdminDashboard() {
       </Grid>
 
       <Grid container spacing={3}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Paper
-            sx={{
-              p: 3,
-              borderRadius: 3,
-              border: '1px solid',
-              borderColor: 'divider',
-              height: '100%',
-            }}
-          >
-            <Typography variant="h6" sx={{ mb: 2 }}>
-              Role distribution
-            </Typography>
+      <Grid size={{ xs: 12, md: 6 }}>
+  <Paper
+    sx={{
+      p: 3,
+      borderRadius: 3,
+      border: '1px solid',
+      borderColor: 'divider',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}
+  >
+    <Typography variant="h6" sx={{ mb: 2.5, fontWeight: 700 }}>
+      Role distribution
+    </Typography>
+    <Box
+  sx={{
+    display: 'flex',
+    height: 16,
+    width: '100%',
+    borderRadius: 8,
+    overflow: 'hidden',
+    bgcolor: 'action.hover',
+    mb: 3,
+    boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
+  }}
+>
+  <Box sx={{ width: `${(consultants / users.length) * 100}%`, bgcolor: '#2E7D32', transition: '0.5s' }} />
+  <Box sx={{ width: `${(managers / users.length) * 100}%`, bgcolor: '#C58A00', transition: '0.5s' }} />
+  <Box sx={{ width: `${(financeManagers / users.length) * 100}%`, bgcolor: '#1976D2', transition: '0.5s' }} />
+  <Box sx={{ width: `${(admins / users.length) * 100}%`, bgcolor: '#6A1B9A', transition: '0.5s' }} />
+</Box>
 
-            <Stack spacing={1.2}>
-              <Typography variant="body2">
-                Consultants: <strong>{consultants}</strong>
-              </Typography>
-              <Typography variant="body2">
-                Managers: <strong>{managers}</strong>
-              </Typography>
-              <Typography variant="body2">
-                Finance: <strong>{financeManagers}</strong>
-              </Typography>
-              <Typography variant="body2">
-                Admins: <strong>{admins}</strong>
-              </Typography>
-            </Stack>
-          </Paper>
-        </Grid>
+<Stack spacing={2} sx={{ flexGrow: 1 }}>
+  {[
+    { label: 'Consultants', count: consultants, color: '#2E7D32', desc: 'Active timesheet contributors' },
+    { label: 'Line Managers', count: managers, color: '#C58A00', desc: 'Approvals & team oversight' },
+    { label: 'Finance Managers', count: financeManagers, color: '#1976D2', desc: 'Payroll & billing processing' },
+    { label: 'System Admins', count: admins, color: '#6A1B9A', desc: 'Platform configuration' },
+  ].map((role) => (
+    <Box
+      key={role.label}
+      sx={{
+        p: 2,
+        borderRadius: 2.5,
+        border: '1px solid',
+        borderColor: 'divider',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'relative',
+        transition: 'transform 0.2s, background-color 0.2s',
+        '&:hover': {
+          bgcolor: 'action.hover',
+          transform: 'translateX(4px)',
+        },
+        '&::before': {
+          content: '""',
+          position: 'absolute',
+          left: 0,
+          top: '20%',
+          bottom: '20%',
+          width: 4,
+          borderRadius: '0 4px 4px 0',
+          bgcolor: role.color,
+          boxShadow: `2px 0 10px ${role.color}66`
+        },
+      }}
+    >
+      <Box sx={{ pl: 1 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+          {role.label}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          {role.desc}
+        </Typography>
+      </Box>
+
+      <Typography 
+        variant="h4" 
+        sx={{ 
+          fontWeight: 900, 
+          fontFamily: '"JetBrains Mono", monospace',
+          color: 'text.primary',
+          opacity: 0.9
+        }}
+      >
+        {role.count}
+      </Typography>
+    </Box>
+  ))}
+</Stack>
+
+      
+    
+  </Paper>
+    </Grid>
 
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper

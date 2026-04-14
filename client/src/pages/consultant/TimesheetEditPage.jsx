@@ -419,8 +419,8 @@ export default function TimesheetEditPage() {
 
       <Paper sx={{ mb: 3, p: { xs: 0, sm: 0 }, overflow: 'hidden' }}>
         <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
-           <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
-           <Typography variant="h6" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.primary }}>
+           <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Timesheet</Typography>
+           <Typography variant="h6" sx={{ fontFamily: '"Outfit", system-ui, sans-serif', color: '#ffffff', letterSpacing: '0.06em', fontSize: '1.1rem' }}>
              {totalHours.toFixed(2)}h Total
            </Typography>
         </Box>
@@ -431,15 +431,15 @@ export default function TimesheetEditPage() {
                 <TableCell sx={{ width: 250, borderRight: `2px solid ${palette.border}` }}>Work Category</TableCell>
                 {weekDates.map(date => (
                   <TableCell key={date} align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>
-                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: palette.textPrimary }}>
+                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, color: palette.textMuted }}>
                       {formatDayName(date).slice(0, 3)}
                     </Typography>
-                    <Typography variant="caption" sx={{ fontFamily: '"JetBrains Mono", monospace', color: palette.textMuted }}>
-                      {date.slice(5)}
+                    <Typography variant="caption" sx={{ fontFamily: '"Outfit", system-ui, sans-serif', color: palette.textMuted }}>
+                      {`${date.slice(8, 10)}/${date.slice(5, 7)}`}
                     </Typography>
                   </TableCell>
                 ))}
-                <TableCell align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}` }}>Total</TableCell>
+                <TableCell align="center" sx={{ width: 80, borderRight: `2px solid ${palette.border}`, }}>Total</TableCell>
                 <TableCell align="center" sx={{ width: 60 }}>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -539,9 +539,8 @@ export default function TimesheetEditPage() {
           >
             {saving ? 'Saving...' : 'Save Draft'}
           </Button>
-          <Button
+          <Button sx={{backgroundColor : '#c5ff00', color: '#000000', borderColor: '#c5ff00', '&:hover': {backgroundColor: '#a3d800', color: '#000000', borderColor: '#a3d800'}}}
             variant="contained"
-            color="primary"
             startIcon={<SendIcon />}
             onClick={() => {
               void handleSubmit()

@@ -87,7 +87,7 @@ export default function TimesheetListPage({
             )
           }
         >
-          {isEditable ? 'Continue Timesheet' : 'View Timesheet'}
+          {isEditable ? 'Continue Current Week' : 'View Current Week'}
         </Button>
       )
     }
@@ -324,7 +324,7 @@ export default function TimesheetListPage({
                           fontWeight: 600,
                         }}
                       >
-                        {ts.totalHours ?? '-'}
+                        {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </Box>
 
@@ -371,7 +371,7 @@ export default function TimesheetListPage({
                           fontSize: '0.85rem',
                         }}
                       >
-                        {ts.totalHours ?? '-'}
+                        {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">

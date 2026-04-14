@@ -50,7 +50,7 @@ describe('dashboard pages', () => {
     expect(screen.getByText('Overview unavailable')).toBeInTheDocument()
     expect(screen.getByText('Drafts')).toBeInTheDocument()
     expect(screen.getByText('Recent timesheets')).toBeInTheDocument()
-    expect(screen.getByText('8 hrs (Editable)')).toBeInTheDocument()
+    expect(screen.getByText('8.00 hrs (Editable)')).toBeInTheDocument()
   })
 
   it('renders admin dashboard summary cards from loader data', () => {

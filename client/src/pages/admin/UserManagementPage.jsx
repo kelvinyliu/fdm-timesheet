@@ -11,6 +11,7 @@ import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
 import SearchIcon from '@mui/icons-material/Search'
+import Snackbar from '@mui/material/Snackbar'
 import Button from '@mui/material/Button'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
@@ -65,6 +66,7 @@ export default function UserManagementPage() {
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
+  const [feedback, setFeedback] = useState(null)
   const { confirm } = useConfirmation()
 
   const isCreateDialogDirty =
@@ -132,6 +134,7 @@ export default function UserManagementPage() {
           return next
         })
         setError('')
+        setFeedback({ severity: 'success', message: 'User role updated successfully.' })
       },
       onError: (err) => setError(err.message || 'Failed to update role.'),
     })
@@ -298,6 +301,21 @@ export default function UserManagementPage() {
           {error}
         </Alert>
       )}
+
+      <Snackbar
+        open={Boolean(feedback)}
+        autoHideDuration={4000}
+        onClose={() => setFeedback(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setFeedback(null)}
+          severity={feedback?.severity}
+          sx={{ width: '100%', boxShadow: 3 }}
+        >
+          {feedback?.message}
+        </Alert>
+      </Snackbar>
 
       <UserList
         users={sortedUsers}

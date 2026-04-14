@@ -261,9 +261,10 @@ const router = createBrowserRouter(
               )}
             />
             <Route
-              path="/admin/audit"
+              path="/admin/audit-log"
               lazy={lazyPage(() => import('./pages/admin/AuditLogPage.jsx'), {}, auditLogLoader)}
             />
+            <Route path="/admin/audit" element={<Navigate to="/admin/audit-log" replace />} />
           </Route>
         </Route>
       </Route>

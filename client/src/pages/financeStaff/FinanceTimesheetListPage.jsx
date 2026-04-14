@@ -234,7 +234,9 @@ export default function FinanceTimesheetListPage() {
                             fontWeight: 600,
                           }}
                         >
-                          {timesheet.totalHours ?? '-'}
+                          {timesheet.totalHours != null
+                            ? Number(timesheet.totalHours).toFixed(2)
+                            : '-'}
                         </Typography>
                       </Box>
                     </Box>
@@ -296,14 +298,18 @@ export default function FinanceTimesheetListPage() {
           </Stack>
         ) : (
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table>
+            <Table sx={{ minWidth: 860 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Submitter</TableCell>
-                  <TableCell>Week of</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Total Hours</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell sx={{ py: 1.75 }}>Submitter</TableCell>
+                  <TableCell sx={{ minWidth: 164, py: 1.75 }}>Week of</TableCell>
+                  <TableCell sx={{ minWidth: 136, py: 1.75 }}>Status</TableCell>
+                  <TableCell align="right" sx={{ minWidth: 120, py: 1.75 }}>
+                    Total Hours
+                  </TableCell>
+                  <TableCell align="right" sx={{ minWidth: 132, py: 1.75 }}>
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -312,33 +318,35 @@ export default function FinanceTimesheetListPage() {
 
                   return (
                     <TableRow key={timesheet.id}>
-                      <TableCell>
+                      <TableCell sx={{ py: 1.75 }}>
                         <Typography variant="body2" fontWeight={500}>
                           {getSubmitterDisplayLabel(timesheet.consultantName)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
-                        <Typography variant="body2" fontWeight={500}>
+                      <TableCell sx={{ py: 1.75 }}>
+                        <Typography variant="body2" fontWeight={500} sx={{ fontSize: '0.95rem' }}>
                           {formatWeekStart(timesheet.weekStart)}
                         </Typography>
                       </TableCell>
-                      <TableCell>
+                      <TableCell sx={{ py: 1.75 }}>
                         <TimesheetStatusDisplay
                           status={timesheet.status}
                           submittedLate={timesheet.submittedLate}
                         />
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ py: 1.75 }}>
                         <Typography
                           sx={{
                             fontFamily: '"JetBrains Mono", monospace',
                             fontSize: '0.85rem',
                           }}
                         >
-                          {timesheet.totalHours ?? '-'}
+                          {timesheet.totalHours != null
+                            ? Number(timesheet.totalHours).toFixed(2)
+                            : '-'}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right">
+                      <TableCell align="right" sx={{ py: 1.75 }}>
                         <Button
                           size="small"
                           variant="outlined"

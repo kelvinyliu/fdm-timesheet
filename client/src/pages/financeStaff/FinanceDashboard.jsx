@@ -55,7 +55,6 @@ export default function FinanceDashboard() {
           <Box sx={{ flex: 1 }}>
             <Typography
               sx={{
-                fontFamily: '"Instrument Serif", Georgia, serif',
                 fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
                 letterSpacing: '-0.01em',
@@ -114,7 +113,7 @@ export default function FinanceDashboard() {
       )}
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard
             icon={PaymentsIcon}
             label="Awaiting Payment"
@@ -126,7 +125,7 @@ export default function FinanceDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard
             icon={TaskAltIcon}
             label="Paid"
@@ -138,7 +137,7 @@ export default function FinanceDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard
             icon={ReceiptLongIcon}
             label="Workload"
@@ -236,7 +235,7 @@ export default function FinanceDashboard() {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {formatWeekStart(ts.weekStart)}
-                      {ts.totalHours != null && ` (${ts.totalHours} hrs)`}
+                      {ts.totalHours != null && ` (${Number(ts.totalHours).toFixed(2)} hrs)`}
                     </Typography>
                   </Box>
 

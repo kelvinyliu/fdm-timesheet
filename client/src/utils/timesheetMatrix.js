@@ -8,10 +8,7 @@ function roundHours(value) {
 }
 
 function formatRoundedHoursValue(value) {
-  if (Number.isInteger(value)) return value.toFixed(1)
-
-  const fixed = value.toFixed(HOURS_DECIMAL_PLACES)
-  return fixed.replace(/\.?0+$/, '')
+  return value.toFixed(HOURS_DECIMAL_PLACES)
 }
 
 export function getBucketValue(entryKind, assignmentId) {

@@ -75,7 +75,6 @@ export default function ConsultantDashboard() {
           <Box sx={{ flex: 1 }}>
             <Typography
               sx={{
-                fontFamily: '"Instrument Serif", Georgia, serif',
                 fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
                 letterSpacing: '-0.01em',
@@ -114,15 +113,6 @@ export default function ConsultantDashboard() {
             >
               {primaryAction.label}
             </Button>
-
-            <Button
-              variant="outlined"
-              size="large"
-              onClick={() => navigate('/consultant/timesheets')}
-              sx={{ minWidth: 180 }}
-            >
-              View All
-            </Button>
           </Stack>
         </Stack>
       </Paper>
@@ -134,7 +124,7 @@ export default function ConsultantDashboard() {
       )}
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={EditNoteIcon}
             label="Drafts"
@@ -146,7 +136,7 @@ export default function ConsultantDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={HourglassTopIcon}
             label="Pending"
@@ -158,7 +148,7 @@ export default function ConsultantDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={ReplayIcon}
             label="Rejected"
@@ -170,7 +160,7 @@ export default function ConsultantDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={AccessTimeIcon}
             label="Approved / Paid"
@@ -278,7 +268,7 @@ export default function ConsultantDashboard() {
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.85 }}>
                         {ts.totalHours != null
-                          ? `${ts.totalHours} hrs (${isEditable ? 'Editable' : 'Read-only'})`
+                          ? `${Number(ts.totalHours).toFixed(2)} hrs (${isEditable ? 'Editable' : 'Read-only'})`
                           : isEditable
                             ? 'Editable'
                             : 'Read-only'}
@@ -296,9 +286,6 @@ export default function ConsultantDashboard() {
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-start">
               <Button variant="contained" onClick={primaryAction.onClick}>
                 {primaryAction.label}
-              </Button>
-              <Button variant="text" onClick={() => navigate('/consultant/timesheets')}>
-                Browse all timesheets
               </Button>
             </Stack>
           </Stack>

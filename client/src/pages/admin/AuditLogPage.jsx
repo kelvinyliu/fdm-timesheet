@@ -48,7 +48,7 @@ function formatDetail(action, detail) {
           detail.marginAmount != null ? `Net \u00A3${Number(detail.marginAmount).toFixed(2)}` : null
         return [
           `${detail.breakdowns.length} categories`,
-          detail.totalHours != null ? `${detail.totalHours}h` : null,
+          detail.totalHours != null ? `${Number(detail.totalHours).toFixed(2)}h` : null,
           incoming,
           outgoing,
           margin,
@@ -59,7 +59,7 @@ function formatDetail(action, detail) {
 
       if (detail.totalBillAmount != null || detail.totalPayAmount != null) {
         return [
-          detail.totalHours != null ? `${detail.totalHours}h` : null,
+          detail.totalHours != null ? `${Number(detail.totalHours).toFixed(2)}h` : null,
           detail.totalBillAmount != null
             ? `In \u00A3${Number(detail.totalBillAmount).toFixed(2)}`
             : null,
@@ -76,7 +76,7 @@ function formatDetail(action, detail) {
 
       const rateValue = detail.hourlyRate ?? detail.dailyRate
       const rate = rateValue != null ? `\u00A3${Number(rateValue).toFixed(2)}/hr` : ''
-      const hours = detail.totalHours != null ? `${detail.totalHours}h` : ''
+      const hours = detail.totalHours != null ? `${Number(detail.totalHours).toFixed(2)}h` : ''
       const amount = detail.amount != null ? `\u00A3${Number(detail.amount).toFixed(2)}` : ''
       return [rate, hours, amount].filter(Boolean).join(' x ').replace(' x \u00A3', ' = \u00A3')
     }

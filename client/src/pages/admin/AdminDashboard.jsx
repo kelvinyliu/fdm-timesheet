@@ -61,7 +61,6 @@ export default function AdminDashboard() {
         <Box>
           <Typography
             sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
               fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
               lineHeight: 1.15,
               letterSpacing: '-0.01em',
@@ -90,7 +89,7 @@ export default function AdminDashboard() {
       )}
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={PeopleIcon}
             label="Total Users"
@@ -102,7 +101,7 @@ export default function AdminDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={ManageAccountsIcon}
             label="Consultants"
@@ -114,7 +113,7 @@ export default function AdminDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={SupervisorAccountIcon}
             label="Managers"
@@ -126,7 +125,7 @@ export default function AdminDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={3}>
+        <Grid size={{ xs: 12, md: 3 }}>
           <DashboardCard
             icon={HistoryIcon}
             label="Audit Events"
@@ -134,13 +133,13 @@ export default function AdminDashboard() {
             subtitle="Tracked system actions"
             color="#6A1B9A"
             delay={320}
-            onClick={() => navigate('/admin/audit')}
+            onClick={() => navigate('/admin/audit-log')}
           />
         </Grid>
       </Grid>
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper
             sx={{
               p: 3,
@@ -171,7 +170,7 @@ export default function AdminDashboard() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Paper
             sx={{
               p: 3,

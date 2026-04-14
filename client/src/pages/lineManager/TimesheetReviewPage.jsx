@@ -165,7 +165,7 @@ export default function TimesheetReviewPage() {
               variant="body2"
               sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
             >
-              {timesheet.totalHours ?? '-'}
+              {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
             </Typography>
           ),
         },
@@ -246,7 +246,7 @@ export default function TimesheetReviewPage() {
                       variant="body2"
                       sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
                     >
-                      {item.totalHours}
+                      {item.totalHours != null ? Number(item.totalHours).toFixed(2) : '-'}
                     </Typography>
                   )
                 }))}
@@ -258,7 +258,7 @@ export default function TimesheetReviewPage() {
           <WeeklyMatrix
             rows={matrixRows}
             weekDates={weekDates}
-            totalHours={timesheet.totalHours ?? '-'}
+            totalHours={timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
             emptyMessage="No entries recorded for this timesheet."
           />
 
@@ -298,7 +298,7 @@ export default function TimesheetReviewPage() {
 
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
                   <Button
-                    variant="outlined"
+                    variant="contained"
                     color="error"
                     startIcon={<CancelIcon />}
                     onClick={() => openRejectDialog(false)}
@@ -309,16 +309,15 @@ export default function TimesheetReviewPage() {
                   </Button>
                   {nextId && (
                     <Button
-                      variant="outlined"
+                      variant="contained"
                       color="error"
                       startIcon={<FastForwardIcon />}
                       onClick={() => openRejectDialog(true)}
                       disabled={submitting}
                       fullWidth={isMobile}
                       sx={{
-                        borderColor: palette.error,
-                        color: palette.error,
-                        '&:hover': { backgroundColor: palette.errorBg },
+                        backgroundColor: '#b22a25',
+                        '&:hover': { backgroundColor: '#8a201c' },
                       }}
                     >
                       Reject & Next

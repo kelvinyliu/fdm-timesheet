@@ -210,7 +210,7 @@ describe('route loaders', () => {
       { id: 'new', createdAt: '2026-04-11T09:00:00.000Z' },
     ])
 
-    await expect(auditLogLoader({ request: createRequest('/admin/audit') })).resolves.toEqual({
+    await expect(auditLogLoader({ request: createRequest('/admin/audit-log') })).resolves.toEqual({
       entries: [
         { id: 'new', createdAt: '2026-04-11T09:00:00.000Z' },
         { id: 'old', createdAt: '2026-04-10T09:00:00.000Z' },

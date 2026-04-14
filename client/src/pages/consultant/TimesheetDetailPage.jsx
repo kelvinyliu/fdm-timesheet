@@ -63,7 +63,7 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
             fontWeight: 700,
           }}
         >
-          {timesheet.totalHours != null ? `${timesheet.totalHours}h` : '-'}
+          {timesheet.totalHours != null ? `${Number(timesheet.totalHours).toFixed(2)}h` : '-'}
         </Typography>
       ),
     },
@@ -134,7 +134,7 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
                   variant="body2"
                   sx={{ fontFamily: '"Outfit", system-ui, sans-serif', fontWeight: 700 }}
                 >
-                  {item.totalHours != null ? `${item.totalHours}h` : '-'}
+                  {item.totalHours != null ? `${Number(item.totalHours).toFixed(2)}h` : '-'}
                 </Typography>
               ),
             }))}
@@ -153,14 +153,14 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
         <WeeklyMatrix
           rows={[]}
           weekDates={weekDates}
-          totalHours={timesheet.totalHours ?? '-'}
+          totalHours={timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
           emptyMessage="No entries recorded for this timesheet."
         />
       ) : (
         <WeeklyMatrix
           rows={matrixRows}
           weekDates={weekDates}
-          totalHours={timesheet.totalHours ?? '-'}
+          totalHours={timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
         />
       )}
     </Box>

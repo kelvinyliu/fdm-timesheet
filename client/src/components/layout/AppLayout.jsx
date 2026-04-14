@@ -34,7 +34,7 @@ const ROLE_SHORT = {
 
 function getBreadcrumbs(pathname) {
   if (pathname.startsWith('/admin/dashboard')) return ['Admin', 'Dashboard']
-  if (pathname.startsWith('/admin/audit')) return ['Admin', 'Audit Log']
+  if (pathname.startsWith('/admin/audit-log')) return ['Admin', 'Audit Log']
   if (pathname.startsWith('/admin/assignments')) return ['Admin', 'Assignments']
   if (pathname.startsWith('/admin/users')) return ['Admin', 'Users']
 
@@ -109,6 +109,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
       <Box
         sx={{
           p: 2.5,
+          mt: 2,
           borderTop: `1px solid ${palette.sidebarScrim}`,
         }}
       >
@@ -195,6 +196,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
       <Box
         sx={{
           p: '16px 10px',
+          mt: 2,
           borderTop: `1px solid ${palette.sidebarScrim}`,
           display: 'flex',
           flexDirection: 'column',
@@ -260,6 +262,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
     <Box
       sx={{
         p: '16px 20px',
+        mt: 2,
         borderTop: `1px solid ${palette.sidebarScrim}`,
         display: 'flex',
         alignItems: 'center',
@@ -311,37 +314,39 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
         </Typography>
       </Box>
 
-      <Tooltip title="Change password">
-        <IconButton
-          size="small"
-          onClick={onChangePassword}
-          sx={{
-            color: palette.textInverseMuted,
-            '&:hover': {
-              color: palette.textInverse,
-              backgroundColor: palette.overlayWhiteSoft,
-            },
-          }}
-        >
-          <LockResetIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      <Box sx={{ display: 'flex', gap: 0.5 }}>
+        <Tooltip title="Change password">
+          <IconButton
+            size="small"
+            onClick={onChangePassword}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.textInverse,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LockResetIcon />
+          </IconButton>
+        </Tooltip>
 
-      <Tooltip title="Sign out">
-        <IconButton
-          size="small"
-          onClick={onLogout}
-          sx={{
-            color: palette.textInverseMuted,
-            '&:hover': {
-              color: palette.primary,
-              backgroundColor: palette.overlayWhiteSoft,
-            },
-          }}
-        >
-          <LogoutIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+        <Tooltip title="Sign out">
+          <IconButton
+            size="small"
+            onClick={onLogout}
+            sx={{
+              color: palette.textInverseMuted,
+              '&:hover': {
+                color: palette.primary,
+                backgroundColor: palette.overlayWhiteSoft,
+              },
+            }}
+          >
+            <LogoutIcon />
+          </IconButton>
+        </Tooltip>
+      </Box>
     </Box>
   )
 }

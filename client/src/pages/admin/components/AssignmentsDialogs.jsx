@@ -41,7 +41,7 @@ export function ClientAssignmentDialog({
             getOptionLabel={(option) => option.name || ''}
             value={submitters.find((user) => user.id === form.consultantId) || null}
             onChange={(_, newValue) => onChange('consultantId', newValue ? newValue.id : '')}
-            renderInput={(params) => <TextField {...params} label=""Employee"" required />}
+            renderInput={(params) => <TextField {...params} label="Employee" required />}
           />
         </Box>
         <TextField
@@ -120,7 +120,7 @@ export function ManagerAssignmentDialog({
             getOptionLabel={(option) => option.name || ''}
             value={submitters.find((user) => user.id === form.consultantId) || null}
             onChange={(_, newValue) => onChange('consultantId', newValue ? newValue.id : '')}
-            renderInput={(params) => <TextField {...params} label=""Employee"" required />}
+            renderInput={(params) => <TextField {...params} label="Employee" required />}
           />
         </Box>
       </DialogContent>

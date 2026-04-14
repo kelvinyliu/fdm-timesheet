@@ -133,7 +133,7 @@ export default function PaymentDetailsPanel({
               />
 
               <TextField
-                label={isMobile ? '"Employee" Pay Rate (£/hr)' : ''}
+                label={isMobile ? 'Employee Pay Rate (£/hr)' : ''}
                 type="number"
                 size="small"
                 required

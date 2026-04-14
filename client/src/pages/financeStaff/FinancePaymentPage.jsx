@@ -200,8 +200,8 @@ export default function FinancePaymentPage() {
       cancelLabel: 'Review again',
       summaryItems: [
         {
-          key: '"Employee"',
-          label: '"Employee"',
+          key: 'Employee',
+          label: 'Employee',
           value: getSubmitterDisplayLabel(timesheet.consultantName),
         },
         { key: 'week', label: 'Week of', value: formatWeekStart(timesheet.weekStart) },
@@ -247,8 +247,8 @@ export default function FinancePaymentPage() {
   const summaryItems = timesheet
     ? [
         {
-          key: '"Employee"',
-          label: '"Employee"',
+          key: 'Employee',
+          label: 'Employee',
           value: getSubmitterDisplayLabel(timesheet.consultantName),
         },
         {

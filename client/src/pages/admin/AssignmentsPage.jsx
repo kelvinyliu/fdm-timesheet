@@ -173,7 +173,7 @@ export default function AssignmentsPage() {
     const parsedClientBillRate = Number(clientBillRate)
 
     if (!consultantId || !clientName || !clientBillRate) {
-      setClientFormError('"Employee", Client Name, and Client Bill Rate are required.')
+      setClientFormError('Employee, Client Name, and Client Bill Rate are required.')
       return
     }
 

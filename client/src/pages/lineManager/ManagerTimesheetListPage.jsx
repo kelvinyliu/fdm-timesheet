@@ -60,16 +60,23 @@ export default function ManagerTimesheetListPage() {
   }
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
-  const filtered = timesheets.filter((timesheet) => {
-    const matchesStatus = matchesManagerStatusFilter(timesheet.status, statusFilter)
-    const matchesConsultant =
-      normalizedSearchQuery.length === 0 ||
-      getSubmitterDisplayLabel(timesheet.consultantName)
-        .toLowerCase()
-        .includes(normalizedSearchQuery)
+  const filtered = timesheets
+    .filter((timesheet) => {
+      const matchesStatus = matchesManagerStatusFilter(timesheet.status, statusFilter)
+      const matchesConsultant =
+        normalizedSearchQuery.length === 0 ||
+        getSubmitterDisplayLabel(timesheet.consultantName)
+          .toLowerCase()
+          .includes(normalizedSearchQuery)
 
     return matchesStatus && matchesConsultant
-  })
+    })
+    .sort((a, b) => {
+      const isApprovedA = a.status === 'APPROVED' || a.status === 'COMPLETED'
+      const isApprovedB = b.status === 'APPROVED' || b.status === 'COMPLETED'
+      if (isApprovedA === isApprovedB) return 0
+      return isApprovedA ? 1 : -1
+    })
 
   let emptyMessage = 'No timesheets found.'
   if (statusFilter !== MANAGER_STATUS_FILTERS.ALL && normalizedSearchQuery) {

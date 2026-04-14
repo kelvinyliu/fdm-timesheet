@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ConsultantDashboard from './consultant/ConsultantDashboard.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
 import ManagerDashboard from './lineManager/ManagerDashboard.jsx'
+import FinanceDashboard from './financeStaff/FinanceDashboard.jsx'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock('../utils/dateFormatters', async () => {
 
 describe('dashboard pages', () => {
   beforeEach(() => {
+    vi.useRealTimers()
     mocks.navigate.mockReset()
     mocks.useLoaderData.mockReset()
     mocks.useAuth.mockReset()
@@ -154,5 +156,79 @@ describe('dashboard pages', () => {
     fireEvent.click(screen.getByText('Approved'))
 
     expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets?status=APPROVED_GROUP')
+  })
+
+  it('bases manager pending age and preview ordering on submission time', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-14T12:00:00.000Z'))
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-recent-submit',
+          status: 'PENDING',
+          consultantName: 'Recent Submitter',
+          weekStart: '2026-03-30',
+          submittedAt: '2026-04-14T09:00:00.000Z',
+          totalHours: 40,
+        },
+        {
+          id: 'ts-waiting-longer',
+          status: 'PENDING',
+          consultantName: 'Waiting Longer',
+          weekStart: '2026-04-07',
+          submittedAt: '2026-04-10T09:00:00.000Z',
+          totalHours: 32,
+        },
+      ],
+      error: null,
+    })
+
+    render(<ManagerDashboard />)
+
+    expect(screen.getByText('Oldest waiting: 4 days')).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/Recent Submitter|Waiting Longer/).map((node) => node.textContent)
+    ).toEqual(['Waiting Longer', 'Recent Submitter'])
+  })
+
+  it('bases finance payment age and preview ordering on approval time', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-14T12:00:00.000Z'))
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-just-approved',
+          status: 'APPROVED',
+          consultantName: 'Just Approved',
+          weekStart: '2026-03-30',
+          updatedAt: '2026-04-14T09:00:00.000Z',
+          totalHours: 40,
+        },
+        {
+          id: 'ts-waiting-payment',
+          status: 'APPROVED',
+          consultantName: 'Waiting Payment',
+          weekStart: '2026-04-07',
+          updatedAt: '2026-04-11T09:00:00.000Z',
+          totalHours: 32,
+        },
+        {
+          id: 'ts-paid',
+          status: 'COMPLETED',
+          weekStart: '2026-04-01',
+          updatedAt: '2026-04-02T09:00:00.000Z',
+          totalHours: 20,
+          marginAmount: 120,
+        },
+      ],
+      error: null,
+    })
+
+    render(<FinanceDashboard />)
+
+    expect(screen.getByText('Oldest approved: 3 days')).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/Just Approved|Waiting Payment/).map((node) => node.textContent)
+    ).toEqual(['Waiting Payment', 'Just Approved'])
   })
 })

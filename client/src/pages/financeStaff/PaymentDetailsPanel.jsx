@@ -223,7 +223,7 @@ export default function PaymentDetailsPanel({
               </Typography>
               <Typography
                 sx={{
-                  fontFamily: 'Poppins, Georgia, serif',
+                  fontFamily: '"Outfit", system-ui, sans-serif',
                   fontWeight: 400,
                   fontSize: { xs: '1.9rem', sm: '2.2rem' },
                   lineHeight: 1,

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -11,6 +12,7 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import { useAuth } from '../../context/useAuth'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getConsultantDisplayLabel } from '../../utils/displayLabels'
+import { formatCurrency } from '../../utils/currency.js'
 
 function SectionLabel({ children }) {
   return (
@@ -75,7 +77,7 @@ function FigureCell({ label, value, suffix, onClick, accent, sx }) {
       <Stack direction="row" alignItems="baseline" spacing={0.75}>
         <Typography
           sx={{
-            fontFamily: 'Poppins, Georgia, serif',
+            fontFamily: '"Outfit", system-ui, sans-serif',
             fontWeight: 400,
             fontSize: { xs: '2.6rem', sm: '3rem', md: '3.4rem' },
             lineHeight: 1,
@@ -108,14 +110,42 @@ export default function FinanceDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { timesheets, error } = useLoaderData()
+  const [mountedAt] = useState(() => Date.now())
+  const getPaymentQueueEnteredAt = (timesheet) =>
+    new Date(timesheet.updatedAt || timesheet.weekStart).getTime()
 
   const firstName = user?.name?.split(' ')[0] || 'there'
   const approved = timesheets.filter((t) => t.status === 'APPROVED')
   const completed = timesheets.filter((t) => t.status === 'COMPLETED')
   const totalApprovedHours = approved.reduce((sum, ts) => sum + Number(ts.totalHours || 0), 0)
+
+  const currentYear = new Date().getFullYear()
+  const completedThisYear = completed.filter(
+    (ts) => new Date(ts.weekStart).getFullYear() === currentYear
+  )
+  const ytdMargin = completedThisYear.reduce(
+    (sum, ts) => sum + Number(ts.marginAmount || 0),
+    0
+  )
+  const marginRiskCount = completedThisYear.filter(
+    (ts) => ts.marginAmount != null && Number(ts.marginAmount) < 0
+  ).length
+
   const readyForPayment = [...approved]
-    .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
+    .sort((a, b) => getPaymentQueueEnteredAt(a) - getPaymentQueueEnteredAt(b))
     .slice(0, 5)
+
+  const oldestApproved = [...approved].sort(
+    (a, b) => getPaymentQueueEnteredAt(a) - getPaymentQueueEnteredAt(b)
+  )[0]
+  const oldestApprovedDays = oldestApproved
+    ? Math.max(
+        0,
+        Math.floor(
+          (mountedAt - getPaymentQueueEnteredAt(oldestApproved)) / (1000 * 60 * 60 * 24)
+        )
+      )
+    : null
 
   return (
     <Box
@@ -154,7 +184,7 @@ export default function FinanceDashboard() {
             <Typography
               component="h1"
               sx={{
-                fontFamily: 'Poppins, Georgia, serif',
+                fontFamily: '"Outfit", system-ui, sans-serif',
                 fontWeight: 400,
                 fontSize: { xs: '2.1rem', sm: '2.6rem', md: '3rem' },
                 lineHeight: 1.1,
@@ -170,6 +200,35 @@ export default function FinanceDashboard() {
                 ? `${approved.length} timesheet${approved.length > 1 ? 's' : ''} ready for payment.`
                 : 'No timesheets awaiting payment right now.'}
             </Typography>
+            {(oldestApprovedDays != null || marginRiskCount > 0) && (
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{ mt: 1.25, flexWrap: 'wrap' }}
+                useFlexGap
+              >
+                {oldestApprovedDays != null && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: oldestApprovedDays >= 14 ? '#b22a25' : 'text.secondary',
+                      fontWeight: oldestApprovedDays >= 14 ? 600 : 500,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    Oldest approved: {oldestApprovedDays} day{oldestApprovedDays === 1 ? '' : 's'}
+                  </Typography>
+                )}
+                {marginRiskCount > 0 && (
+                  <Typography
+                    variant="caption"
+                    sx={{ color: '#b22a25', fontWeight: 600, letterSpacing: '0.04em' }}
+                  >
+                    {marginRiskCount} negative-margin sheet{marginRiskCount === 1 ? '' : 's'}
+                  </Typography>
+                )}
+              </Stack>
+            )}
           </Box>
 
           <Stack
@@ -212,7 +271,7 @@ export default function FinanceDashboard() {
           borderBottom: '1px solid',
           borderColor: 'divider',
           display: 'grid',
-          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
+          gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
           gap: { xs: 3, sm: 4, md: 6 },
         }}
       >
@@ -233,6 +292,11 @@ export default function FinanceDashboard() {
           value={totalApprovedHours}
           suffix="hrs"
           onClick={() => navigate('/finance/timesheets?status=APPROVED')}
+        />
+        <FigureCell
+          label="YTD margin"
+          value={formatCurrency(ytdMargin)}
+          accent={ytdMargin >= 0 ? '#2f6b36' : '#b22a25'}
           sx={{ gridColumn: { xs: '1 / -1', sm: 'auto' } }}
         />
       </Box>

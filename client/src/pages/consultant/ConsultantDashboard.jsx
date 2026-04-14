@@ -75,7 +75,7 @@ function FigureCell({ label, value, suffix, onClick, accent, sx }) {
       <Stack direction="row" alignItems="baseline" spacing={0.75}>
         <Typography
           sx={{
-            fontFamily: 'Poppins, Georgia, serif',
+            fontFamily: '"Outfit", system-ui, sans-serif',
             fontWeight: 400,
             fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.2rem' },
             lineHeight: 1,
@@ -229,7 +229,7 @@ export default function ConsultantDashboard() {
             <Typography
               component="h1"
               sx={{
-                fontFamily: 'Poppins, Georgia, serif',
+                fontFamily: '"Outfit", system-ui, sans-serif',
                 fontWeight: 400,
                 fontSize: { xs: '2.1rem', sm: '2.6rem', md: '3rem' },
                 lineHeight: 1.1,
@@ -299,7 +299,7 @@ export default function ConsultantDashboard() {
         >
           <Typography
             sx={{
-              fontFamily: 'Poppins, Georgia, serif',
+              fontFamily: '"Outfit", system-ui, sans-serif',
               fontWeight: 400,
               fontSize: { xs: '3rem', sm: '3.6rem', md: '4.2rem' },
               lineHeight: 1,

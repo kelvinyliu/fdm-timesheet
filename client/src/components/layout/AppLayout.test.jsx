@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { getBreadcrumbs } from './AppLayout.jsx'
+import { getRouteMeta } from '../../routes/routeMeta.js'
 
-describe('getBreadcrumbs', () => {
+describe('route breadcrumbs', () => {
   it('matches the finance pay-rates route', () => {
-    expect(getBreadcrumbs('/finance/pay-rates')).toEqual(['Pay Rates'])
+    expect(getRouteMeta('/finance/pay-rates').breadcrumbs).toEqual(['Pay Rates'])
   })
 
   it('keeps finance timesheet routes mapped to timesheet breadcrumbs', () => {
-    expect(getBreadcrumbs('/finance/timesheets')).toEqual(['Timesheets'])
+    expect(getRouteMeta('/finance/timesheets').breadcrumbs).toEqual(['Timesheets'])
   })
 })

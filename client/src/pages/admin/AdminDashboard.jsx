@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -55,6 +56,7 @@ function SectionLabel({ children }) {
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const { users, auditLog, error } = useLoaderData()
+  const [mountedAt] = useState(() => Date.now())
 
   const consultants = users.filter((u) => u.role === 'CONSULTANT').length
   const managers = users.filter((u) => u.role === 'LINE_MANAGER').length
@@ -73,6 +75,18 @@ export default function AdminDashboard() {
   }))
 
   const recentActivity = auditLog.slice(0, 6)
+
+  const sevenDaysAgo = mountedAt - 7 * 24 * 60 * 60 * 1000
+  const twentyFourHoursAgo = mountedAt - 24 * 60 * 60 * 1000
+  const recentRejectionCount = auditLog.filter(
+    (entry) =>
+      entry.action === 'REJECTION' &&
+      entry.createdAt &&
+      new Date(entry.createdAt).getTime() >= sevenDaysAgo
+  ).length
+  const last24hCount = auditLog.filter(
+    (entry) => entry.createdAt && new Date(entry.createdAt).getTime() >= twentyFourHoursAgo
+  ).length
 
   return (
     <Box
@@ -104,7 +118,7 @@ export default function AdminDashboard() {
         <Typography
           component="h1"
           sx={{
-            fontFamily: 'Poppins, Georgia, serif',
+            fontFamily: '"Outfit", system-ui, sans-serif',
             fontWeight: 400,
             fontSize: { xs: '2.1rem', sm: '2.6rem', md: '3rem' },
             lineHeight: 1.1,
@@ -118,6 +132,35 @@ export default function AdminDashboard() {
         <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 640 }}>
           Account distribution and recent system activity at a glance.
         </Typography>
+        {(recentRejectionCount > 0 || last24hCount > 0) && (
+          <Stack
+            direction="row"
+            spacing={2}
+            sx={{ mt: 1.5, flexWrap: 'wrap' }}
+            useFlexGap
+          >
+            {recentRejectionCount > 0 && (
+              <Typography
+                variant="caption"
+                sx={{
+                  color: recentRejectionCount >= 5 ? '#b22a25' : '#8a5a00',
+                  fontWeight: 600,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                {recentRejectionCount} rejection{recentRejectionCount === 1 ? '' : 's'} in last 7 days
+              </Typography>
+            )}
+            {last24hCount > 0 && (
+              <Typography
+                variant="caption"
+                sx={{ color: 'text.secondary', fontWeight: 500, letterSpacing: '0.04em' }}
+              >
+                {last24hCount} event{last24hCount === 1 ? '' : 's'} in last 24h
+              </Typography>
+            )}
+          </Stack>
+        )}
       </Box>
 
       {error && (
@@ -223,7 +266,7 @@ export default function AdminDashboard() {
               <Stack direction="row" alignItems="baseline" spacing={0.75} sx={{ pl: 2 }}>
                 <Typography
                   sx={{
-                    fontFamily: 'Poppins, Georgia, serif',
+                    fontFamily: '"Outfit", system-ui, sans-serif',
                     fontSize: '1.5rem',
                     fontWeight: 400,
                     lineHeight: 1,
@@ -384,7 +427,7 @@ function FigureCell({ label, value, onClick, sx }) {
       </Stack>
       <Typography
         sx={{
-          fontFamily: 'Poppins, Georgia, serif',
+          fontFamily: '"Outfit", system-ui, sans-serif',
           fontWeight: 400,
           fontSize: { xs: '2.6rem', sm: '3rem', md: '3.6rem' },
           lineHeight: 1,

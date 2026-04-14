@@ -90,7 +90,7 @@ export default function WeeklyMatrix({
       >
         <Typography
           sx={{
-            fontFamily: 'Poppins, Georgia, serif',
+            fontFamily: '"Outfit", system-ui, sans-serif',
             fontSize: '1.85rem',
             fontWeight: 400,
             color: palette.textPrimary,
@@ -139,7 +139,7 @@ export default function WeeklyMatrix({
             >
               <Typography
                 sx={{
-                  fontFamily: 'Poppins, Georgia, serif',
+                  fontFamily: '"Outfit", system-ui, sans-serif',
                   fontSize: '1.5rem',
                   color: palette.textSecondary,
                   mb: 1,
@@ -169,7 +169,7 @@ export default function WeeklyMatrix({
                       <Box>
                         <Typography
                           sx={{
-                            fontFamily: 'Poppins, Georgia, serif',
+                            fontFamily: '"Outfit", system-ui, sans-serif',
                             fontSize: '1.4rem',
                             color: isOverLimit
                               ? palette.error
@@ -184,7 +184,7 @@ export default function WeeklyMatrix({
                         <Typography
                           variant="caption"
                           sx={{
-                            fontFamily: 'Poppins, Georgia, serif',
+                            fontFamily: '"Outfit", system-ui, sans-serif',
                             color: palette.textMuted,
                             fontSize: '0.8rem',
                             mt: 0.5,
@@ -367,7 +367,7 @@ export default function WeeklyMatrix({
                     <Box sx={{ maxWidth: 300, mx: 'auto' }}>
                       <Typography
                         sx={{
-                          fontFamily: '"Instrument Serif", Georgia, serif',
+                          fontFamily: '"Outfit", system-ui, sans-serif',
                           fontSize: '1.5rem',
                           color: palette.textSecondary,
                           mb: 1,

@@ -168,7 +168,7 @@ export default function LoginPage() {
             bottom: 40,
             left: 40,
             right: 40,
-            fontFamily: 'Poppins, Georgia, serif',
+            fontFamily: '"Outfit", system-ui, sans-serif',
             fontWeight: 500,
             fontSize: '1.1rem',
             color: 'rgba(var(--ui-white-rgb), 0.28)',
@@ -200,8 +200,8 @@ export default function LoginPage() {
           >
             <Typography
               sx={{
-                fontFamily: 'Poppins, Georgia, serif',
-                fontSize: '3.1rem',
+                fontFamily: '"Instrument Serif", Georgia, serif',
+                fontSize: '3rem',
                 color: palette.textPrimary,
                 lineHeight: 1,
               }}
@@ -224,12 +224,13 @@ export default function LoginPage() {
           <Typography
             variant="h1"
             sx={{
-              fontFamily: 'Poppins, Georgia, serif',
+              fontFamily: '"Outfit", system-ui, sans-serif',
               color: palette.textPrimary,
               lineHeight: 1.1,
               mb: 0.5,
-              fontSize: '3em',
-              fontWeight: 400,
+              fontSize: '2rem',
+              fontWeight: 600,
+              letterSpacing: '-0.01em',
             }}
           >
             Welcome Back

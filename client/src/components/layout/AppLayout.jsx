@@ -20,65 +20,32 @@ import PasswordDialog from './PasswordDialog.jsx'
 import { useAuth } from '../../context/useAuth.js'
 import { useUnsavedChangesController } from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
+import useRouteMeta from '../../hooks/useRouteMeta.js'
 
 const SIDEBAR_WIDTH = 260
 const SIDEBAR_COLLAPSED_WIDTH = 84
 const MOBILE_DRAWER_WIDTH = 320
 
-const ROLE_SHORT = {
-  CONSULTANT: 'Consultant',
-  LINE_MANAGER: 'Manager',
-  FINANCE_MANAGER: 'Finance',
-  SYSTEM_ADMIN: 'Admin',
-}
+function BrandLockup({ size = 'default' }) {
+  const isCollapsed = size === 'collapsed'
+  const isCompact = size === 'compact'
 
-export function getBreadcrumbs(pathname) {
-  if (pathname.startsWith('/admin/dashboard')) return ['Admin', 'Dashboard']
-  if (pathname.startsWith('/admin/audit-log')) return ['Admin', 'Audit Log']
-  if (pathname.startsWith('/admin/assignments')) return ['Admin', 'Assignments']
-  if (pathname.startsWith('/admin/users')) return ['Admin', 'Users']
-
-  if (pathname.startsWith('/consultant/dashboard')) return ['Dashboard']
-  if (pathname.startsWith('/manager/dashboard')) return ['Dashboard']
-  if (pathname.startsWith('/finance/dashboard')) return ['Dashboard']
-
-  if (/\/my-timesheets\/[^/]+\/edit/.test(pathname)) return ['My Timesheets', 'Edit']
-  if (/\/my-timesheets\/new/.test(pathname)) return ['My Timesheets', 'New']
-  if (/\/my-timesheets\/[^/]+/.test(pathname)) return ['My Timesheets', 'Detail']
-  if (pathname.includes('/my-timesheets')) return ['My Timesheets']
-
-  if (/\/timesheets\/[^/]+\/edit/.test(pathname)) return ['Timesheets', 'Edit']
-  if (/\/timesheets\/[^/]+\/payment/.test(pathname)) return ['Timesheets', 'Payment']
-  if (/\/timesheets\/new/.test(pathname)) return ['Timesheets', 'New']
-
-  if (/\/timesheets\/[^/]+/.test(pathname)) {
-    return pathname.startsWith('/manager')
-      ? ['Timesheets', 'Open Timesheet']
-      : ['Timesheets', 'Detail']
-  }
-
-  if (pathname.includes('/timesheets')) return ['Timesheets']
-  if (pathname.includes('/pay-rates')) return ['Pay Rates']
-  
-  return []
-}
-
-function BrandLockup({ compact = false, collapsed = false }) {
   return (
     <Box
       sx={{
-        p: collapsed ? '18px 12px 60px' : compact ? '18px 20px' : '28px 24px 20px',
+        p: isCollapsed ? '20px 12px' : isCompact ? '20px 22px' : '26px 24px',
         position: 'relative',
         borderBottom: `1px solid ${palette.sidebarScrim}`,
         display: 'flex',
         flexDirection: 'column',
-        alignItems: collapsed ? 'center' : 'flex-start',
+        alignItems: isCollapsed ? 'center' : 'flex-start',
+        gap: 0.25,
       }}
     >
       <Typography
         sx={{
           fontFamily: '"Instrument Serif", Georgia, serif',
-          fontSize: collapsed ? '2.6rem' : compact ? '2.35rem' : '5rem',
+          fontSize: isCollapsed ? '2rem' : isCompact ? '2.2rem' : '3rem',
           color: palette.textInverse,
           letterSpacing: '-0.01em',
           lineHeight: 1,
@@ -87,15 +54,14 @@ function BrandLockup({ compact = false, collapsed = false }) {
         FDM
       </Typography>
 
-      {!collapsed && (
+      {!isCollapsed && (
         <Typography
           sx={{
             fontFamily: '"Outfit", sans-serif',
-            fontSize: compact ? '0.62rem' : '0.65rem',
-            letterSpacing: compact ? '0.18em' : '0.2em',
+            fontSize: '0.6rem',
+            letterSpacing: '0.2em',
             textTransform: 'uppercase',
             color: palette.textInverseMuted,
-            mt: 0.5,
           }}
         >
           Timesheets
@@ -108,13 +74,7 @@ function BrandLockup({ compact = false, collapsed = false }) {
 function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapsed = false }) {
   if (mobile) {
     return (
-      <Box
-        sx={{
-          p: 2.5,
-          mt: 2,
-          borderTop: `1px solid ${palette.sidebarScrim}`,
-        }}
-      >
+      <Box sx={{ p: 2.5, borderTop: `1px solid ${palette.sidebarScrim}` }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
           <Box
             sx={{
@@ -133,7 +93,6 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
           >
             {user?.name?.[0]?.toUpperCase() ?? '?'}
           </Box>
-
           <Box sx={{ minWidth: 0 }}>
             <Typography
               sx={{
@@ -147,7 +106,6 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
             >
               {user?.name ?? 'User'}
             </Typography>
-
             <Typography
               sx={{
                 fontSize: '0.65rem',
@@ -161,13 +119,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
           </Box>
         </Box>
 
-        <Box
-          sx={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: 1,
-          }}
-        >
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1 }}>
           <Button
             variant="outlined"
             startIcon={<LockResetIcon />}
@@ -184,7 +136,6 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
           >
             Password
           </Button>
-
           <Button variant="contained" startIcon={<LogoutIcon />} onClick={onLogout}>
             Sign out
           </Button>
@@ -198,7 +149,6 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
       <Box
         sx={{
           p: '16px 10px',
-          mt: 2,
           borderTop: `1px solid ${palette.sidebarScrim}`,
           display: 'flex',
           flexDirection: 'column',
@@ -224,11 +174,11 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
         >
           {user?.name?.[0]?.toUpperCase() ?? '?'}
         </Box>
-
-        <Tooltip title="Change password">
+        <Tooltip title="Change password" placement="right">
           <IconButton
             size="small"
             onClick={onChangePassword}
+            aria-label="Change password"
             sx={{
               color: palette.textInverseMuted,
               '&:hover': {
@@ -240,11 +190,11 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
             <LockResetIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-
-        <Tooltip title="Sign out">
+        <Tooltip title="Sign out" placement="right">
           <IconButton
             size="small"
             onClick={onLogout}
+            aria-label="Sign out"
             sx={{
               color: palette.textInverseMuted,
               '&:hover': {
@@ -264,7 +214,6 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
     <Box
       sx={{
         p: '16px 20px',
-        mt: 2,
         borderTop: `1px solid ${palette.sidebarScrim}`,
         display: 'flex',
         alignItems: 'center',
@@ -303,7 +252,6 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
         >
           {user?.name ?? 'User'}
         </Typography>
-
         <Typography
           sx={{
             fontSize: '0.65rem',
@@ -321,6 +269,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
           <IconButton
             size="small"
             onClick={onChangePassword}
+            aria-label="Change password"
             sx={{
               color: palette.textInverseMuted,
               '&:hover': {
@@ -332,11 +281,11 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
             <LockResetIcon />
           </IconButton>
         </Tooltip>
-
         <Tooltip title="Sign out">
           <IconButton
             size="small"
             onClick={onLogout}
+            aria-label="Sign out"
             sx={{
               color: palette.textInverseMuted,
               '&:hover': {
@@ -358,7 +307,8 @@ export default function AppLayout() {
   const location = useLocation()
   const { logout, user } = useAuth()
   const { runWithGuard } = useUnsavedChangesController()
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  // Unified breakpoint: compact mode below 900px
+  const isCompact = useMediaQuery(theme.breakpoints.down('md'))
 
   const [pwOpen, setPwOpen] = useState(false)
   const [desktopNavCollapsed, setDesktopNavCollapsed] = useState(false)
@@ -367,7 +317,11 @@ export default function AppLayout() {
     pathname: location.pathname,
   })
 
-  const crumbs = getBreadcrumbs(location.pathname)
+  const routeMeta = useRouteMeta()
+  const crumbs = routeMeta.breadcrumbs ?? []
+  const mobileTitle = routeMeta.mobileTitle || routeMeta.title || ''
+  const mobileSubtitle = routeMeta.mobileSubtitle
+
   const mobileNavOpen = mobileNavState.open && mobileNavState.pathname === location.pathname
   const desktopSidebarWidth = desktopNavCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH
 
@@ -406,14 +360,15 @@ export default function AppLayout() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', alignItems: 'stretch' }}>
-      {!isMobile && (
+      {!isCompact && (
         <Box
           component="nav"
+          aria-label="Primary"
           sx={{
             width: desktopSidebarWidth,
             flexShrink: 0,
             display: 'grid',
-            gridTemplateRows: 'auto 1fr auto',
+            gridTemplateRows: 'auto 1fr auto auto',
             height: '100vh',
             top: 0,
             overflow: 'hidden',
@@ -422,29 +377,7 @@ export default function AppLayout() {
             position: 'sticky',
           }}
         >
-          <Box sx={{ position: 'relative' }}>
-            <BrandLockup collapsed={desktopNavCollapsed} />
-
-            <IconButton
-              onClick={() => setDesktopNavCollapsed((prev) => !prev)}
-              sx={{
-                position: 'absolute',
-                top: desktopNavCollapsed? 'auto' : 14,
-                bottom: desktopNavCollapsed? 12 : 'auto',
-                right: desktopNavCollapsed ? '50%' : 14,
-                transform: desktopNavCollapsed ? 'translateX(50%)' : 'none',
-                color: palette.textInverseMuted,
-                border: `1px solid ${palette.sidebarScrim}`,
-                backgroundColor: palette.overlayWhiteSoft,
-                '&:hover': {
-                  color: palette.textInverse,
-                  backgroundColor: palette.overlayWhiteMuted,
-                },
-              }}
-            >
-              {desktopNavCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
-            </IconButton>
-          </Box>
+          <BrandLockup size={desktopNavCollapsed ? 'collapsed' : 'default'} />
 
           <Box sx={{ minHeight: 0, overflow: 'auto', position: 'relative' }}>
             <Sidebar collapsed={desktopNavCollapsed} />
@@ -456,10 +389,39 @@ export default function AppLayout() {
             onChangePassword={() => setPwOpen(true)}
             onLogout={() => runWithGuard(logout)}
           />
+
+          <Box
+            sx={{
+              borderTop: `1px solid ${palette.sidebarScrim}`,
+              display: 'flex',
+              justifyContent: desktopNavCollapsed ? 'center' : 'flex-end',
+              p: 1,
+            }}
+          >
+            <Tooltip
+              title={desktopNavCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              placement="right"
+            >
+              <IconButton
+                onClick={() => setDesktopNavCollapsed((prev) => !prev)}
+                size="small"
+                aria-label={desktopNavCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                sx={{
+                  color: palette.textInverseMuted,
+                  '&:hover': {
+                    color: palette.textInverse,
+                    backgroundColor: palette.overlayWhiteSoft,
+                  },
+                }}
+              >
+                {desktopNavCollapsed ? <ChevronRightIcon /> : <ChevronLeftIcon />}
+              </IconButton>
+            </Tooltip>
+          </Box>
         </Box>
       )}
 
-      {isMobile && (
+      {isCompact && (
         <>
           <AppBar
             position="fixed"
@@ -468,20 +430,21 @@ export default function AppLayout() {
             sx={{
               display: { xs: 'flex', md: 'none' },
               borderBottom: `1px solid ${palette.border}`,
-              backgroundColor: 'rgba(var(--ui-white-rgb), 0.9)',
+              backgroundColor: 'rgba(var(--ui-white-rgb), 0.92)',
               backdropFilter: 'blur(12px)',
             }}
           >
             <Toolbar
               sx={{
-                minHeight: { xs: 64, sm: 72 },
-                px: { xs: 2, sm: 3 },
-                gap: 1.5,
+                minHeight: { xs: 60, sm: 68 },
+                px: { xs: 1.5, sm: 2.5 },
+                gap: 1.25,
               }}
             >
               <IconButton
                 edge="start"
                 onClick={openMobileNav}
+                aria-label="Open navigation"
                 sx={{
                   color: palette.textPrimary,
                   border: `1px solid ${palette.border}`,
@@ -493,10 +456,53 @@ export default function AppLayout() {
 
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
+                  component="h1"
+                  sx={{
+                    fontFamily: '"Outfit", system-ui, sans-serif',
+                    fontSize: { xs: '1.05rem', sm: '1.15rem' },
+                    fontWeight: 600,
+                    color: palette.textPrimary,
+                    lineHeight: 1.15,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}
+                >
+                  {mobileTitle}
+                </Typography>
+                {mobileSubtitle && (
+                  <Typography
+                    sx={{
+                      fontSize: '0.7rem',
+                      color: palette.textMuted,
+                      letterSpacing: '0.04em',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      mt: 0.1,
+                    }}
+                  >
+                    {mobileSubtitle}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Small supporting brand lockup */}
+              <Box
+                aria-hidden
+                sx={{
+                  display: { xs: 'none', sm: 'flex' },
+                  flexDirection: 'column',
+                  alignItems: 'flex-end',
+                  flexShrink: 0,
+                  mr: 0.5,
+                }}
+              >
+                <Typography
                   sx={{
                     fontFamily: '"Instrument Serif", Georgia, serif',
-                    fontSize: '2rem',
-                    color: palette.textPrimary,
+                    fontSize: '1.15rem',
+                    color: palette.textSecondary,
                     lineHeight: 1,
                   }}
                 >
@@ -504,29 +510,16 @@ export default function AppLayout() {
                 </Typography>
                 <Typography
                   sx={{
-                    fontSize: '0.6rem',
-                    letterSpacing: '0.18em',
+                    fontSize: '0.55rem',
+                    letterSpacing: '0.2em',
                     textTransform: 'uppercase',
                     color: palette.textMuted,
-                    mt: 0.3,
+                    mt: 0.1,
                   }}
                 >
                   Timesheets
                 </Typography>
               </Box>
-
-              <Typography
-                variant="caption"
-                sx={{
-                  display: { xs: 'none', sm: 'block' },
-                  color: palette.textMuted,
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontSize: '0.68rem',
-                  textAlign: 'right',
-                }}
-              >
-                {todayLabel}
-              </Typography>
 
               <Box
                 sx={{
@@ -566,7 +559,7 @@ export default function AppLayout() {
               },
             }}
           >
-            <BrandLockup compact />
+            <BrandLockup size="compact" />
             <Box sx={{ minHeight: 0, overflow: 'auto', position: 'relative' }}>
               <Sidebar onNavigate={closeMobileNav} />
             </Box>
@@ -593,13 +586,7 @@ export default function AppLayout() {
           minWidth: 0,
         }}
       >
-        {isMobile && (
-          <Toolbar
-            sx={{
-              minHeight: { xs: 64, sm: 72 },
-            }}
-          />
-        )}
+        {isCompact && <Toolbar sx={{ minHeight: { xs: 60, sm: 68 } }} />}
 
         <Box
           sx={{

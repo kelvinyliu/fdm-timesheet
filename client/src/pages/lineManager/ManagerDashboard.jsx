@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -78,7 +79,7 @@ function FigureCell({ label, value, onClick, accent, sx }) {
       </Stack>
       <Typography
         sx={{
-          fontFamily: 'Poppins, Georgia, serif',
+          fontFamily: '"Outfit", system-ui, sans-serif',
           fontWeight: 400,
           fontSize: { xs: '2.6rem', sm: '3rem', md: '3.4rem' },
           lineHeight: 1,
@@ -97,13 +98,29 @@ export default function ManagerDashboard() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { timesheets, error } = useLoaderData()
+  const [mountedAt] = useState(() => Date.now())
+  const getPendingQueueEnteredAt = (timesheet) =>
+    new Date(timesheet.submittedAt || timesheet.weekStart).getTime()
 
   const firstName = user?.name?.split(' ')[0] || 'there'
   const pending = timesheets.filter((t) => t.status === 'PENDING')
   const approved = timesheets.filter((t) => t.status === 'APPROVED' || t.status === 'COMPLETED')
   const rejected = timesheets.filter((t) => t.status === 'REJECTED')
 
-  const pendingPreview = pending.slice(0, 5)
+  const latePendingCount = pending.filter((t) => t.submittedLate).length
+
+  const pendingSorted = [...pending].sort(
+    (a, b) => getPendingQueueEnteredAt(a) - getPendingQueueEnteredAt(b)
+  )
+  const oldestPending = pendingSorted[0]
+  const oldestPendingDays = oldestPending
+    ? Math.max(
+        0,
+        Math.floor((mountedAt - getPendingQueueEnteredAt(oldestPending)) / (1000 * 60 * 60 * 24))
+      )
+    : null
+
+  const pendingPreview = pendingSorted.slice(0, 5)
 
   return (
     <Box
@@ -142,7 +159,7 @@ export default function ManagerDashboard() {
             <Typography
               component="h1"
               sx={{
-                fontFamily: 'Poppins, Georgia, serif',
+                fontFamily: '"Outfit", system-ui, sans-serif',
                 fontWeight: 400,
                 fontSize: { xs: '2.1rem', sm: '2.6rem', md: '3rem' },
                 lineHeight: 1.1,
@@ -158,6 +175,35 @@ export default function ManagerDashboard() {
                 ? `${pending.length} timesheet${pending.length > 1 ? 's' : ''} waiting for review.`
                 : 'No pending reviews. Your team is caught up.'}
             </Typography>
+            {pending.length > 0 && (oldestPendingDays != null || latePendingCount > 0) && (
+              <Stack
+                direction="row"
+                spacing={2}
+                sx={{ mt: 1.25, flexWrap: 'wrap' }}
+                useFlexGap
+              >
+                {oldestPendingDays != null && (
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      color: oldestPendingDays >= 14 ? '#b22a25' : 'text.secondary',
+                      fontWeight: oldestPendingDays >= 14 ? 600 : 500,
+                      letterSpacing: '0.04em',
+                    }}
+                  >
+                    Oldest waiting: {oldestPendingDays} day{oldestPendingDays === 1 ? '' : 's'}
+                  </Typography>
+                )}
+                {latePendingCount > 0 && (
+                  <Typography
+                    variant="caption"
+                    sx={{ color: '#8a5a00', fontWeight: 600, letterSpacing: '0.04em' }}
+                  >
+                    {latePendingCount} late submission{latePendingCount === 1 ? '' : 's'}
+                  </Typography>
+                )}
+              </Stack>
+            )}
           </Box>
 
           <Stack

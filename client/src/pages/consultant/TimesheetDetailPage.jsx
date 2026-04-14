@@ -179,8 +179,9 @@ export default function TimesheetDetailPage() {
                   variant="body2"
                   sx={{ fontFamily: '"Outfit", system-ui, sans-serif', fontWeight: 700 }}
                 >
-                  {item.totalHours}
+                  {item.totalHours}h
                 </Typography>
+              
               </Box>
             ))}
           </Stack>
@@ -202,8 +203,8 @@ export default function TimesheetDetailPage() {
       ) : (
         <Paper sx={{ mb: 3, p: { xs: 0, sm: 0 }, overflow: 'hidden' }}>
           <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: palette.sidebarBg, color: palette.textInverse }}>
-             <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Matrix</Typography>
-             <Typography variant="h6" sx={{ fontFamily: '"Outfit", system-ui, sans-serif', color: palette.primary, letterSpacing: '0.05em' }}>
+             <Typography variant="h6" sx={{ color: palette.textInverse }}>Weekly Timesheet</Typography>
+             <Typography variant="h6" sx={{ fontFamily: '"Outfit", system-ui, sans-serif', color: '#ffffff', letterSpacing: '0.05em' }}>
                {timesheet.totalHours ?? '-'}h Total
              </Typography>
           </Box>

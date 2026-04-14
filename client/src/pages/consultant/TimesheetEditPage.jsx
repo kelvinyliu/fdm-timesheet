@@ -24,6 +24,7 @@ import {
   getDuplicateBucketValues,
   getMatrixTotalHours,
   getNextAvailableBucketValue,
+  normaliseHoursValue,
   parseBucketValue,
   rowHasValues,
   serializeEntries,
@@ -149,7 +150,9 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
 
   function handleRowHoursChange(rowId, date, value) {
     setMatrixRows((prev) =>
-      prev.map((r) => (r.id === rowId ? { ...r, hours: { ...r.hours, [date]: value } } : r))
+      prev.map((r) =>
+        r.id === rowId ? { ...r, hours: { ...r.hours, [date]: normaliseHoursValue(value) } } : r
+      )
     )
   }
 

@@ -58,6 +58,8 @@ function getBreadcrumbs(pathname) {
   }
 
   if (pathname.includes('/timesheets')) return ['Timesheets']
+  if (pathname.includes('/payrates')) return ['Pay Rates']
+  
   return []
 }
 

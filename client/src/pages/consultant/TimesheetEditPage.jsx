@@ -4,13 +4,14 @@ import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
-import Stack from '@mui/material/Stack'
 import SaveIcon from '@mui/icons-material/Save'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditableWeeklyMatrix from '../../components/shared/EditableWeeklyMatrix.jsx'
 import PageHeader from '../../components/shared/PageHeader'
+import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
+import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useGuardedNavigate, useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
@@ -412,37 +413,37 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         onRowHoursChange={handleRowHoursChange}
       />
 
-      <Box
-        sx={{
-          mt: 4,
-          pt: 3,
-          borderTop: '1px solid',
-          borderColor: 'divider',
-        }}
+      <StickyActionBar
+        sx={{ mt: { sm: 4 } }}
+        secondary={
+          saving ? (
+            <SaveStateBanner state="saving" message="Saving..." />
+          ) : isDirty ? (
+            <SaveStateBanner state="dirty" message="Unsaved changes" />
+          ) : null
+        }
       >
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
-          <Button
-            variant="outlined"
-            startIcon={<SaveIcon />}
-            onClick={saveDraft}
-            disabled={isBusy}
-            size="large"
-          >
-            {saving ? 'Saving...' : 'Save Draft'}
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            disabled={isBusy}
-            size="large"
-          >
-            {submitting ? 'Submitting...' : 'Submit for Review'}
-          </Button>
-        </Stack>
-      </Box>
+        <Button
+          variant="outlined"
+          startIcon={<SaveIcon />}
+          onClick={saveDraft}
+          disabled={isBusy}
+          size="large"
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<SendIcon />}
+          onClick={() => {
+            void handleSubmit()
+          }}
+          disabled={isBusy}
+          size="large"
+        >
+          {submitting ? 'Submitting...' : 'Submit'}
+        </Button>
+      </StickyActionBar>
 
       <Snackbar
         open={snackbar.open}

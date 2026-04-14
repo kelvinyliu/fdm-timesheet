@@ -7,6 +7,7 @@ import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
+import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
@@ -21,6 +22,7 @@ import FastForwardIcon from '@mui/icons-material/FastForward'
 import BlockIcon from '@mui/icons-material/Block'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
+import FieldGroup from '../../components/shared/FieldGroup.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { reviewTimesheet } from '../../api/timesheets'
@@ -32,6 +34,13 @@ import {
 } from '../../utils/displayLabels'
 import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
 import { buildManagerTimesheetListPath } from './utils/managerTimesheetFilters.js'
+
+const REJECTION_PRESETS = [
+  'Hours logged are inconsistent with expected schedule.',
+  'Work category allocation is incorrect.',
+  'Needs supporting detail or comment for the recorded hours.',
+  'Timesheet was submitted for the wrong week.',
+]
 
 export default function TimesheetReviewPage() {
   const theme = useTheme()
@@ -391,16 +400,41 @@ export default function TimesheetReviewPage() {
                 Rejecting this timesheet will return it to the submitter for changes.
                 {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
-              <TextField
-                label="Rejection Comment"
-                multiline
-                minRows={3}
-                fullWidth
-                value={rejectionComment}
-                onChange={(e) => setRejectionComment(e.target.value)}
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap' }} useFlexGap>
+                {REJECTION_PRESETS.map((preset) => (
+                  <Chip
+                    key={preset}
+                    label={preset.length > 32 ? `${preset.slice(0, 30)}…` : preset}
+                    onClick={() => setRejectionComment(preset)}
+                    size="small"
+                    variant="outlined"
+                    disabled={submitting}
+                    sx={{ mb: 0.5 }}
+                  />
+                ))}
+              </Stack>
+              <FieldGroup
+                label="Rejection comment"
+                htmlFor="rejection-comment"
                 required
-                disabled={submitting}
-              />
+                error={
+                  rejectionComment.length > 0 && !rejectionComment.trim()
+                    ? 'Rejection comment cannot be blank.'
+                    : undefined
+                }
+                helper="A clear reason helps the consultant correct and resubmit quickly."
+              >
+                <TextField
+                  id="rejection-comment"
+                  multiline
+                  minRows={3}
+                  fullWidth
+                  value={rejectionComment}
+                  onChange={(e) => setRejectionComment(e.target.value)}
+                  disabled={submitting}
+                  error={rejectionComment.length > 0 && !rejectionComment.trim()}
+                />
+              </FieldGroup>
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setRejectDialogOpen(false)} disabled={submitting}>

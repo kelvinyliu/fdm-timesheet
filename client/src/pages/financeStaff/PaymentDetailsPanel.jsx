@@ -102,7 +102,7 @@ export default function PaymentDetailsPanel({
                   {getWorkBucketDisplayLabel(item.bucketLabel)}
                 </Typography>
                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                  {item.totalHours} hours recorded
+                  {item.totalHours != null ? Number(item.totalHours).toFixed(2) : '-'} hours recorded
                 </Typography>
               </Box>
 
@@ -270,7 +270,7 @@ export default function PaymentDetailsPanel({
                     {getWorkBucketDisplayLabel(item.bucketLabel)}:
                   </Typography>
                   <Typography variant="inherit" sx={{ color: palette.textMuted }}>
-                    {item.hours}h
+                    {Number(item.hours).toFixed(2)}h
                   </Typography>
                   <Typography variant="inherit" sx={{ color: palette.border }}>
                     |

@@ -14,6 +14,7 @@ import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
+import { Tooltip } from '@mui/material'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import AddIcon from '@mui/icons-material/Add'
@@ -376,36 +377,50 @@ export default function EditableWeeklyMatrix({
               )}
 
               {canChangeBuckets && (
-                <Button
-                  variant="outlined"
-                  startIcon={<AddIcon />}
-                  onClick={onAddRow}
-                  disabled={isBusy || !canAddMoreBuckets}
-                  sx={{
-                    mt: 1,
-                    py: 1.5,
-                    borderStyle: 'dashed',
-                    borderWidth: 2,
-                    borderColor: palette.borderStrong,
-                    color: palette.textSecondary,
-                    backgroundColor: palette.surface,
-                    borderRadius: 2,
-                    '&:hover': {
-                      borderStyle: 'dashed',
-                      borderWidth: 2,
-                      borderColor: palette.primary,
-                      backgroundColor: palette.overlayPrimarySoft,
-                      color: palette.primaryContrast,
-                    },
-                  }}
-                >
-                  Add Category
-                </Button>
-              )}
-              {canChangeBuckets && !canAddMoreBuckets && (
-                <Typography variant="body2" sx={{ color: palette.textMuted }}>
-                  All available work categories have already been added.
-                </Typography>
+                <>
+                  <Tooltip
+                    title={
+                      !canAddMoreBuckets
+                        ? 'All available work categories have already been added'
+                        : ''
+                    }
+                    placement="top"
+                  >
+                    <span>
+                      <Button
+                        variant="outlined"
+                        startIcon={<AddIcon />}
+                        onClick={onAddRow}
+                        disabled={isBusy || !canAddMoreBuckets}
+                        sx={{
+                          mt: 1,
+                          py: 1.5,
+                          width: '100%',
+                          borderStyle: 'dashed',
+                          borderWidth: 2,
+                          borderColor: palette.borderStrong,
+                          color: palette.textSecondary,
+                          backgroundColor: palette.surface,
+                          borderRadius: 2,
+                          '&:hover': {
+                            borderStyle: 'dashed',
+                            borderWidth: 2,
+                            borderColor: palette.primary,
+                            backgroundColor: palette.overlayPrimarySoft,
+                            color: palette.primaryContrast,
+                          },
+                        }}
+                      >
+                        Add Category
+                      </Button>
+                    </span>
+                  </Tooltip>
+                  {!canAddMoreBuckets && (
+                    <Typography variant="body2" sx={{ mt: 1, color: palette.textMuted }}>
+                      All available work categories have already been added.
+                    </Typography>
+                  )}
+                </>
               )}
             </Stack>
           </Box>
@@ -912,33 +927,42 @@ export default function EditableWeeklyMatrix({
                 textAlign: 'center',
               }}
             >
-              <Button
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={onAddRow}
-                disabled={isBusy || !canAddMoreBuckets}
-                sx={{
-                  py: 1,
-                  px: 4,
-                  borderStyle: 'dashed',
-                  borderWidth: 2,
-                  borderColor: palette.borderStrong,
-                  color: palette.textSecondary,
-                  backgroundColor: palette.surface,
-                  borderRadius: 2,
-                  transition: 'all 0.2s ease',
-                  '&:hover': {
-                    borderStyle: 'dashed',
-                    borderWidth: 2,
-                    borderColor: palette.primary,
-                    backgroundColor: palette.overlayPrimarySoft,
-                    color: palette.primaryContrast,
-                    transform: 'translateY(-1px)',
-                  },
-                }}
+              <Tooltip
+                title={
+                  !canAddMoreBuckets ? 'All available work categories have already been added' : ''
+                }
+                placement="top"
               >
-                Add Row
-              </Button>
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<AddIcon />}
+                    onClick={onAddRow}
+                    disabled={isBusy || !canAddMoreBuckets}
+                    sx={{
+                      py: 1,
+                      px: 4,
+                      borderStyle: 'dashed',
+                      borderWidth: 2,
+                      borderColor: palette.borderStrong,
+                      color: palette.textSecondary,
+                      backgroundColor: palette.surface,
+                      borderRadius: 2,
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        borderStyle: 'dashed',
+                        borderWidth: 2,
+                        borderColor: palette.primary,
+                        backgroundColor: palette.overlayPrimarySoft,
+                        color: palette.primaryContrast,
+                        transform: 'translateY(-1px)',
+                      },
+                    }}
+                  >
+                    Add Row
+                  </Button>
+                </span>
+              </Tooltip>
               {!canAddMoreBuckets && (
                 <Typography variant="body2" sx={{ mt: 1.5, color: palette.textMuted }}>
                   All available work categories have already been added.

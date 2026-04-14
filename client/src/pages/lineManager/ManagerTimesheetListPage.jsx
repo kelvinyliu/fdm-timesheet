@@ -196,7 +196,7 @@ export default function ManagerTimesheetListPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {timesheet.totalHours ?? '-'}
+                        {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </Box>
                   </Box>
@@ -250,7 +250,7 @@ export default function ManagerTimesheetListPage() {
                           fontSize: '0.85rem',
                         }}
                       >
-                        {timesheet.totalHours ?? '-'}
+                        {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell align="right">

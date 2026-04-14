@@ -293,9 +293,8 @@ describe('EditableWeeklyMatrix', () => {
     )
 
     expect(screen.getByText('Daily Total')).toBeInTheDocument()
-    expect(screen.getByText('8.5')).toBeInTheDocument()
-    expect(screen.getByText('0.0')).toBeInTheDocument()
-    expect(screen.getAllByText('8.50')).toHaveLength(2)
+    expect(screen.getAllByText('8.50').length).toBeGreaterThan(1)
+    expect(screen.getByText('0.00')).toBeInTheDocument()
   })
 
   it('keeps the desktop matrix on a fixed table layout with stable numeric input sizing', () => {
@@ -377,7 +376,7 @@ describe('EditableWeeklyMatrix', () => {
       />
     )
 
-    expect(screen.getByText('26.5')).toBeInTheDocument()
+    expect(screen.getAllByText('26.50').length).toBeGreaterThan(1)
     expect(screen.getByText('Over daily limit')).toBeInTheDocument()
   })
 
@@ -414,7 +413,7 @@ describe('EditableWeeklyMatrix', () => {
       />
     )
 
-    expect(screen.getByText('26.5')).toBeInTheDocument()
+    expect(screen.getAllByText('26.50').length).toBeGreaterThan(1)
     expect(screen.getByText('Over daily limit')).toBeInTheDocument()
   })
 })

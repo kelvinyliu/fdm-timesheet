@@ -57,7 +57,6 @@ export default function ManagerDashboard() {
           <Box sx={{ flex: 1 }}>
             <Typography
               sx={{
-                fontFamily: '"Instrument Serif", Georgia, serif',
                 fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
                 letterSpacing: '-0.01em',
@@ -122,7 +121,7 @@ export default function ManagerDashboard() {
       )}
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard
             icon={HourglassEmptyIcon}
             label="Pending Reviews"
@@ -134,7 +133,7 @@ export default function ManagerDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard
             icon={CheckCircleOutlineIcon}
             label="Approved"
@@ -148,7 +147,7 @@ export default function ManagerDashboard() {
           />
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid size={{ xs: 12, md: 4 }}>
           <DashboardCard
             icon={ErrorOutlineIcon}
             label="Rejected"
@@ -252,7 +251,7 @@ export default function ManagerDashboard() {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       {formatWeekStart(ts.weekStart)}
-                      {ts.totalHours != null && ` (${ts.totalHours} hrs)`}
+                      {ts.totalHours != null && ` (${Number(ts.totalHours).toFixed(2)} hrs)`}
                     </Typography>
                   </Box>
 
@@ -266,12 +265,6 @@ export default function ManagerDashboard() {
             <Divider sx={{ my: 0.5 }} />
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-start">
-              <Button
-                variant="contained"
-                onClick={() => navigate('/manager/timesheets?status=PENDING')}
-              >
-                Review pending
-              </Button>
               <Button variant="text" onClick={() => navigate('/manager/timesheets')}>
                 Browse all timesheets
               </Button>

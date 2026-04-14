@@ -109,7 +109,7 @@ export default function WeeklyMatrix({
               lineHeight: 1,
             }}
           >
-            {totalHours?.toFixed(2) ?? '0.00'}
+            {formatTotalHoursValue(totalHours)}
           </Typography>
           <Typography
             variant="body2"
@@ -279,12 +279,12 @@ export default function WeeklyMatrix({
         <TableContainer
           sx={{ borderTop: `1px solid ${palette.border}`, borderRadius: 0, boxShadow: 'none' }}
         >
-          <Table size="medium" sx={{ minWidth: 800 }}>
+          <Table size="medium" sx={{ minWidth: 940 }}>
             <TableHead>
               <TableRow sx={{ backgroundColor: palette.surfaceMuted }}>
                 <TableCell
                   sx={{
-                    width: 280,
+                    width: 320,
                     borderRight: `1px solid ${palette.border}`,
                     py: 2.5,
                     px: 3,
@@ -306,7 +306,13 @@ export default function WeeklyMatrix({
                   <TableCell
                     key={date}
                     align="center"
-                    sx={{ width: 95, borderRight: `1px solid ${palette.border}`, py: 2 }}
+                    sx={{
+                      width: 88,
+                      minWidth: 88,
+                      borderRight: `1px solid ${palette.border}`,
+                      py: 2,
+                      px: 1.5,
+                    }}
                   >
                     <Typography
                       sx={{
@@ -315,7 +321,7 @@ export default function WeeklyMatrix({
                         color: palette.textPrimary,
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em',
-                        fontSize: '0.85rem',
+                        fontSize: '0.95rem',
                       }}
                     >
                       {formatDayName(date).slice(0, 3)}
@@ -324,7 +330,7 @@ export default function WeeklyMatrix({
                       sx={{
                         fontFamily: '"JetBrains Mono", monospace',
                         color: palette.textMuted,
-                        fontSize: '0.75rem',
+                        fontSize: '0.82rem',
                         mt: 0.5,
                       }}
                     >
@@ -404,7 +410,7 @@ export default function WeeklyMatrix({
                                 color: val > 0 ? palette.textPrimary : palette.textMuted,
                               }}
                             >
-                              {val || '-'}
+                              {val > 0 ? formatHoursValue(val) : '-'}
                             </Typography>
                           </TableCell>
                         )
@@ -424,7 +430,7 @@ export default function WeeklyMatrix({
                             color: rowTotal > 0 ? palette.textPrimary : palette.textMuted,
                           }}
                         >
-                          {rowTotal.toFixed(2)}
+                          {formatTotalHoursValue(rowTotal)}
                         </Typography>
                       </TableCell>
                     </TableRow>
@@ -507,7 +513,7 @@ export default function WeeklyMatrix({
                         color: totalHours > 0 ? palette.textPrimary : palette.textMuted,
                       }}
                     >
-                      {totalHours?.toFixed(2) ?? '0.00'}
+                      {formatTotalHoursValue(totalHours)}
                     </Typography>
                   </TableCell>
                 </TableRow>

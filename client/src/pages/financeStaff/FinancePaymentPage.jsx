@@ -205,7 +205,7 @@ export default function FinancePaymentPage() {
           value: getSubmitterDisplayLabel(timesheet.consultantName),
         },
         { key: 'week', label: 'Week of', value: formatWeekStart(timesheet.weekStart) },
-        { key: 'hours', label: 'Total hours', value: `${timesheet.totalHours ?? 0}h` },
+        { key: 'hours', label: 'Total hours', value: `${timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : 0}h` },
         { key: 'incoming', label: 'Money in', value: formatCurrency(totals.incoming) },
         { key: 'outgoing', label: 'Money out', value: formatCurrency(totals.outgoing) },
         { key: 'margin', label: 'Net margin', value: formatCurrency(netMargin) },
@@ -274,7 +274,7 @@ export default function FinancePaymentPage() {
               variant="body2"
               sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
             >
-              {timesheet.totalHours ?? '-'}
+              {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
             </Typography>
           ),
         },
@@ -349,7 +349,7 @@ export default function FinancePaymentPage() {
                       variant="body2"
                       sx={{ fontFamily: '"JetBrains Mono", monospace', fontWeight: 700 }}
                     >
-                      {item.totalHours}
+                      {item.totalHours != null ? Number(item.totalHours).toFixed(2) : '-'}
                     </Typography>
                   )
                 }))}
@@ -361,7 +361,7 @@ export default function FinancePaymentPage() {
           <WeeklyMatrix
             rows={matrixRows}
             weekDates={weekDates}
-            totalHours={timesheet.totalHours ?? '-'}
+            totalHours={timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
             emptyMessage="No entries recorded for this timesheet."
           />
 

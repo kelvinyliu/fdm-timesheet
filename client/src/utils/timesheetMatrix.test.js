@@ -137,10 +137,10 @@ describe('timesheet matrix utilities', () => {
     expect(adjustHoursValue('0.75', 1, 0.25)).toBe('1')
     expect(adjustHoursValue('0.5', -1)).toBe('')
     expect(adjustHoursValue('24', 1)).toBe('24')
-    expect(formatHoursValue(8)).toBe('8.0')
+    expect(formatHoursValue(8)).toBe('8.00')
     expect(formatHoursValue(7.25)).toBe('7.25')
-    expect(formatHoursValue(26.5)).toBe('24.0')
-    expect(formatTotalHoursValue(26.5)).toBe('26.5')
+    expect(formatHoursValue(26.5)).toBe('24.00')
+    expect(formatTotalHoursValue(26.5)).toBe('26.50')
   })
 
   it('detects rows with entered values', () => {
@@ -161,9 +161,7 @@ describe('timesheet matrix utilities', () => {
   })
 
   it('finds the next available bucket using preferred assignment first', () => {
-    const rows = [
-      { id: 'row-1', entryKind: 'CLIENT', assignmentId: 'assignment-1', hours: {} },
-    ]
+    const rows = [{ id: 'row-1', entryKind: 'CLIENT', assignmentId: 'assignment-1', hours: {} }]
     const assignments = [
       { id: 'assignment-1', clientName: 'Client A' },
       { id: 'assignment-2', clientName: 'Client B' },

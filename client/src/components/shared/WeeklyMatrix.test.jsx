@@ -37,8 +37,8 @@ describe('WeeklyMatrix', () => {
     expect(screen.getByText('Weekly Timesheet')).toBeInTheDocument()
     expect(screen.getByText('Total Hours')).toBeInTheDocument()
     expect(screen.getByText('Client A')).toBeInTheDocument()
-    expect(screen.getAllByText('7.5').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('6').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('7.50').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('6.00').length).toBeGreaterThan(0)
     expect(screen.getAllByText('13.50').length).toBeGreaterThan(0)
   })
 
@@ -83,8 +83,8 @@ describe('WeeklyMatrix', () => {
 
     expect(screen.getByText('Monday')).toBeInTheDocument()
     expect(screen.getByText('Tuesday')).toBeInTheDocument()
-    expect(screen.getByText('8.5')).toBeInTheDocument()
-    expect(screen.getByText('0.0')).toBeInTheDocument()
+    expect(screen.getAllByText('8.50').length).toBeGreaterThan(1)
+    expect(screen.getByText('0.00')).toBeInTheDocument()
     expect(screen.getAllByText('Client A')).toHaveLength(2)
     expect(screen.getAllByText('Internal')).toHaveLength(2)
   })
@@ -115,7 +115,7 @@ describe('WeeklyMatrix', () => {
       />
     )
 
-    expect(screen.getByText('26.5')).toBeInTheDocument()
+    expect(screen.getAllByText('26.50').length).toBeGreaterThan(1)
     expect(screen.getByText('Over daily limit')).toBeInTheDocument()
   })
 })

@@ -203,13 +203,13 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           width: 32,
           height: 32,
           borderRadius: '8px',
-          background: `linear-gradient(135deg, ${palette.primary} 0%, ${palette.primaryHover} 100%)`,
+          background: '#c5ff00',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '0.75rem',
           fontWeight: 700,
-          color: palette.primaryContrast,
+          color: '#000000',
           flexShrink: 0,
         }}
       >
@@ -257,7 +257,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, pinned =
           onClick={onLogout}
           sx={{
             color: palette.textInverseMuted,
-            '&:hover': { color: palette.primary, backgroundColor: palette.overlayWhiteSoft },
+            '&:hover': { color: '#c5ff00' },
           }}
         >
           <LogoutIcon fontSize="small" />

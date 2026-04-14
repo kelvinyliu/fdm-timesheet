@@ -139,7 +139,7 @@ export default function FinanceTimesheetListPage() {
           }}
         />
 
-        <FormControl size="small" sx={{ minWidth: 160 }}>
+        <FormControl size="small" sx={{ minWidth: 210, width: 210 }}>
           <InputLabel id="finance-sort-label">Sort</InputLabel>
           <Select
             labelId="finance-sort-label"
@@ -296,14 +296,14 @@ export default function FinanceTimesheetListPage() {
           </Stack>
         ) : (
           <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table>
+            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell>Submitter</TableCell>
-                  <TableCell>Week of</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Total Hours</TableCell>
-                  <TableCell align="right">Actions</TableCell>
+                  <TableCell sx={{ width: '35%' }}>Submitter</TableCell>
+                  <TableCell sx={{ width: '15%' }}>Week of</TableCell>
+                  <TableCell sx={{ width: '20%' }}>Status</TableCell>
+                  <TableCell align="right" sx={{ width: '10%' }}>Total Hours</TableCell>
+                  <TableCell align="right" sx={{ width: '20%' }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>

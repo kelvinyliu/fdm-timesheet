@@ -114,7 +114,7 @@ export default function TimesheetReviewPage() {
       } else {
         setFeedback({
           severity: 'info',
-          message: 'Timesheet rejected and returned to the submitter.',
+          message: 'Timesheet rejected and returned to the employee.',
         })
         revalidator.revalidate()
       }
@@ -408,7 +408,7 @@ export default function TimesheetReviewPage() {
                 </>
               ) : (
                 <>
-                  This timesheet has been <strong>rejected</strong> and returned to the submitter
+                  This timesheet has been <strong>rejected</strong> and returned to the employee
                   for changes.
                 </>
               )}

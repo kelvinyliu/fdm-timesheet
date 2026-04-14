@@ -9,7 +9,7 @@ export function getConsultantDisplayLabel(consultantName) {
 }
 
 export function getSubmitterDisplayLabel(submitterName) {
-  return hasText(submitterName) ? submitterName : 'Unknown submitter'
+  return hasText(submitterName) ? submitterName : 'Unknown employee'
 }
 
 export function getClientAssignmentDisplayLabel(clientName) {

@@ -272,7 +272,7 @@ export default function AssignmentsPage() {
     setManagerFormError('')
     const { managerId, consultantId } = managerForm
     if (!managerId || !consultantId) {
-      setManagerFormError('Both Manager and Submitter are required.')
+      setManagerFormError('Both Manager and Consultant are required.')
       return
     }
 

@@ -130,7 +130,7 @@ export default function FinanceTimesheetListPage() {
     <Box>
       <PageHeader title={pageTitle} subtitle="Process approved timesheets and review paid ones">
         <TextField
-          placeholder="Search submitters..."
+          placeholder="Search employees..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -376,7 +376,7 @@ export default function FinanceTimesheetListPage() {
             <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '35%', py: 1.75 }}>Submitter</TableCell>
+                  <TableCell sx={{ width: '35%', py: 1.75 }}>Employee</TableCell>
                   <TableCell sx={{ width: '15%', py: 1.75 }}>Week of</TableCell>
                   <TableCell sx={{ width: '20%', py: 1.75 }}>Status</TableCell>
                   <TableCell align="right" sx={{ width: '10%', py: 1.75 }}>

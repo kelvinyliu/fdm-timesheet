@@ -92,11 +92,11 @@ export default function ManagerTimesheetListPage() {
 
   let emptyMessage = 'No timesheets found.'
   if (statusFilter !== MANAGER_STATUS_FILTERS.ALL && normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}" with status "${getManagerStatusFilterLabel(statusFilter)}".`
+    emptyMessage = `No timesheets found for employee "${searchQuery.trim()}" with status "${getManagerStatusFilterLabel(statusFilter)}".`
   } else if (statusFilter !== MANAGER_STATUS_FILTERS.ALL) {
     emptyMessage = `No timesheets found with status "${getManagerStatusFilterLabel(statusFilter)}".`
   } else if (normalizedSearchQuery) {
-    emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}".`
+    emptyMessage = `No timesheets found for employee "${searchQuery.trim()}".`
   }
 
   const pageTitle =
@@ -323,7 +323,7 @@ export default function ManagerTimesheetListPage() {
             <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '35%' }}>Submitter</TableCell>
+                  <TableCell sx={{ width: '35%' }}>Employee</TableCell>
                   <TableCell sx={{ width: '15%' }}>Week of</TableCell>
                   <TableCell sx={{ width: '20%' }}>Status</TableCell>
                   <TableCell align="right" sx={{ width: '10%' }}>Total Hours</TableCell>

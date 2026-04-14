@@ -122,7 +122,7 @@ export function ClientAssignmentsPanel({
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Submitter</TableCell>
+                <TableCell>Employee</TableCell>
                 <TableCell>Client Name</TableCell>
                 <TableCell>Client Bill Rate</TableCell>
                 <TableCell>Created</TableCell>
@@ -272,7 +272,7 @@ export function ManagerAssignmentsPanel({
             <TableHead>
               <TableRow>
                 <TableCell>Manager</TableCell>
-                <TableCell>Submitter</TableCell>
+                <TableCell>Employee</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>

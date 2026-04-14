@@ -35,7 +35,7 @@ export default function PaymentDetailsPanel({
         Payment Details
       </Typography>
       <Alert severity="info" sx={{ mb: 4 }}>
-        Rates are pre-filled from client assignments and submitter defaults. Overrides only affect
+        Rates are pre-filled from client assignments and employee defaults. Overrides only affect
         this payment processing.
       </Alert>
 
@@ -84,7 +84,7 @@ export default function PaymentDetailsPanel({
                 letterSpacing: '0.05em',
               }}
             >
-              Submitter Pay Rate
+              Employee Pay Rate
             </Typography>
             <Box sx={{ gridColumn: '1 / -1', mt: -1 }}>
               <Divider />

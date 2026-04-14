@@ -74,7 +74,7 @@ export default function FinancePayRatesPage() {
       setPendingRates((prev) => ({ ...prev, [consultantId]: String(updated.defaultPayRate) }))
       setFeedback('Employee pay rate updated.')
     } catch (err) {
-      setError(err.message || 'Failed to update submitter pay rate.')
+      setError(err.message || 'Failed to update employee pay rate.')
     } finally {
       setSavingById((prev) => ({ ...prev, [consultantId]: false }))
     }
@@ -89,7 +89,7 @@ export default function FinancePayRatesPage() {
   useUnsavedChangesGuard({
     isDirty: hasUnsavedRateChanges,
     title: 'Leave with unsaved pay-rate edits?',
-    message: 'Some submitter pay-rate fields have been edited locally but not saved yet.',
+    message: 'Some employee pay-rate fields have been edited locally but not saved yet.',
     variant: 'warning',
     discardLabel: 'Discard edits',
     stayLabel: 'Keep editing',
@@ -110,7 +110,7 @@ export default function FinancePayRatesPage() {
         subtitle="Configure default pay rates used to prefill outgoing payroll costs"
       >
         <TextField
-          placeholder="Search submitters..."
+          placeholder="Search employees..."
           size="small"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -142,7 +142,7 @@ export default function FinancePayRatesPage() {
       {filteredConsultants.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
           <Typography variant="body2" color="text.secondary">
-            No submitters found.
+            No employees found.
           </Typography>
         </Paper>
       ) : isMobile ? (
@@ -209,7 +209,7 @@ export default function FinancePayRatesPage() {
           <Table size="small">
             <TableHead>
               <TableRow>
-                <TableCell>Submitter</TableCell>
+                <TableCell>Employee</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Default Pay Rate</TableCell>
                 <TableCell align="right">Actions</TableCell>

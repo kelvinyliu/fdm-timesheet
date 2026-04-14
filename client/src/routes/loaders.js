@@ -203,7 +203,7 @@ export async function financePayRatesLoader({ request }) {
   } catch (err) {
     return {
       consultants: [],
-      error: getErrorMessage(err, 'Failed to load submitter pay rates.'),
+      error: getErrorMessage(err, 'Failed to load employee pay rates.'),
     }
   }
 }

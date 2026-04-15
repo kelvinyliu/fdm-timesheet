@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
 function readSearchParams(search = '') {
@@ -88,4 +88,31 @@ export function useQueryStateObject(config) {
   )
 
   return useMemo(() => [values, setValues], [setValues, values])
+}
+
+export function useDebouncedValue(value, onCommit, delay = 500) {
+  const [draftValue, setDraftValue] = useState(value)
+  const latestOnCommitRef = useRef(onCommit)
+
+  useEffect(() => {
+    latestOnCommitRef.current = onCommit
+  }, [onCommit])
+
+  useEffect(() => {
+    setDraftValue(value)
+  }, [value])
+
+  useEffect(() => {
+    if (draftValue === value) return
+
+    const timeoutId = setTimeout(() => {
+      latestOnCommitRef.current(draftValue)
+    }, delay)
+
+    return () => {
+      clearTimeout(timeoutId)
+    }
+  }, [delay, draftValue, value])
+
+  return useMemo(() => [draftValue, setDraftValue], [draftValue])
 }

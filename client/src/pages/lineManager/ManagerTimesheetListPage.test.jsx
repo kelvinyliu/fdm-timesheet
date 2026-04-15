@@ -133,7 +133,7 @@ describe('ManagerTimesheetListPage', () => {
   })
 
   it('falls back to all for invalid status values and preserves the selected filter on open', () => {
-    renderAt('/manager/timesheets?status=UNKNOWN')
+    const view = renderAt('/manager/timesheets?status=UNKNOWN')
 
     expect(screen.getByRole('heading', { name: 'Team Timesheets' })).toBeInTheDocument()
     expect(screen.getByText('Pat Pending')).toBeInTheDocument()
@@ -144,6 +144,17 @@ describe('ManagerTimesheetListPage', () => {
     fireEvent.change(screen.getByLabelText('Status'), {
       target: { value: 'PENDING' },
     })
+
+    expect(mocks.navigate).toHaveBeenCalledWith(
+      {
+        search: '?status=PENDING',
+      },
+      { replace: true }
+    )
+
+    view.unmount()
+    mocks.navigate.mockReset()
+    renderAt('/manager/timesheets?status=PENDING')
 
     expect(screen.getByRole('heading', { name: 'Pending Timesheets' })).toBeInTheDocument()
 

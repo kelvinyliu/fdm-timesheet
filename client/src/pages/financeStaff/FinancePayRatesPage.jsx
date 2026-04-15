@@ -22,7 +22,7 @@ import PageHeader from '../../components/shared/PageHeader'
 import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
 import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
-import { useQueryStateObject } from '../../hooks/useQueryState.js'
+import { useDebouncedValue, useQueryStateObject } from '../../hooks/useQueryState.js'
 import { updateDefaultPayRate } from '../../api/users'
 import { palette } from '../../theme.js'
 
@@ -59,7 +59,12 @@ export default function FinancePayRatesPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { consultants: loadedConsultants, error: loadError } = useLoaderData()
-  const [{ q: searchQuery }, setQueryState] = useQueryStateObject({ q: '' })
+  const [queryState, setQueryState] = useQueryStateObject({ q: '' })
+  const [searchQuery, setSearchQuery] = useDebouncedValue(
+    queryState.q,
+    (nextValue) => setQueryState({ q: nextValue }),
+    500
+  )
 
   const [pendingRates, setPendingRates] = useState({})
   const [savedConsultantOverrides, setSavedConsultantOverrides] = useState({})
@@ -239,7 +244,7 @@ export default function FinancePayRatesPage() {
           placeholder="Name or email"
           size="small"
           value={searchQuery}
-          onChange={(event) => setQueryState({ q: event.target.value })}
+          onChange={(event) => setSearchQuery(event.target.value)}
           sx={{ minWidth: { sm: 240 } }}
           slotProps={{
             input: {

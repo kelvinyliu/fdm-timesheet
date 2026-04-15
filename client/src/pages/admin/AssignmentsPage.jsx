@@ -13,7 +13,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
-import { useQueryStateObject } from '../../hooks/useQueryState.js'
+import { useDebouncedValue, useQueryStateObject } from '../../hooks/useQueryState.js'
 import {
   createAssignment,
   deleteAssignment,
@@ -38,10 +38,15 @@ export default function AssignmentsPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const revalidator = useRevalidator()
-  const [{ tab: activeTab, q: searchQuery }, setQueryState] = useQueryStateObject({
+  const [{ tab: activeTab, q: committedSearchQuery }, setQueryState] = useQueryStateObject({
     tab: 'client',
     q: '',
   })
+  const [searchQuery, setSearchQuery] = useDebouncedValue(
+    committedSearchQuery,
+    (nextValue) => setQueryState({ q: nextValue }),
+    500
+  )
   const {
     users,
     clientAssignments,
@@ -322,7 +327,7 @@ export default function AssignmentsPage() {
           placeholder="Client or employee"
           size="small"
           value={searchQuery}
-          onChange={(e) => setQueryState({ q: e.target.value })}
+          onChange={(e) => setSearchQuery(e.target.value)}
           sx={{ minWidth: 250, flexGrow: { xs: 1, sm: 0 } }}
           slotProps={{
             input: {

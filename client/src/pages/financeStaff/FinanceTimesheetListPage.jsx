@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
-import { useQueryStateObject } from '../../hooks/useQueryState.js'
+import { useDebouncedValue, useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
@@ -88,7 +88,11 @@ export default function FinanceTimesheetListPage() {
     sort: 'latest',
     status: '',
   })
-  const searchQuery = queryState.q
+  const [searchQuery, setSearchQuery] = useDebouncedValue(
+    queryState.q,
+    (nextValue) => setQueryState({ q: nextValue }),
+    500
+  )
   const sortBy = queryState.sort
   const activeTabKey = queryState.tab === TAB_KEYS.PAID ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY
   const activeTab = activeTabKey === TAB_KEYS.PAID ? 1 : 0
@@ -151,7 +155,7 @@ export default function FinanceTimesheetListPage() {
           placeholder="Name or email"
           size="small"
           value={searchQuery}
-          onChange={(e) => setQueryState({ q: e.target.value })}
+          onChange={(e) => setSearchQuery(e.target.value)}
           sx={{ minWidth: { sm: 220 } }}
           slotProps={{
             input: {

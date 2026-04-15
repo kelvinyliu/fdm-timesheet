@@ -16,7 +16,7 @@ import Button from '@mui/material/Button'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
-import { useQueryStateObject } from '../../hooks/useQueryState.js'
+import { useDebouncedValue, useQueryStateObject } from '../../hooks/useQueryState.js'
 import { createUser, updateUserRole, deleteUser } from '../../api/users'
 import CreateUserDialog from './components/CreateUserDialog.jsx'
 import UserList from './components/UserList.jsx'
@@ -38,13 +38,18 @@ export default function UserManagementPage() {
   const revalidator = useRevalidator()
   const { users, error: loadError } = useLoaderData()
   const [
-    { q: searchQuery, role: roleFilter, sort: sortBy },
+    { q: committedSearchQuery, role: roleFilter, sort: sortBy },
     setQueryState,
   ] = useQueryStateObject({
     q: '',
     role: 'ALL',
     sort: 'nameAsc',
   })
+  const [searchInput, setSearchInput] = useDebouncedValue(
+    committedSearchQuery,
+    (nextValue) => setQueryState({ q: nextValue }),
+    500
+  )
   const [error, setError] = useSyncedErrorState(loadError)
   const [pendingRoles, setPendingRoles] = useState({})
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -200,7 +205,7 @@ export default function UserManagementPage() {
   const normalizedSort = ['nameAsc', 'nameDesc', 'roleAsc', 'roleDesc'].includes(sortBy)
     ? sortBy
     : 'nameAsc'
-  const normalizedQuery = searchQuery.trim().toLowerCase()
+  const normalizedQuery = searchInput.trim().toLowerCase()
   const filteredUsers = users.filter((user) => {
     const matchesRole = normalizedRoleFilter === 'ALL' || user.role === normalizedRoleFilter
     const matchesSearch =
@@ -220,11 +225,11 @@ export default function UserManagementPage() {
 
   let emptyMessage = 'No users found.'
   if (normalizedRoleFilter !== 'ALL' && normalizedQuery) {
-    emptyMessage = `No users found for "${searchQuery.trim()}" with role "${getRoleLabel(normalizedRoleFilter)}".`
+    emptyMessage = `No users found for "${searchInput.trim()}" with role "${getRoleLabel(normalizedRoleFilter)}".`
   } else if (normalizedRoleFilter !== 'ALL') {
     emptyMessage = `No users found with role "${getRoleLabel(normalizedRoleFilter)}".`
   } else if (normalizedQuery) {
-    emptyMessage = `No users found for "${searchQuery.trim()}".`
+    emptyMessage = `No users found for "${searchInput.trim()}".`
   }
 
   return (
@@ -234,8 +239,8 @@ export default function UserManagementPage() {
           label="Search users"
           placeholder="Name or email"
           size="small"
-          value={searchQuery}
-          onChange={(e) => setQueryState({ q: e.target.value })}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
           sx={{ minWidth: { sm: 220 } }}
           slotProps={{
             input: {

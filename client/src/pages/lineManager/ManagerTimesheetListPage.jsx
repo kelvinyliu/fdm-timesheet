@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
-import { useQueryStateObject } from '../../hooks/useQueryState.js'
+import { useDebouncedValue, useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
@@ -55,7 +55,11 @@ export default function ManagerTimesheetListPage() {
   const statusFilter = VALID_STATUS_FILTERS.has(rawStatus)
     ? rawStatus
     : (LEGACY_STATUS_ALIASES[rawStatus] ?? MANAGER_STATUS_FILTERS.ALL)
-  const searchQuery = queryState.q
+  const [searchQuery, setSearchQuery] = useDebouncedValue(
+    queryState.q,
+    (nextValue) => setQueryState({ q: nextValue }),
+    500
+  )
   const visibleTimesheets = timesheets.filter(
     (timesheet) => timesheet.status !== 'DRAFT'
   )
@@ -130,7 +134,7 @@ export default function ManagerTimesheetListPage() {
           placeholder="Employee name"
           size="small"
           value={searchQuery}
-          onChange={(e) => setQueryState({ q: e.target.value })}
+          onChange={(e) => setSearchQuery(e.target.value)}
           sx={{ minWidth: { sm: 240 } }}
           slotProps={{
             input: {

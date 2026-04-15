@@ -58,6 +58,9 @@ export function matchesManagerStatusFilter(timesheetStatus, statusFilter) {
   if (timesheetStatus === 'DRAFT') return false
 
   if (statusFilter === MANAGER_STATUS_FILTERS.ALL) return true
+  if (statusFilter === MANAGER_STATUS_FILTERS.PENDING) {
+    return timesheetStatus === 'PENDING' || timesheetStatus === 'FINANCE_REJECTED'
+  }
   if (statusFilter === MANAGER_STATUS_FILTERS.APPROVED_GROUP) {
     return timesheetStatus === 'APPROVED' || timesheetStatus === 'COMPLETED'
   }

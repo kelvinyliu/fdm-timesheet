@@ -27,7 +27,7 @@ import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { reviewTimesheet } from '../../api/timesheets'
-import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
+import { buildWeekDates, formatTimestamp, formatWeekStart } from '../../utils/dateFormatters'
 import {
   getSubmitterDisplayLabel,
   getWorkBucketDisplayLabel,
@@ -70,6 +70,7 @@ export default function TimesheetReviewPage() {
   }
 
   const nextId = getNextPendingId()
+  const isFinanceReturned = timesheet?.status === 'FINANCE_REJECTED'
 
   async function handleApprove() {
     setSubmitting(true)
@@ -200,6 +201,10 @@ export default function TimesheetReviewPage() {
     ? 'Approve & Next or Reject & Next saves this decision and immediately opens the next pending timesheet in your queue.'
     : 'This is the last pending timesheet in your current queue.'
 
+  const decisionSummary = isFinanceReturned
+    ? 'Finance returned this timesheet for another manager review before payment can be processed.'
+    : 'Review totals and either approve the sheet for finance or reject it back to the employee.'
+
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader title="Open Timesheet">
@@ -287,7 +292,16 @@ export default function TimesheetReviewPage() {
             emptyMessage="No entries recorded for this timesheet."
           />
 
-          {timesheet.status === 'PENDING' && (
+          {isFinanceReturned && timesheet.financeReturnComment && (
+            <Alert severity="warning" sx={{ mt: 3 }}>
+              <strong>Returned by finance</strong>
+              {timesheet.financeReturnedByName ? ` by ${timesheet.financeReturnedByName}` : ''}
+              {timesheet.financeReturnedAt ? ` on ${formatTimestamp(timesheet.financeReturnedAt)}` : ''}.
+              {' '}Reason: {timesheet.financeReturnComment}
+            </Alert>
+          )}
+
+          {(timesheet.status === 'PENDING' || timesheet.status === 'FINANCE_REJECTED') && (
             <StickyActionBar
               sx={{ mt: 4 }}
               secondary={
@@ -308,6 +322,9 @@ export default function TimesheetReviewPage() {
                     Review totals: {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'} hours for{' '}
                     {getSubmitterDisplayLabel(timesheet.consultantName)} in the week starting{' '}
                     {formatWeekStart(timesheet.weekStart)}.
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                    {decisionSummary}
                   </Typography>
                   <Typography variant="body2" sx={{ color: 'text.secondary' }}>
                     {queueContextMessage}
@@ -380,8 +397,9 @@ export default function TimesheetReviewPage() {
             <DialogTitle>Approve timesheet?</DialogTitle>
             <DialogContent>
               <DialogContentText>
-                Approving this timesheet will mark it as approved and make it available to finance
-                for payment processing.
+                {isFinanceReturned
+                  ? 'Approving this timesheet will send it back to finance for payment processing.'
+                  : 'Approving this timesheet will mark it as approved and make it available to finance for payment processing.'}
                 {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
             </DialogContent>

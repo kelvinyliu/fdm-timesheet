@@ -93,6 +93,13 @@ describe('ManagerTimesheetListPage', () => {
           status: 'COMPLETED',
         },
         {
+          id: 'ts-finance-returned',
+          consultantName: 'Fiona Finance',
+          weekStart: '2026-04-14',
+          totalHours: 39,
+          status: 'FINANCE_REJECTED',
+        },
+        {
           id: 'ts-rejected',
           consultantName: 'Riley Rejected',
           weekStart: '2026-04-13',
@@ -140,7 +147,7 @@ describe('ManagerTimesheetListPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Pending Timesheets' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Open Timesheet' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Open Timesheet' })[0])
 
     expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets/ts-pending', {
       state: { returnTo: '/manager/timesheets?status=PENDING' },
@@ -159,6 +166,13 @@ describe('ManagerTimesheetListPage', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets/ts-pending', {
       state: { returnTo: '/manager/timesheets?status=PENDING&q=Pat' },
     })
+  })
+
+  it('includes finance-returned sheets in the pending manager view', () => {
+    renderAt('/manager/timesheets?status=PENDING')
+
+    expect(screen.getByText('Pat Pending')).toBeInTheDocument()
+    expect(screen.getByText('Fiona Finance')).toBeInTheDocument()
   })
 
   it('omits the draft summary tile for hidden manager drafts', () => {

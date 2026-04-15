@@ -34,7 +34,13 @@ import useQueryState from '../../hooks/useQueryState.js'
 import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
-import { getTimesheetForWeek, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
+import {
+  getConsultantVisibleStatus,
+  getTimesheetForWeek,
+  isConsultantApprovedStatus,
+  isConsultantEditableStatus,
+  isConsultantPendingStatus,
+} from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetListPage({
   basePath = '/consultant/timesheets',
@@ -161,16 +167,14 @@ export default function TimesheetListPage({
   }
 
   const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
-  const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
+  const pendingCount = timesheets.filter((ts) => isConsultantPendingStatus(ts.status)).length
   const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
-  const approvedOrPaidCount = timesheets.filter(
-    (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
-  ).length
+  const approvedOrPaidCount = timesheets.filter((ts) => isConsultantApprovedStatus(ts.status)).length
 
   const displayTimesheets = timesheets.filter((ts) =>
     activeTab === 0
-      ? ts.status === 'DRAFT' || ts.status === 'PENDING' || ts.status === 'REJECTED'
-      : ts.status === 'APPROVED' || ts.status === 'COMPLETED'
+      ? ts.status === 'DRAFT' || isConsultantPendingStatus(ts.status) || ts.status === 'REJECTED'
+      : isConsultantApprovedStatus(ts.status)
   )
 
   return (
@@ -308,17 +312,20 @@ export default function TimesheetListPage({
                     '&:hover': { backgroundColor: 'action.hover' },
                   }}
                 >
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
-                    <Box>
-                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                    <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }} noWrap>
                         {formatWeekStart(ts.weekStart)}
                       </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      <Typography variant="body2" color="text.secondary" noWrap>
                         {getWorkSummaryDisplayLabel(ts.workSummary, 2)}
                         {ts.totalHours != null && ` · ${Number(ts.totalHours).toFixed(2)} hrs`}
                       </Typography>
                     </Box>
-                    <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
+                    <TimesheetStatusDisplay
+                      status={getConsultantVisibleStatus(ts.status)}
+                      submittedLate={ts.submittedLate}
+                    />
                   </Stack>
                 </ButtonBase>
               )
@@ -371,7 +378,7 @@ export default function TimesheetListPage({
                       <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
                       <TableCell>
                         <TimesheetStatusDisplay
-                          status={ts.status}
+                          status={getConsultantVisibleStatus(ts.status)}
                           submittedLate={ts.submittedLate}
                         />
                       </TableCell>
@@ -430,7 +437,7 @@ export default function TimesheetListPage({
               node: (
                 <Stack direction="row" sx={{ mt: 0.5 }}>
                   <TimesheetStatusDisplay
-                    status={selectedMobileTimesheet.status}
+                    status={getConsultantVisibleStatus(selectedMobileTimesheet.status)}
                     submittedLate={selectedMobileTimesheet.submittedLate}
                   />
                 </Stack>

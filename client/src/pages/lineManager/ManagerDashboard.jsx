@@ -29,7 +29,9 @@ export default function ManagerDashboard() {
   const { timesheets, error } = useLoaderData()
 
   const firstName = user?.name?.split(' ')[0] || 'there'
-  const pending = timesheets.filter((t) => t.status === 'PENDING')
+  const pending = timesheets.filter(
+    (t) => t.status === 'PENDING' || t.status === 'FINANCE_REJECTED'
+  )
   const approved = timesheets.filter((t) => t.status === 'APPROVED' || t.status === 'COMPLETED')
   const rejected = timesheets.filter((t) => t.status === 'REJECTED')
 

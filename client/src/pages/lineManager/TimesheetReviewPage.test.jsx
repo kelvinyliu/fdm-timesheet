@@ -130,4 +130,29 @@ describe('TimesheetReviewPage', () => {
 
     expect(screen.getByText('No entries recorded for this timesheet.')).toBeInTheDocument()
   })
+
+  it('shows finance return context for finance-returned sheets', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheet: {
+        id: 'ts-1',
+        consultantName: 'Pat Pending',
+        weekStart: '2026-04-06',
+        totalHours: 40,
+        status: 'FINANCE_REJECTED',
+        financeReturnComment: 'Billing split needs another pass.',
+        financeReturnedAt: '2026-04-08T10:00:00.000Z',
+        financeReturnedByName: 'Finance User',
+        workSummary: [],
+        entries: [],
+      },
+      pendingQueue: [{ id: 'ts-1' }, { id: 'ts-2' }],
+      error: '',
+    })
+
+    render(<TimesheetReviewPage />)
+
+    expect(screen.getByText(/Returned by finance/i)).toBeInTheDocument()
+    expect(screen.getByText(/Billing split needs another pass\./)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeInTheDocument()
+  })
 })

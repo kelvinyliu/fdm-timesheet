@@ -293,7 +293,7 @@ export default function FinanceTimesheetListPage() {
                       alignItems="flex-start"
                       spacing={1.5}
                     >
-                      <Typography variant="body2" fontWeight={600}>
+                      <Typography variant="body2" fontWeight={600} sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {getSubmitterDisplayLabel(timesheet.consultantName)}
                       </Typography>
                       <TimesheetStatusDisplay

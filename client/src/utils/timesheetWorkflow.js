@@ -1,6 +1,8 @@
 import { buildWeekDates } from './dateFormatters.js'
 
 const CONSULTANT_EDITABLE_STATUSES = new Set(['DRAFT', 'REJECTED'])
+const CONSULTANT_PENDING_STATUSES = new Set(['PENDING', 'FINANCE_REJECTED'])
+const CONSULTANT_APPROVED_STATUSES = new Set(['APPROVED', 'COMPLETED'])
 
 function getUtcWeekdayIndex(dateStr) {
   const [year, month, day] = dateStr.split('-').map(Number)
@@ -9,6 +11,18 @@ function getUtcWeekdayIndex(dateStr) {
 
 export function isConsultantEditableStatus(status) {
   return CONSULTANT_EDITABLE_STATUSES.has(status)
+}
+
+export function isConsultantPendingStatus(status) {
+  return CONSULTANT_PENDING_STATUSES.has(status)
+}
+
+export function isConsultantApprovedStatus(status) {
+  return CONSULTANT_APPROVED_STATUSES.has(status)
+}
+
+export function getConsultantVisibleStatus(status) {
+  return status === 'FINANCE_REJECTED' ? 'PENDING' : status
 }
 
 export function getTimesheetForWeek(timesheets, weekStart) {

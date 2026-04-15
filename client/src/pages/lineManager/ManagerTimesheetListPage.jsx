@@ -89,7 +89,7 @@ export default function ManagerTimesheetListPage() {
       return matchesStatus && matchesConsultant
     })
     .sort((a, b) => {
-      const statusOrder = { PENDING: 0, REJECTED: 0, APPROVED: 1, COMPLETED: 2 }
+      const statusOrder = { PENDING: 0, FINANCE_REJECTED: 0, REJECTED: 1, APPROVED: 2, COMPLETED: 3 }
       return (statusOrder[a.status] ?? 3) - (statusOrder[b.status] ?? 3)
     })
 
@@ -114,7 +114,9 @@ export default function ManagerTimesheetListPage() {
         : statusFilter === MANAGER_STATUS_FILTERS.PAID
           ? 'Paid Timesheets'
           : 'Team Timesheets'
-  const pendingCount = visibleTimesheets.filter((ts) => ts.status === 'PENDING').length
+  const pendingCount = visibleTimesheets.filter(
+    (ts) => ts.status === 'PENDING' || ts.status === 'FINANCE_REJECTED'
+  ).length
   const rejectedCount = visibleTimesheets.filter((ts) => ts.status === 'REJECTED').length
   const approvedOrPaidCount = visibleTimesheets.filter(
     (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
@@ -269,12 +271,12 @@ export default function ManagerTimesheetListPage() {
                   '&:hover': { backgroundColor: 'action.hover' },
                 }}
               >
-                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
-                  <Box>
-                    <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                  <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                    <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }} noWrap>
                       {getSubmitterDisplayLabel(timesheet.consultantName)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" noWrap>
                       {formatWeekStart(timesheet.weekStart)}
                       {timesheet.totalHours != null &&
                         ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}

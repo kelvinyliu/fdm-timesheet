@@ -58,9 +58,28 @@ export function getTimesheetStatusDisplayLabel(status) {
       return 'Pending'
     case 'APPROVED':
       return 'Approved'
+    case 'FINANCE_REJECTED':
+      return 'Returned by Finance'
     case 'REJECTED':
       return 'Rejected'
     default:
       return status ?? 'Unknown'
+  }
+}
+
+export function getAuditActionDisplayLabel(action) {
+  switch (action) {
+    case 'SUBMISSION':
+      return 'Submitted'
+    case 'APPROVAL':
+      return 'Approved'
+    case 'REJECTION':
+      return 'Rejected'
+    case 'FINANCE_RETURN':
+      return 'Returned by finance'
+    case 'PROCESSING':
+      return 'Processed payment'
+    default:
+      return action ?? 'Unknown'
   }
 }

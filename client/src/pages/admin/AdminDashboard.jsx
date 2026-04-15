@@ -12,21 +12,7 @@ import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount'
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
 import HistoryIcon from '@mui/icons-material/History'
 import DashboardCard from '../../components/shared/DashboardCard'
-
-function getAuditActionLabel(action) {
-  switch (action) {
-    case 'SUBMISSION':
-      return 'Submitted'
-    case 'APPROVAL':
-      return 'Approved'
-    case 'REJECTION':
-      return 'Rejected'
-    case 'PROCESSING':
-      return 'Processed payment'
-    default:
-      return action
-  }
-}
+import { getAuditActionDisplayLabel } from '../../utils/displayLabels.js'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
@@ -66,6 +52,13 @@ export default function AdminDashboard() {
     ...role,
     width: totalUsers > 0 ? `${(role.count / totalUsers) * 100}%` : '0%',
   }))
+  const ACTION_STYLES = {
+    SUBMISSION: { color: '#2E7D32', label: 'Submitted', bg: '#E8F5E9' },
+    APPROVAL: { color: '#1976D2', label: 'Approved', bg: '#E3F2FD' },
+    REJECTION: { color: '#D32F2F', label: 'Rejected', bg: '#FFEBEE' },
+    PROCESSING: { color: '#ED6C02', label: 'Processed payment', bg: '#FFF3E0' },
+    DEFAULT: { color: '#757575', label: 'System Action', bg: '#F5F5F5' }
+  };
   const recentActivity = auditLog.slice(0, 5)
   const systemMessage =
     recentActivity.length > 0
@@ -319,11 +312,20 @@ export default function AdminDashboard() {
                         </Typography>
                       </Box>
 
-                      <Chip label={item.action} size="small" variant="outlined" />
-                    </Stack>
-                  </Box>
-                ))}
-              </Stack>
+              <Chip 
+                label={item.action} 
+                size="small" 
+                sx={{ 
+                  fontWeight: 600, 
+                  bgcolor: style.bg, 
+                  color: style.color,
+                  border: 'none'
+                }} 
+              />
+            </Box>
+          );
+        })}
+      </Stack>
             )}
           </Paper>
         </Grid>

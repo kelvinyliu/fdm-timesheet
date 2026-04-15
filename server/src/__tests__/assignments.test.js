@@ -39,9 +39,15 @@ const assignmentRow = {
   client_bill_rate: '750.00',
   created_at: '2025-03-24T00:00:00Z',
 }
+const authUsers = {
+  'consultant-1': { user_id: 'consultant-1', role: 'CONSULTANT' },
+  'manager-1': { user_id: 'manager-1', role: 'LINE_MANAGER' },
+  'admin-1': { user_id: 'admin-1', role: 'SYSTEM_ADMIN' },
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
+  userModel.findUserById.mockImplementation(async (id) => authUsers[id] ?? null)
 })
 
 describe('GET /api/assignments', () => {

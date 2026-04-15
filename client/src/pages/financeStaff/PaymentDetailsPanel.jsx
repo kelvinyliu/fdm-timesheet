@@ -38,6 +38,7 @@ export default function PaymentDetailsPanel({
   submitting,
   nextId,
   onProcessPayment,
+  onOpenReturnDialog,
   formatCurrency,
   saveState,
   disabledReason,
@@ -359,6 +360,16 @@ export default function PaymentDetailsPanel({
           </Stack>
         }
       >
+        <Button
+          variant="contained"
+          color="error"
+          size="large"
+          onClick={onOpenReturnDialog}
+          disabled={submitting}
+          fullWidth={isMobile}
+        >
+          Send Back to Manager
+        </Button>
         <Button
           variant="contained"
           color="primary"

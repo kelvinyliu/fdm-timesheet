@@ -8,6 +8,7 @@ import {
   createTimesheetEditLoader,
   createTimesheetListLoader,
   financeTimesheetListLoader,
+  timesheetReviewLoader,
 } from './loaders.js'
 
 const mocks = vi.hoisted(() => ({
@@ -200,6 +201,28 @@ describe('route loaders', () => {
         { id: 'draft', status: 'DRAFT' },
         { id: 'approved', status: 'APPROVED' },
         { id: 'completed', status: 'COMPLETED' },
+      ],
+      error: null,
+    })
+  })
+
+  it('includes finance-returned sheets in the manager review queue', async () => {
+    const request = createRequest('/manager/timesheets/ts-2')
+    const timesheet = { id: 'ts-2', status: 'FINANCE_REJECTED' }
+    const allTimesheets = [
+      { id: 'ts-1', status: 'PENDING' },
+      { id: 'ts-2', status: 'FINANCE_REJECTED' },
+      { id: 'ts-3', status: 'APPROVED' },
+    ]
+
+    mocks.getTimesheet.mockResolvedValue(timesheet)
+    mocks.getTimesheets.mockResolvedValue(allTimesheets)
+
+    await expect(timesheetReviewLoader({ params: { id: 'ts-2' }, request })).resolves.toEqual({
+      timesheet,
+      pendingQueue: [
+        { id: 'ts-1', status: 'PENDING' },
+        { id: 'ts-2', status: 'FINANCE_REJECTED' },
       ],
       error: null,
     })

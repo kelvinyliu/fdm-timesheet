@@ -58,6 +58,13 @@ export async function reviewTimesheet(id, body) {
   })
 }
 
+export async function financeReviewTimesheet(id, body) {
+  return apiClient(`/api/timesheets/${id}/finance-review`, {
+    method: 'PATCH',
+    body,
+  })
+}
+
 export async function processPayment(id, body) {
   return apiClient(`/api/timesheets/${id}/payment`, {
     method: 'POST',

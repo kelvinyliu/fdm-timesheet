@@ -28,6 +28,10 @@ vi.mock('../models/clientAssignmentModel.js', () => ({
   getAssignmentByIdIncludingDeleted: vi.fn(),
 }))
 
+vi.mock('../models/lineManagerConsultantModel.js', () => ({
+  getManagerAssignmentByConsultantId: vi.fn(),
+}))
+
 vi.mock('../models/userModel.js', () => ({
   findUserById: vi.fn(),
 }))
@@ -47,6 +51,7 @@ import app from '../app.js'
 import * as timesheetModel from '../models/timesheetModel.js'
 import * as entryModel from '../models/timesheetEntryModel.js'
 import * as clientAssignmentModel from '../models/clientAssignmentModel.js'
+import * as managerAssignmentModel from '../models/lineManagerConsultantModel.js'
 import * as userModel from '../models/userModel.js'
 import * as auditModel from '../models/auditModel.js'
 import * as paymentModel from '../models/paymentModel.js'
@@ -181,6 +186,11 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2025-03-27T12:00:00Z'))
   vi.clearAllMocks()
   userModel.findUserById.mockImplementation(async (id) => authUsers[id] ?? null)
+  managerAssignmentModel.getManagerAssignmentByConsultantId.mockResolvedValue({
+    manager_id: 'manager-1',
+    manager_name: 'Lina Manager',
+    manager_email: 'lina@example.com',
+  })
   timesheetModel.getTimesheetsByConsultant.mockResolvedValue([])
   entryModel.getWorkSummariesByTimesheetIds.mockResolvedValue([])
 })
@@ -797,7 +807,14 @@ describe('POST /api/timesheets/:id/submit', () => {
     expect(timesheetModel.updateTimesheetStatus).toHaveBeenCalledWith(
       TIMESHEET_ID,
       'PENDING',
-      expect.objectContaining({ submittedLate: false })
+      expect.objectContaining({
+        submittedLate: false,
+        submittedManager: {
+          id: 'manager-1',
+          name: 'Lina Manager',
+          email: 'lina@example.com',
+        },
+      })
     )
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -825,6 +842,13 @@ describe('POST /api/timesheets/:id/submit', () => {
     expect(res.body.status).toBe('PENDING')
     expect(res.body.consultantName).toBe('Alex Consultant')
     expect(res.body.rejectionComment).toBe('Please correct Monday hours')
+    expect(timesheetModel.updateTimesheetStatus).toHaveBeenCalledWith(
+      TIMESHEET_ID,
+      'PENDING',
+      expect.objectContaining({
+        submittedManager: null,
+      })
+    )
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'SUBMISSION',
@@ -858,7 +882,14 @@ describe('POST /api/timesheets/:id/submit', () => {
     expect(timesheetModel.updateTimesheetStatus).toHaveBeenCalledWith(
       TIMESHEET_ID,
       'PENDING',
-      expect.objectContaining({ submittedLate: true })
+      expect.objectContaining({
+        submittedLate: true,
+        submittedManager: {
+          id: 'manager-1',
+          name: 'Lina Manager',
+          email: 'lina@example.com',
+        },
+      })
     )
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -907,6 +938,21 @@ describe('POST /api/timesheets/:id/submit', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/at least one entry/i)
+    expect(timesheetModel.updateTimesheetStatus).not.toHaveBeenCalled()
+    expect(auditModel.logAction).not.toHaveBeenCalled()
+  })
+
+  it('returns 409 when no manager is assigned at submit time', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(fakeTimesheet)
+    entryModel.getEntriesByTimesheet.mockResolvedValue([fakeEntry])
+    managerAssignmentModel.getManagerAssignmentByConsultantId.mockResolvedValue(null)
+
+    const res = await request(app)
+      .post(`/api/timesheets/${TIMESHEET_ID}/submit`)
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(409)
+    expect(res.body.error).toMatch(/sheet manager/i)
     expect(timesheetModel.updateTimesheetStatus).not.toHaveBeenCalled()
     expect(auditModel.logAction).not.toHaveBeenCalled()
   })

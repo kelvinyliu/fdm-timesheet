@@ -8,6 +8,7 @@ process.env.LOG_LEVEL = 'silent'
 vi.mock('../models/lineManagerConsultantModel.js', () => ({
   getAllManagerAssignments: vi.fn(),
   getManagerAssignmentById: vi.fn(),
+  getManagerAssignmentByConsultantId: vi.fn(),
   createManagerAssignment: vi.fn(),
   updateManagerAssignment: vi.fn(),
   deleteManagerAssignment: vi.fn(),
@@ -17,8 +18,13 @@ vi.mock('../models/userModel.js', () => ({
   findUserById: vi.fn(),
 }))
 
+vi.mock('../models/timesheetModel.js', () => ({
+  getTimesheetById: vi.fn(),
+}))
+
 import app from '../app.js'
 import * as managerAssignmentModel from '../models/lineManagerConsultantModel.js'
+import * as timesheetModel from '../models/timesheetModel.js'
 import * as userModel from '../models/userModel.js'
 
 const SECRET = 'test-secret'
@@ -35,6 +41,7 @@ function token(payload) {
 
 const adminToken = token({ userId: ADMIN_ID, role: 'SYSTEM_ADMIN' })
 const consultantToken = token({ userId: CONSULTANT_ID, role: 'CONSULTANT' })
+const managerSubmitterToken = token({ userId: SUBMITTER_MANAGER_ID, role: 'LINE_MANAGER' })
 
 const assignmentRow = {
   id: ASSIGNMENT_ID,
@@ -47,6 +54,7 @@ const assignmentRow = {
 const authUsers = {
   [ADMIN_ID]: { user_id: ADMIN_ID, role: 'SYSTEM_ADMIN' },
   [CONSULTANT_ID]: { user_id: CONSULTANT_ID, role: 'CONSULTANT' },
+  [SUBMITTER_MANAGER_ID]: { user_id: SUBMITTER_MANAGER_ID, role: 'LINE_MANAGER' },
 }
 
 function mockUsersById(overrides = {}) {
@@ -56,6 +64,127 @@ function mockUsersById(overrides = {}) {
 beforeEach(() => {
   vi.clearAllMocks()
   mockUsersById()
+})
+
+describe('GET /api/manager-assignments/me', () => {
+  it('returns the current manager for a consultant submitter', async () => {
+    managerAssignmentModel.getManagerAssignmentByConsultantId.mockResolvedValue({
+      ...assignmentRow,
+      manager_email: 'lina@example.com',
+    })
+
+    const res = await request(app)
+      .get('/api/manager-assignments/me')
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      manager: {
+        id: MANAGER_ID,
+        name: 'Lina Manager',
+        email: 'lina@example.com',
+      },
+      source: 'current',
+    })
+  })
+
+  it('returns the current manager for a line-manager submitter', async () => {
+    managerAssignmentModel.getManagerAssignmentByConsultantId.mockResolvedValue({
+      ...assignmentRow,
+      consultant_id: SUBMITTER_MANAGER_ID,
+      consultant_name: 'Morgan Manager',
+      manager_email: 'lina@example.com',
+    })
+
+    const res = await request(app)
+      .get('/api/manager-assignments/me')
+      .set('Authorization', managerSubmitterToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body.source).toBe('current')
+    expect(managerAssignmentModel.getManagerAssignmentByConsultantId).toHaveBeenCalledWith(
+      SUBMITTER_MANAGER_ID
+    )
+  })
+
+  it('returns a submitted manager snapshot for an owned timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({
+      timesheet_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      consultant_id: CONSULTANT_ID,
+      submitted_at: '2025-03-24T10:00:00Z',
+      submitted_manager_id: MANAGER_ID,
+      submitted_manager_name: 'Lina Manager',
+      submitted_manager_email: 'lina@example.com',
+    })
+
+    const res = await request(app)
+      .get('/api/manager-assignments/me')
+      .query({ timesheetId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' })
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({
+      manager: {
+        id: MANAGER_ID,
+        name: 'Lina Manager',
+        email: 'lina@example.com',
+      },
+      source: 'snapshot',
+    })
+    expect(managerAssignmentModel.getManagerAssignmentByConsultantId).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the current manager for legacy submitted timesheets without a snapshot', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({
+      timesheet_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      consultant_id: CONSULTANT_ID,
+      submitted_at: '2025-03-24T10:00:00Z',
+      submitted_manager_id: null,
+      submitted_manager_name: null,
+      submitted_manager_email: null,
+    })
+    managerAssignmentModel.getManagerAssignmentByConsultantId.mockResolvedValue({
+      ...assignmentRow,
+      manager_email: 'lina@example.com',
+    })
+
+    const res = await request(app)
+      .get('/api/manager-assignments/me')
+      .query({ timesheetId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' })
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body.source).toBe('legacy_fallback')
+  })
+
+  it('returns an unassigned state when no manager exists', async () => {
+    managerAssignmentModel.getManagerAssignmentByConsultantId.mockResolvedValue(null)
+
+    const res = await request(app)
+      .get('/api/manager-assignments/me')
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ manager: null, source: 'unassigned' })
+  })
+
+  it('returns 403 when a submitter requests another user’s timesheet', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({
+      timesheet_id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      consultant_id: SECOND_CONSULTANT_ID,
+      submitted_at: null,
+      submitted_manager_id: null,
+      submitted_manager_name: null,
+      submitted_manager_email: null,
+    })
+
+    const res = await request(app)
+      .get('/api/manager-assignments/me')
+      .query({ timesheetId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' })
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(403)
+  })
 })
 
 describe('POST /api/manager-assignments', () => {

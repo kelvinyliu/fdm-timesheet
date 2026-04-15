@@ -10,6 +10,7 @@ const TIMESHEET_SELECT = `
   SELECT t.timesheet_id, t.consultant_id, consultant.name AS consultant_name,
          t.assignment_id, assignment.client_name AS assignment_client_name,
          t.week_start, t.status, t.submitted_at, t.submitted_late,
+         t.submitted_manager_id, t.submitted_manager_name, t.submitted_manager_email,
          t.created_at, t.updated_at,
          p.total_bill_amount,
          p.total_pay_amount,
@@ -99,18 +100,39 @@ export async function createTimesheet({ consultantId, assignmentId, weekStart })
 export async function updateTimesheetStatus(id, status, options = {}) {
   const submittedAt = options.submittedAt ?? null
   const submittedLate = options.submittedLate ?? null
+  const submittedManager = options.submittedManager ?? null
   const allowedStatuses = options.allowedStatuses ?? null
   const statusCondition = allowedStatuses
-    ? 'AND status = ANY($5::timesheet_status[])'
+    ? 'AND status = ANY($8::timesheet_status[])'
     : ''
   const params = allowedStatuses
-    ? [status, id, submittedAt, submittedLate, allowedStatuses]
-    : [status, id, submittedAt, submittedLate]
+    ? [
+        status,
+        id,
+        submittedAt,
+        submittedLate,
+        submittedManager?.id ?? null,
+        submittedManager?.name ?? null,
+        submittedManager?.email ?? null,
+        allowedStatuses,
+      ]
+    : [
+        status,
+        id,
+        submittedAt,
+        submittedLate,
+        submittedManager?.id ?? null,
+        submittedManager?.name ?? null,
+        submittedManager?.email ?? null,
+      ]
   const { rows } = await pool.query(
     `UPDATE timesheets
      SET status = $1,
          submitted_at = COALESCE($3, submitted_at),
          submitted_late = COALESCE($4, submitted_late),
+         submitted_manager_id = COALESCE(submitted_manager_id, $5),
+         submitted_manager_name = COALESCE(submitted_manager_name, $6),
+         submitted_manager_email = COALESCE(submitted_manager_email, $7),
          updated_at = NOW()
      WHERE timesheet_id = $2
        ${statusCondition}

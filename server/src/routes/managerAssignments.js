@@ -3,6 +3,7 @@ import auth from '../middleware/auth.js'
 import requireRole from '../middleware/requireRole.js'
 import {
   listManagerAssignments,
+  getOwnManagerAssignmentHandler,
   createManagerAssignmentHandler,
   updateManagerAssignmentHandler,
   deleteManagerAssignmentHandler,
@@ -11,7 +12,11 @@ import { Role } from '../constants/roles.js'
 
 const router = Router()
 
-router.use(auth, requireRole(Role.SYSTEM_ADMIN))
+router.use(auth)
+
+router.get('/me', requireRole(Role.CONSULTANT, Role.LINE_MANAGER), getOwnManagerAssignmentHandler)
+
+router.use(requireRole(Role.SYSTEM_ADMIN))
 
 router.get('/', listManagerAssignments)
 router.post('/', createManagerAssignmentHandler)

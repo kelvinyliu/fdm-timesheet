@@ -34,6 +34,9 @@ CREATE TABLE timesheets (
   status        timesheet_status NOT NULL DEFAULT 'DRAFT',
   submitted_at  TIMESTAMPTZ,
   submitted_late BOOLEAN NOT NULL DEFAULT FALSE,
+  submitted_manager_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+  submitted_manager_name VARCHAR(255),
+  submitted_manager_email VARCHAR(255),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

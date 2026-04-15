@@ -10,6 +10,7 @@ import {
   reviewTimesheet,
   returnTimesheetToManager,
 } from '../models/timesheetModel.js'
+import { getManagerAssignmentByConsultantId } from '../models/lineManagerConsultantModel.js'
 import { getAssignmentById, getAssignmentByIdIncludingDeleted } from '../models/clientAssignmentModel.js'
 import { findUserById } from '../models/userModel.js'
 import { getEntriesByTimesheet, getWorkSummariesByTimesheetIds, upsertEntries } from '../models/timesheetEntryModel.js'
@@ -471,9 +472,22 @@ export async function submitTimesheet(req, res, next) {
       ? weekStart < currentMonday
       : Boolean(timesheet.submitted_late)
     const submittedAt = isFirstSubmission ? new Date().toISOString() : timesheet.submitted_at ?? null
+    const currentManager = await getManagerAssignmentByConsultantId(req.user.userId)
+
+    if (!currentManager) {
+      return res.status(409).json({ error: 'Assign a sheet manager before submitting this timesheet.' })
+    }
+
     const updated = await updateTimesheetStatus(req.params.id, TimesheetStatus.PENDING, {
       submittedAt: isFirstSubmission ? submittedAt : null,
       submittedLate,
+      submittedManager: isFirstSubmission
+        ? {
+            id: currentManager.manager_id,
+            name: currentManager.manager_name,
+            email: currentManager.manager_email,
+          }
+        : null,
       allowedStatuses: [TimesheetStatus.DRAFT, TimesheetStatus.REJECTED],
       conflictMessage: 'Only draft or rejected timesheets can be submitted',
     })

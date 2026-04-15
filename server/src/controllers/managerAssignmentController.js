@@ -2,18 +2,96 @@ import {
   getAllManagerAssignments,
   createManagerAssignment,
   getManagerAssignmentById,
+  getManagerAssignmentByConsultantId,
   deleteManagerAssignment,
   updateManagerAssignment,
 } from '../models/lineManagerConsultantModel.js'
+import { getTimesheetById } from '../models/timesheetModel.js'
 import { managerAssignmentDto } from '../dtos/managerAssignmentDto.js'
 import { findUserById } from '../models/userModel.js'
 import { Role, TIMESHEET_SUBMITTER_ROLES } from '../constants/roles.js'
 import { isUuid, normaliseUuid, sameUuid } from '../utils/validation.js'
 
+function buildManagerLookupResponse(manager, source) {
+  return {
+    manager: manager
+      ? {
+          id: manager.manager_id,
+          name: manager.manager_name,
+          email: manager.manager_email,
+        }
+      : null,
+    source,
+  }
+}
+
+function hasSubmittedManagerSnapshot(timesheet) {
+  return Boolean(
+    timesheet?.submitted_manager_id ||
+      timesheet?.submitted_manager_name ||
+      timesheet?.submitted_manager_email
+  )
+}
+
 export async function listManagerAssignments(req, res, next) {
   try {
     const assignments = await getAllManagerAssignments()
     res.json(assignments.map(managerAssignmentDto))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function getOwnManagerAssignmentHandler(req, res, next) {
+  try {
+    const { timesheetId } = req.query
+
+    if (timesheetId !== undefined) {
+      if (!isUuid(timesheetId)) {
+        return res.status(400).json({ error: 'timesheetId must be a valid UUID' })
+      }
+
+      const timesheet = await getTimesheetById(timesheetId)
+      if (!timesheet) {
+        return res.status(404).json({ error: 'Timesheet not found' })
+      }
+
+      if (!sameUuid(timesheet.consultant_id, req.user.userId)) {
+        return res.status(403).json({ error: 'Forbidden' })
+      }
+
+      if (hasSubmittedManagerSnapshot(timesheet)) {
+        return res.json(
+          buildManagerLookupResponse(
+            {
+              manager_id: timesheet.submitted_manager_id,
+              manager_name: timesheet.submitted_manager_name,
+              manager_email: timesheet.submitted_manager_email,
+            },
+            'snapshot'
+          )
+        )
+      }
+
+      const currentManager = await getManagerAssignmentByConsultantId(req.user.userId)
+      if (!currentManager) {
+        return res.json(buildManagerLookupResponse(null, 'unassigned'))
+      }
+
+      return res.json(
+        buildManagerLookupResponse(
+          currentManager,
+          timesheet.submitted_at ? 'legacy_fallback' : 'current'
+        )
+      )
+    }
+
+    const currentManager = await getManagerAssignmentByConsultantId(req.user.userId)
+    if (!currentManager) {
+      return res.json(buildManagerLookupResponse(null, 'unassigned'))
+    }
+
+    res.json(buildManagerLookupResponse(currentManager, 'current'))
   } catch (err) {
     next(err)
   }

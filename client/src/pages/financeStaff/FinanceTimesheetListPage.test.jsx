@@ -49,7 +49,7 @@ describe('FinanceTimesheetListPage', () => {
     mocks.useMediaQuery.mockReturnValue(false)
   })
 
-  it('derives summary card counts from all timesheets while listing only approved items on the to-pay tab', () => {
+  it('shows separate to-pay and paid summary counts while listing only approved items on the to-pay tab', () => {
     mocks.useLoaderData.mockReturnValue({
       timesheets: [
         {
@@ -97,12 +97,11 @@ describe('FinanceTimesheetListPage', () => {
       </MemoryRouter>
     )
 
-    expect(within(screen.getByText('Drafts').closest('div')).getByText('1')).toBeInTheDocument()
-    expect(within(screen.getByText('Pending').closest('div')).getByText('1')).toBeInTheDocument()
-    expect(within(screen.getByText('Rejected').closest('div')).getByText('1')).toBeInTheDocument()
-    expect(
-      within(screen.getByText('Approved / Paid').closest('div')).getByText('2')
-    ).toBeInTheDocument()
+    expect(screen.queryByText('Drafts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument()
+    expect(screen.queryByText('Rejected')).not.toBeInTheDocument()
+    expect(within(screen.getByText('To Pay').closest('div')).getByText('1')).toBeInTheDocument()
+    expect(within(screen.getByText('Paid').closest('div')).getByText('1')).toBeInTheDocument()
 
     expect(screen.getByText('Avery Approved')).toBeInTheDocument()
     expect(screen.queryByText('Dana Draft')).not.toBeInTheDocument()

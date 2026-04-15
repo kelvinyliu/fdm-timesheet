@@ -140,12 +140,8 @@ export default function FinanceTimesheetListPage() {
     emptyMessage = `No timesheets found for "${searchQuery.trim()}".`
   }
 
-  const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
-  const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
-  const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
-  const approvedOrPaidCount = timesheets.filter(
-    (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
-  ).length
+  const toPayCount = timesheets.filter((ts) => ts.status === 'APPROVED').length
+  const paidCount = timesheets.filter((ts) => ts.status === 'COMPLETED').length
 
   return (
     <Box>
@@ -192,15 +188,13 @@ export default function FinanceTimesheetListPage() {
             borderBottom: '1px solid',
             borderColor: 'divider',
             display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(2, 1fr)' },
             gap: { xs: 3, sm: 4 },
           }}
         >
           {[
-            { label: 'Drafts', count: draftCount, color: 'text.primary' },
-            { label: 'Pending', count: pendingCount, color: '#8a5a00' },
-            { label: 'Rejected', count: rejectedCount, color: '#e55c58' },
-            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2f6b36' },
+            { label: 'To Pay', count: toPayCount, color: '#8a5a00' },
+            { label: 'Paid', count: paidCount, color: '#2f6b36' },
           ].map((item) => (
             <Box key={item.label}>
               <Typography
@@ -235,10 +229,8 @@ export default function FinanceTimesheetListPage() {
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label={`To Pay (${timesheets.filter((ts) => ts.status === 'APPROVED').length})`} />
-          <Tab
-            label={`Paid History (${timesheets.filter((ts) => ts.status === 'COMPLETED').length})`}
-          />
+          <Tab label={`To Pay (${toPayCount})`} />
+          <Tab label={`Paid History (${paidCount})`} />
         </Tabs>
       </Box>
 

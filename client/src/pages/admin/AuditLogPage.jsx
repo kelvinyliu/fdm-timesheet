@@ -39,8 +39,13 @@ import ActionBadge from '../../components/shared/ActionBadge'
 const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'FINANCE_RETURN', 'PROCESSING']
 
 const QUERY_STATE_CONFIG = { action: '', author: '', from: '', to: '', page: '1' }
-const DATE_FORMAT = 'YYYY-MM-DD'
+const QUERY_DATE_FORMAT = 'YYYY-MM-DD'
+const FILTER_DISPLAY_DATE_FORMAT = 'DD-MM-YYYY'
 const PAGE_SIZE = 25
+
+function formatActionFilterLabel(action) {
+  return typeof action === 'string' ? action.toUpperCase().replaceAll('_', ' ') : ''
+}
 
 function formatDetail(action, detail) {
   if (detail === null || detail === undefined) return '-'
@@ -139,6 +144,7 @@ export default function AuditLogPage() {
     <>
       <Autocomplete
         options={ACTION_OPTIONS}
+        getOptionLabel={formatActionFilterLabel}
         value={actionFilter}
         onChange={(_e, value) => setQueryState({ action: value ?? '', page: '1' })}
         size="small"
@@ -155,10 +161,11 @@ export default function AuditLogPage() {
       />
       <DatePicker
         label="From"
+        format={FILTER_DISPLAY_DATE_FORMAT}
         value={dateFrom}
         onChange={(value) =>
           setQueryState({
-            from: value && value.isValid() ? value.format(DATE_FORMAT) : '',
+            from: value && value.isValid() ? value.format(QUERY_DATE_FORMAT) : '',
             page: '1',
           })
         }
@@ -170,10 +177,11 @@ export default function AuditLogPage() {
       />
       <DatePicker
         label="To"
+        format={FILTER_DISPLAY_DATE_FORMAT}
         value={dateTo}
         onChange={(value) =>
           setQueryState({
-            to: value && value.isValid() ? value.format(DATE_FORMAT) : '',
+            to: value && value.isValid() ? value.format(QUERY_DATE_FORMAT) : '',
             page: '1',
           })
         }

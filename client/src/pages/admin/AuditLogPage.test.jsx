@@ -21,9 +21,10 @@ vi.mock('@mui/material/useMediaQuery', () => ({
 }))
 
 vi.mock('@mui/material/Autocomplete', () => ({
-  default: function MockAutocomplete({ onChange, options, renderInput, value }) {
+  default: function MockAutocomplete({ getOptionLabel, onChange, options, renderInput, value }) {
     const input = renderInput?.({})
     const label = input?.props?.label ?? 'Autocomplete'
+    const formatOptionLabel = getOptionLabel ?? ((option) => option)
 
     return (
       <label>
@@ -36,7 +37,7 @@ vi.mock('@mui/material/Autocomplete', () => ({
           <option value="">All</option>
           {options.map((option) => (
             <option key={option} value={option}>
-              {option}
+              {formatOptionLabel(option)}
             </option>
           ))}
         </select>
@@ -74,8 +75,15 @@ vi.mock('@mui/x-date-pickers/LocalizationProvider', () => ({
 }))
 
 vi.mock('@mui/x-date-pickers/DatePicker', () => ({
-  DatePicker: function MockDatePicker({ label, value }) {
-    return <input aria-label={label} readOnly value={value?.format?.('YYYY-MM-DD') ?? ''} />
+  DatePicker: function MockDatePicker({ format, label, value }) {
+    return (
+      <input
+        aria-label={label}
+        data-format={format}
+        readOnly
+        value={value?.format?.('YYYY-MM-DD') ?? ''}
+      />
+    )
   },
 }))
 
@@ -206,6 +214,30 @@ describe('AuditLogPage', () => {
     await waitFor(() =>
       expect(screen.getByTestId('location-search')).toHaveTextContent('?action=APPROVAL')
     )
+  })
+
+  it('formats action filter labels with spaces instead of underscores', () => {
+    mocks.useLoaderData.mockReturnValue({
+      entries: [buildEntry(1, { action: 'FINANCE_RETURN' })],
+      error: '',
+    })
+
+    renderPage()
+
+    expect(screen.getByRole('option', { name: /finance return/i })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: 'FINANCE_RETURN' })).not.toBeInTheDocument()
+  })
+
+  it('renders admin date filters in day-month-year order', () => {
+    mocks.useLoaderData.mockReturnValue({
+      entries: [buildEntry(1)],
+      error: '',
+    })
+
+    renderPage()
+
+    expect(screen.getByLabelText('From')).toHaveAttribute('data-format', 'DD-MM-YYYY')
+    expect(screen.getByLabelText('To')).toHaveAttribute('data-format', 'DD-MM-YYYY')
   })
 
   it('clamps invalid page params to the last available page', async () => {

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
-import useQueryState from '../../hooks/useQueryState.js'
+import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -27,6 +27,7 @@ import RateReviewIcon from '@mui/icons-material/RateReview'
 import SearchIcon from '@mui/icons-material/Search'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import MobileDetailDrawer from '../../components/shared/MobileDetailDrawer.jsx'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 import {
@@ -41,28 +42,33 @@ const VALID_STATUS_FILTERS = new Set(Object.values(MANAGER_STATUS_FILTERS))
 
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
   const { timesheets, error } = useLoaderData()
-  const [rawStatus, setRawStatus] = useQueryState('status', MANAGER_STATUS_FILTERS.ALL)
+  const [selectedMobileId, setSelectedMobileId] = useState(null)
+  const [queryState, setQueryState] = useQueryStateObject({
+    status: MANAGER_STATUS_FILTERS.ALL,
+    q: '',
+  })
+  const rawStatus = queryState.status
   const statusFilter = VALID_STATUS_FILTERS.has(rawStatus)
     ? rawStatus
     : (LEGACY_STATUS_ALIASES[rawStatus] ?? MANAGER_STATUS_FILTERS.ALL)
-  const [searchQuery, setSearchQuery] = useState('')
+  const searchQuery = queryState.q
 
-  const activeTab = statusFilter === MANAGER_STATUS_FILTERS.PENDING ? 0 : 1;
+  const activeTab = statusFilter === MANAGER_STATUS_FILTERS.PENDING ? 0 : 1
 
   function handleTabChange(event, newValue) {
     if (newValue === 0) {
-      setRawStatus(MANAGER_STATUS_FILTERS.PENDING);
+      setQueryState({ status: MANAGER_STATUS_FILTERS.PENDING })
     } else if (statusFilter === MANAGER_STATUS_FILTERS.PENDING) {
-      setRawStatus(MANAGER_STATUS_FILTERS.ALL);
+      setQueryState({ status: MANAGER_STATUS_FILTERS.ALL })
     }
   }
 
   function handleOpenTimesheet(timesheetId) {
     navigate(`/manager/timesheets/${timesheetId}`, {
-      state: { returnTo: buildManagerTimesheetListPath(statusFilter) },
+      state: { returnTo: buildManagerTimesheetListPath(statusFilter, searchQuery) },
     })
   }
 
@@ -76,7 +82,7 @@ export default function ManagerTimesheetListPage() {
           .toLowerCase()
           .includes(normalizedSearchQuery)
 
-    return matchesStatus && matchesConsultant
+      return matchesStatus && matchesConsultant
     })
     .sort((a, b) => {
       const statusOrder = { PENDING: 0, REJECTED: 0, APPROVED: 1, COMPLETED: 2 }
@@ -92,6 +98,8 @@ export default function ManagerTimesheetListPage() {
     emptyMessage = `No timesheets found for submitter "${searchQuery.trim()}".`
   }
 
+  const selectedMobileTimesheet = timesheets.find((ts) => ts.id === selectedMobileId)
+
   const pageTitle =
     statusFilter === MANAGER_STATUS_FILTERS.PENDING
       ? 'Pending Timesheets'
@@ -102,12 +110,12 @@ export default function ManagerTimesheetListPage() {
           : statusFilter === MANAGER_STATUS_FILTERS.PAID
             ? 'Paid Timesheets'
             : 'Team Timesheets'
-        const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
-        const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
-        const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
-        const approvedOrPaidCount = timesheets.filter(
-        (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
-        ).length
+  const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
+  const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
+  const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
+  const approvedOrPaidCount = timesheets.filter(
+    (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
+  ).length
 
   return (
     <Box>
@@ -116,7 +124,7 @@ export default function ManagerTimesheetListPage() {
           placeholder="Search Timesheets..."
           size="small"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => setQueryState({ q: e.target.value })}
           sx={{ minWidth: { sm: 240 } }}
           slotProps={{
             input: {
@@ -135,7 +143,7 @@ export default function ManagerTimesheetListPage() {
               labelId="status-filter-label"
               value={statusFilter}
               label="Status"
-              onChange={(e) => setRawStatus(e.target.value)}
+              onChange={(e) => setQueryState({ status: e.target.value })}
             >
               <MenuItem value={MANAGER_STATUS_FILTERS.ALL}>All</MenuItem>
               <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
@@ -196,14 +204,16 @@ export default function ManagerTimesheetListPage() {
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, mx: { xs: 0, sm: 0 } }}>
-        <Tabs 
-          value={activeTab} 
+        <Tabs
+          value={activeTab}
           onChange={handleTabChange}
-          variant={isMobile ? "fullWidth" : "standard"}
-          sx={{ '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500, pb: 1.5 } }}
+          variant={isMobile ? 'fullWidth' : 'standard'}
+          sx={{
+            '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500, pb: 1.5 },
+          }}
         >
-          <Tab label="Pending Approval" />
-          <Tab label="All Timesheets" />
+          <Tab label={`Pending Approval (${pendingCount})`} />
+          <Tab label={`All Timesheets (${pendingCount + rejectedCount + approvedOrPaidCount})`} />
         </Tabs>
       </Box>
 
@@ -232,11 +242,14 @@ export default function ManagerTimesheetListPage() {
       {!error &&
         filtered.length > 0 &&
         (isMobile ? (
-          <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />} spacing={0}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+            spacing={0}
+          >
             {filtered.map((timesheet) => (
               <Box
                 key={timesheet.id}
-                onClick={() => handleOpenTimesheet(timesheet.id)}
+                onClick={() => setSelectedMobileId(timesheet.id)}
                 sx={{
                   py: 2.25,
                   px: 1,
@@ -247,33 +260,21 @@ export default function ManagerTimesheetListPage() {
                   '&:hover': { backgroundColor: 'action.hover' },
                 }}
               >
-                <Stack spacing={1.25}>
-                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
-                    <Typography variant="body2" fontWeight={600}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
+                  <Box>
+                    <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
                       {getSubmitterDisplayLabel(timesheet.consultantName)}
                     </Typography>
-                    <TimesheetStatusDisplay
-                      status={timesheet.status}
-                      submittedLate={timesheet.submittedLate}
-                    />
-                  </Stack>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="body2" color="text.secondary">
                       {formatWeekStart(timesheet.weekStart)}
-                      {timesheet.totalHours != null && ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}
+                      {timesheet.totalHours != null &&
+                        ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}
                     </Typography>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      startIcon={<RateReviewIcon sx={{ fontSize: '0.9rem' }} />}
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleOpenTimesheet(timesheet.id)
-                      }}
-                    >
-                      Open
-                    </Button>
-                  </Stack>
+                  </Box>
+                  <TimesheetStatusDisplay
+                    status={timesheet.status}
+                    submittedLate={timesheet.submittedLate}
+                  />
                 </Stack>
               </Box>
             ))}
@@ -335,7 +336,9 @@ export default function ManagerTimesheetListPage() {
                           fontSize: '0.85rem',
                         }}
                       >
-                        {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
+                        {timesheet.totalHours != null
+                          ? Number(timesheet.totalHours).toFixed(2)
+                          : '-'}
                       </Typography>
                     </TableCell>
                     <TableCell align="right" onClick={(e) => e.stopPropagation()}>
@@ -354,6 +357,46 @@ export default function ManagerTimesheetListPage() {
             </Table>
           </TableContainer>
         ))}
+
+      {isMobile && selectedMobileTimesheet && (
+        <MobileDetailDrawer
+          open={!!selectedMobileId}
+          onClose={() => setSelectedMobileId(null)}
+          title={getSubmitterDisplayLabel(selectedMobileTimesheet.consultantName)}
+          subtitle={`Week of ${formatWeekStart(selectedMobileTimesheet.weekStart)}`}
+          data={[
+            {
+              label: 'Status',
+              node: (
+                <Stack direction="row" sx={{ mt: 0.5 }}>
+                  <TimesheetStatusDisplay
+                    status={selectedMobileTimesheet.status}
+                    submittedLate={selectedMobileTimesheet.submittedLate}
+                  />
+                </Stack>
+              ),
+            },
+            {
+              label: 'Total Hours',
+              value:
+                selectedMobileTimesheet.totalHours != null
+                  ? `${Number(selectedMobileTimesheet.totalHours).toFixed(2)} hrs`
+                  : '-',
+            },
+          ]}
+          actions={
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              startIcon={<RateReviewIcon />}
+              onClick={() => handleOpenTimesheet(selectedMobileId)}
+            >
+              Open Timesheet
+            </Button>
+          }
+        />
+      )}
     </Box>
   )
 }

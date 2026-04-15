@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, useLoaderData } from 'react-router'
-import useQueryState from '../../hooks/useQueryState.js'
+import { useLoaderData, useNavigate } from 'react-router'
+import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -58,21 +57,37 @@ const TAB_KEYS = {
   PAID: 'paid',
 }
 
-function buildListPath(tabKey) {
-  return tabKey === TAB_KEYS.PAID ? `/finance/timesheets?tab=${tabKey}` : '/finance/timesheets'
+function buildListPath({ tab = TAB_KEYS.TO_PAY, q = '', sort = 'latest' } = {}) {
+  const params = new URLSearchParams()
+
+  if (tab === TAB_KEYS.PAID) {
+    params.set('tab', tab)
+  }
+  if (q !== '') {
+    params.set('q', q)
+  }
+  if (sort !== 'latest') {
+    params.set('sort', sort)
+  }
+
+  const search = params.toString()
+  return search ? `/finance/timesheets?${search}` : '/finance/timesheets'
 }
 
 export default function FinanceTimesheetListPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
   const { timesheets, error } = useLoaderData()
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortBy, setSortBy] = useState('latest')
-
-  const [tab, setTab] = useQueryState('tab', TAB_KEYS.TO_PAY)
-  const activeTabKey = tab === TAB_KEYS.PAID ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY
+  const [queryState, setQueryState] = useQueryStateObject({
+    tab: TAB_KEYS.TO_PAY,
+    q: '',
+    sort: 'latest',
+  })
+  const searchQuery = queryState.q
+  const sortBy = queryState.sort
+  const activeTabKey = queryState.tab === TAB_KEYS.PAID ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY
   const activeTab = activeTabKey === TAB_KEYS.PAID ? 1 : 0
 
   const displayTimesheets = timesheets.filter((timesheet) =>
@@ -97,12 +112,14 @@ export default function FinanceTimesheetListPage() {
   })
 
   function handleTabChange(_event, newValue) {
-    setTab(newValue === 1 ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY)
+    setQueryState({ tab: newValue === 1 ? TAB_KEYS.PAID : TAB_KEYS.TO_PAY })
   }
 
   function handleOpenTimesheet(timesheetId) {
     navigate(`/finance/timesheets/${timesheetId}`, {
-      state: { returnTo: buildListPath(activeTabKey) },
+      state: {
+        returnTo: buildListPath({ tab: activeTabKey, q: searchQuery, sort: sortBy }),
+      },
     })
   }
 
@@ -128,7 +145,7 @@ export default function FinanceTimesheetListPage() {
           placeholder="Search submitters..."
           size="small"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => setQueryState({ q: e.target.value })}
           sx={{ minWidth: { sm: 220 } }}
           slotProps={{
             input: {
@@ -147,7 +164,7 @@ export default function FinanceTimesheetListPage() {
             labelId="finance-sort-label"
             value={sortBy}
             label="Sort"
-            onChange={(e) => setSortBy(e.target.value)}
+            onChange={(e) => setQueryState({ sort: e.target.value })}
           >
             <MenuItem value="latest">Latest</MenuItem>
             <MenuItem value="oldest">Oldest</MenuItem>
@@ -208,8 +225,10 @@ export default function FinanceTimesheetListPage() {
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={activeTab} onChange={handleTabChange}>
-          <Tab label="To Pay" />
-          <Tab label="Paid History" />
+          <Tab label={`To Pay (${timesheets.filter((ts) => ts.status === 'APPROVED').length})`} />
+          <Tab
+            label={`Paid History (${timesheets.filter((ts) => ts.status === 'COMPLETED').length})`}
+          />
         </Tabs>
       </Box>
 
@@ -238,7 +257,10 @@ export default function FinanceTimesheetListPage() {
       {!error &&
         sortedTimesheets.length > 0 &&
         (isMobile ? (
-          <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />} spacing={0}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+            spacing={0}
+          >
             {sortedTimesheets.map((timesheet) => {
               const ActionIcon = getActionButtonIcon(timesheet.status)
 
@@ -257,7 +279,12 @@ export default function FinanceTimesheetListPage() {
                   }}
                 >
                   <Stack spacing={1.25}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                    <Stack
+                      direction="row"
+                      justifyContent="space-between"
+                      alignItems="flex-start"
+                      spacing={1.5}
+                    >
                       <Typography variant="body2" fontWeight={600}>
                         {getSubmitterDisplayLabel(timesheet.consultantName)}
                       </Typography>
@@ -268,10 +295,14 @@ export default function FinanceTimesheetListPage() {
                     </Stack>
                     <Typography variant="body2" color="text.secondary">
                       {formatWeekStart(timesheet.weekStart)}
-                      {timesheet.totalHours != null && ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}
+                      {timesheet.totalHours != null &&
+                        ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}
                     </Typography>
                     {timesheet.status === 'COMPLETED' && (
-                      <Typography variant="body2" sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}
+                      >
                         {timesheet.totalBillAmount != null
                           ? `Received ${formatCurrency(timesheet.totalBillAmount)}`
                           : ''}
@@ -306,8 +337,12 @@ export default function FinanceTimesheetListPage() {
                   <TableCell sx={{ py: 1.75 }}>Submitter</TableCell>
                   <TableCell sx={{ py: 1.75 }}>Week of</TableCell>
                   <TableCell sx={{ py: 1.75 }}>Status</TableCell>
-                  <TableCell align="right" sx={{ py: 1.75 }}>Total Hours</TableCell>
-                  <TableCell align="right" sx={{ py: 1.75 }}>Actions</TableCell>
+                  <TableCell align="right" sx={{ py: 1.75 }}>
+                    Total Hours
+                  </TableCell>
+                  <TableCell align="right" sx={{ py: 1.75 }}>
+                    Actions
+                  </TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -363,7 +398,11 @@ export default function FinanceTimesheetListPage() {
                             : '-'}
                         </Typography>
                       </TableCell>
-                      <TableCell align="right" sx={{ py: 1.75 }} onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        align="right"
+                        sx={{ py: 1.75 }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Button
                           size="small"
                           variant="outlined"

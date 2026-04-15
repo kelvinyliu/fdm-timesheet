@@ -146,4 +146,18 @@ describe('ManagerTimesheetListPage', () => {
       state: { returnTo: '/manager/timesheets?status=PENDING' },
     })
   })
+
+  it('preserves the search query on open', () => {
+    renderAt('/manager/timesheets?status=PENDING&q=Pat')
+
+    expect(screen.getByRole('heading', { name: 'Pending Timesheets' })).toBeInTheDocument()
+    expect(screen.getByText('Pat Pending')).toBeInTheDocument()
+    expect(screen.queryByText('Amy Approved')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Timesheet' }))
+
+    expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets/ts-pending', {
+      state: { returnTo: '/manager/timesheets?status=PENDING&q=Pat' },
+    })
+  })
 })

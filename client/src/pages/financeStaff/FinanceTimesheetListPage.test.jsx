@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MemoryRouter } from 'react-router'
 import FinanceTimesheetListPage from './FinanceTimesheetListPage.jsx'
@@ -52,11 +52,41 @@ describe('FinanceTimesheetListPage', () => {
   it('derives summary card counts from all timesheets while listing only approved items on the to-pay tab', () => {
     mocks.useLoaderData.mockReturnValue({
       timesheets: [
-        { id: 'ts-draft', consultantName: 'Dana Draft', status: 'DRAFT', totalHours: 8, weekStart: '2026-04-06' },
-        { id: 'ts-pending', consultantName: 'Perry Pending', status: 'PENDING', totalHours: 40, weekStart: '2026-04-06' },
-        { id: 'ts-rejected', consultantName: 'Riley Rejected', status: 'REJECTED', totalHours: 32, weekStart: '2026-04-06' },
-        { id: 'ts-approved', consultantName: 'Avery Approved', status: 'APPROVED', totalHours: 37.5, weekStart: '2026-04-13' },
-        { id: 'ts-completed', consultantName: 'Casey Completed', status: 'COMPLETED', totalHours: 41, weekStart: '2026-04-20' },
+        {
+          id: 'ts-draft',
+          consultantName: 'Dana Draft',
+          status: 'DRAFT',
+          totalHours: 8,
+          weekStart: '2026-04-06',
+        },
+        {
+          id: 'ts-pending',
+          consultantName: 'Perry Pending',
+          status: 'PENDING',
+          totalHours: 40,
+          weekStart: '2026-04-06',
+        },
+        {
+          id: 'ts-rejected',
+          consultantName: 'Riley Rejected',
+          status: 'REJECTED',
+          totalHours: 32,
+          weekStart: '2026-04-06',
+        },
+        {
+          id: 'ts-approved',
+          consultantName: 'Avery Approved',
+          status: 'APPROVED',
+          totalHours: 37.5,
+          weekStart: '2026-04-13',
+        },
+        {
+          id: 'ts-completed',
+          consultantName: 'Casey Completed',
+          status: 'COMPLETED',
+          totalHours: 41,
+          weekStart: '2026-04-20',
+        },
       ],
       error: null,
     })
@@ -79,5 +109,39 @@ describe('FinanceTimesheetListPage', () => {
     expect(screen.queryByText('Perry Pending')).not.toBeInTheDocument()
     expect(screen.queryByText('Riley Rejected')).not.toBeInTheDocument()
     expect(screen.queryByText('Casey Completed')).not.toBeInTheDocument()
+  })
+
+  it('preserves tab, search, and sort params in the return path when opening a paid timesheet', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-approved',
+          consultantName: 'Avery Approved',
+          status: 'APPROVED',
+          totalHours: 37.5,
+          weekStart: '2026-04-13',
+        },
+        {
+          id: 'ts-completed',
+          consultantName: 'Casey Completed',
+          status: 'COMPLETED',
+          totalHours: 41,
+          weekStart: '2026-04-20',
+        },
+      ],
+      error: null,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/finance/timesheets?tab=paid&q=Casey&sort=hoursHigh']}>
+        <FinanceTimesheetListPage />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'View' }))
+
+    expect(mocks.navigate).toHaveBeenCalledWith('/finance/timesheets/ts-completed', {
+      state: { returnTo: '/finance/timesheets?tab=paid&q=Casey&sort=hoursHigh' },
+    })
   })
 })

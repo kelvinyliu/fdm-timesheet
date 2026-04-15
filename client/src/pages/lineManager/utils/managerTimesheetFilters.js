@@ -36,9 +36,22 @@ export function getManagerStatusFilterFromSearch(search) {
   return LEGACY_STATUS_ALIASES[rawStatus] ?? MANAGER_STATUS_FILTERS.ALL
 }
 
-export function buildManagerTimesheetListPath(statusFilter = MANAGER_STATUS_FILTERS.ALL) {
+export function buildManagerTimesheetListPath(
+  statusFilter = MANAGER_STATUS_FILTERS.ALL,
+  searchQuery = ''
+) {
+  const params = new URLSearchParams()
   const status = getCanonicalStatusQueryValue(statusFilter)
-  return status ? `/manager/timesheets?status=${status}` : '/manager/timesheets'
+
+  if (status) {
+    params.set('status', status)
+  }
+  if (searchQuery !== '') {
+    params.set('q', searchQuery)
+  }
+
+  const search = params.toString()
+  return search ? `/manager/timesheets?${search}` : '/manager/timesheets'
 }
 
 export function matchesManagerStatusFilter(timesheetStatus, statusFilter) {
@@ -59,4 +72,3 @@ export function getManagerStatusFilterLabel(statusFilter) {
 
   return getTimesheetStatusDisplayLabel(statusFilter)
 }
-

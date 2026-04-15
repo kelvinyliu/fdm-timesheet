@@ -66,6 +66,13 @@ export default function AdminDashboard() {
     ...role,
     width: totalUsers > 0 ? `${(role.count / totalUsers) * 100}%` : '0%',
   }))
+  const ACTION_STYLES = {
+    SUBMISSION: { color: '#2E7D32', label: 'Submitted', bg: '#E8F5E9' },
+    APPROVAL: { color: '#1976D2', label: 'Approved', bg: '#E3F2FD' },
+    REJECTION: { color: '#D32F2F', label: 'Rejected', bg: '#FFEBEE' },
+    PROCESSING: { color: '#ED6C02', label: 'Processed payment', bg: '#FFF3E0' },
+    DEFAULT: { color: '#757575', label: 'System Action', bg: '#F5F5F5' }
+  };
   const recentActivity = auditLog.slice(0, 5)
   const systemMessage =
     recentActivity.length > 0
@@ -292,37 +299,68 @@ export default function AdminDashboard() {
                 </Typography>
               </Box>
             ) : (
-              <Stack divider={<Divider flexItem />} spacing={0}>
-                {recentActivity.map((item) => (
-                  <Box key={item.id} sx={{ py: 1.75 }}>
-                    <Stack
-                      direction={{ xs: 'column', sm: 'row' }}
-                      spacing={1.5}
-                      justifyContent="space-between"
-                      alignItems={{ xs: 'flex-start', sm: 'center' }}
-                    >
-                      <Box>
-                        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.35 }}>
-                          {getAuditActionLabel(item.action)}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {item.createdAt
-                            ? new Date(item.createdAt).toLocaleString([], {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })
-                            : 'Unknown time'}
-                        </Typography>
-                      </Box>
+              <Stack spacing={1.5}>
+        {recentActivity.map((item, index) => {
+          const style = ACTION_STYLES[item.action] || ACTION_STYLES.DEFAULT;
 
-                      <Chip label={item.action} size="small" variant="outlined" />
-                    </Stack>
-                  </Box>
-                ))}
-              </Stack>
+          return (
+            <Box
+              key={item.id}
+              sx={{
+                p: 2,
+                borderRadius: '16px',
+                border: '1px solid',
+                borderColor: 'divider',
+                backgroundColor: 'background.paper',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 2,
+                animation: 'slideIn 0.5s ease backwards',
+                animationDelay: `${index * 0.1}s`,
+                '@keyframes slideIn': {
+                  from: { opacity: 0, transform: 'translateX(-20px)' },
+                  to: { opacity: 1, transform: 'translateX(0)' },
+                },
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
+                  borderColor: style.color,
+                },
+              }}
+            >
+              <Box 
+                sx={{ 
+                  width: 6, 
+                  height: 40, 
+                  borderRadius: 4, 
+                  bgcolor: style.color 
+                }} 
+              />
+
+              <Box sx={{ flexGrow: 1 }}>
+                <Typography variant="body2" fontWeight={700} sx={{ color: style.color }}>
+                  {style.label}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Unknown time'}
+                </Typography>
+              </Box>
+
+              <Chip 
+                label={item.action} 
+                size="small" 
+                sx={{ 
+                  fontWeight: 600, 
+                  bgcolor: style.bg, 
+                  color: style.color,
+                  border: 'none'
+                }} 
+              />
+            </Box>
+          );
+        })}
+      </Stack>
             )}
           </Paper>
         </Grid>

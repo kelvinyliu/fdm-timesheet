@@ -62,7 +62,7 @@ export default function WeeklyMatrix({
   emptyMessage = 'No hours logged for this period.',
 }) {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const dayCards = buildDayCardData(rows, weekDates)
   const dayTotals = getMatrixDayTotals(rows, weekDates)

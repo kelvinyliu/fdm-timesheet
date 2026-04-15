@@ -61,7 +61,7 @@ export default function ConfirmActionDialog({
   onSecondary,
 }) {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const variantStyle = VARIANT_STYLES[variant] ?? VARIANT_STYLES.info
   const Icon = variantStyle.icon
   const cancelBtnRef = useRef(null)

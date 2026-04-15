@@ -16,7 +16,7 @@ const EMPTY_PASSWORD_FORM = { current: '', next: '', confirm: '' }
 
 export default function PasswordDialog({ open, onClose }) {
   const theme = useTheme()
-  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'))
+  const fullScreen = useMediaQuery(theme.breakpoints.down('md'))
   const { confirm } = useConfirmation()
   const [form, setForm] = useState(EMPTY_PASSWORD_FORM)
   const [error, setError] = useState('')

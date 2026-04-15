@@ -6,16 +6,17 @@ const palette = {
   surfaceMuted: '#f5f4f1',
   surfaceRaised: '#ffffff',
   textPrimary: '#2a2a28',
-  textSecondary: '#6c6c6b',
-  textMuted: '#a1a1a0',
+  textSecondary: '#55554f',
+  textMuted: '#66665f',
   textInverse: '#ffffff',
-  textInverseMuted: 'rgba(255,255,255,0.7)',
+  textInverseMuted: 'rgba(255,255,255,0.82)',
   border: '#e6e4e0',
   borderStrong: '#d1cfcb',
   primary: '#b2c784',
   primaryHover: '#9fb56b',
   primaryContrast: '#2a2a28',
-  focusRing: 'rgba(178,199,132,0.4)',
+  focusRing: 'rgba(68, 84, 25, 0.18)',
+  focusOutline: '#445419',
   selectionBg: 'rgba(178,199,132,0.25)',
   sidebarBg: '#1f2118',
   sidebarBgAlt: '#161711',
@@ -26,7 +27,7 @@ const palette = {
   successBg: '#f3faf0',
   warning: '#8a5a00',
   warningBg: '#fff8e6',
-  error: '#e55c58',
+  error: '#b3261e',
   errorBg: '#fff5f4',
   info: '#26556f',
   infoBg: '#f0f8fc',
@@ -82,23 +83,23 @@ const theme = createTheme({
   typography: {
     fontFamily: '"Outfit", system-ui, sans-serif',
     h1: {
-      fontFamily: 'Poppins, Georgia, serif',
-      fontWeight: 400,
-      fontSize: '2.5rem',
+      fontFamily: '"Outfit", system-ui, sans-serif',
+      fontWeight: 600,
+      fontSize: '2rem',
       lineHeight: 1.15,
-      letterSpacing: '-0.02em',
+      letterSpacing: '-0.01em',
     },
     h2: {
-      fontFamily: 'Poppins, Georgia, serif',
-      fontWeight: 400,
-      fontSize: '2rem',
+      fontFamily: '"Outfit", system-ui, sans-serif',
+      fontWeight: 600,
+      fontSize: '1.6rem',
       lineHeight: 1.2,
       letterSpacing: '-0.01em',
     },
     h3: {
-      fontFamily: 'Poppins, Georgia, serif',
-      fontWeight: 400,
-      fontSize: '1.75rem',
+      fontFamily: '"Outfit", system-ui, sans-serif',
+      fontWeight: 600,
+      fontSize: '1.35rem',
       lineHeight: 1.25,
     },
     h4: {
@@ -202,6 +203,27 @@ const theme = createTheme({
             borderRadius: 4,
           },
         },
+        '@media (prefers-reduced-motion: reduce)': {
+          'html:focus-within': {
+            scrollBehavior: 'auto',
+          },
+          '*, *::before, *::after': {
+            animationDuration: '0.01ms !important',
+            animationIterationCount: '1 !important',
+            transitionDuration: '0.01ms !important',
+            scrollBehavior: 'auto !important',
+          },
+        },
+      },
+    },
+    MuiButtonBase: {
+      styleOverrides: {
+        root: {
+          '&.Mui-focusVisible': {
+            outline: `3px solid ${palette.focusOutline}`,
+            outlineOffset: 2,
+          },
+        },
       },
     },
     MuiButton: {
@@ -212,6 +234,7 @@ const theme = createTheme({
         root: {
           borderRadius: 8,
           padding: '8px 20px',
+          minHeight: 44,
           border: '1px solid transparent',
           transition: 'all 0.2s ease',
           backgroundColor: palette.surface,
@@ -231,6 +254,10 @@ const theme = createTheme({
             transform: 'none',
             backgroundColor: palette.surfaceMuted,
             color: palette.textMuted,
+          },
+          '&.Mui-focusVisible': {
+            outline: `3px solid ${palette.focusOutline}`,
+            outlineOffset: 2,
           },
         },
         contained: {
@@ -387,9 +414,19 @@ const theme = createTheme({
               boxShadow: `0 0 0 3px ${palette.focusRing}`,
             },
             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-              borderColor: palette.primary,
-              borderWidth: 1,
+              borderColor: palette.focusOutline,
+              borderWidth: 2,
             },
+          },
+        },
+      },
+    },
+    MuiFormHelperText: {
+      styleOverrides: {
+        root: {
+          color: palette.textSecondary,
+          '&.Mui-error': {
+            color: palette.error,
           },
         },
       },
@@ -420,10 +457,10 @@ const theme = createTheme({
     MuiDialogTitle: {
       styleOverrides: {
         root: {
-          fontFamily: 'Poppins, Georgia, serif',
-          fontSize: '2rem',
-          fontWeight: 400,
-          padding: '24px 32px 16px',
+          fontFamily: '"Outfit", system-ui, sans-serif',
+          fontSize: '1.35rem',
+          fontWeight: 600,
+          padding: '20px 24px 12px',
           color: palette.textPrimary,
         },
       },
@@ -540,10 +577,16 @@ const theme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
+          minWidth: 44,
+          minHeight: 44,
           borderRadius: 8,
           transition: 'all 0.2s ease',
           '&:hover': {
             backgroundColor: palette.overlayTextSoft,
+          },
+          '&.Mui-focusVisible': {
+            outline: `3px solid ${palette.focusOutline}`,
+            outlineOffset: 2,
           },
         },
       },

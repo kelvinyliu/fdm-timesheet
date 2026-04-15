@@ -1,6 +1,7 @@
-import { useState } from 'react'
-import { useLoaderData, useNavigate, useSearchParams } from 'react-router'
+import { useEffect, useState } from 'react'
+import { useLoaderData, useLocation, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
@@ -28,10 +29,18 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import MobileDetailDrawer from '../../components/shared/MobileDetailDrawer.jsx'
+import useQueryState from '../../hooks/useQueryState.js'
 import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
-import { getTimesheetForWeek, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
+import {
+  getConsultantVisibleStatus,
+  getTimesheetForWeek,
+  isConsultantApprovedStatus,
+  isConsultantEditableStatus,
+  isConsultantPendingStatus,
+} from '../../utils/timesheetWorkflow.js'
 
 export default function TimesheetListPage({
   basePath = '/consultant/timesheets',
@@ -39,14 +48,30 @@ export default function TimesheetListPage({
   subtitle = 'View and manage your weekly timesheets',
 }) {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const location = useLocation()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
   const { timesheets, eligibility, error: loadError, eligibilityError } = useLoaderData()
   const [error, setError] = useState(loadError)
   const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
   const [creatingWeekStart, setCreatingWeekStart] = useState(null)
-  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'approved' ? 1 : 0)
+  const [selectedMobileId, setSelectedMobileId] = useState(null)
+  const [tab, setTab] = useQueryState('tab', 'active')
+  const normalizedTab = tab === 'approved' ? 'history' : tab
+  const activeTab = normalizedTab === 'history' ? 1 : 0
+  const returnTo = `${location.pathname}${location.search}`
+
+  useEffect(() => {
+    if (tab === 'approved') {
+      setTab('history')
+    }
+  }, [setTab, tab])
+
+  const selectedMobileTimesheet = timesheets.find((ts) => ts.id === selectedMobileId)
+  const isMobileEditable = selectedMobileTimesheet ? isConsultantEditableStatus(selectedMobileTimesheet.status) : false
+  const mobileActionLabel = isMobileEditable ? 'Edit Timesheet' : 'View Timesheet'
+  const MobileActionIcon = selectedMobileTimesheet && isMobileEditable ? EditIcon : VisibilityIcon
+  const mobileDestination = selectedMobileTimesheet ? (isMobileEditable ? `${basePath}/${selectedMobileId}/edit` : `${basePath}/${selectedMobileId}`) : ''
 
   const currentMonday = eligibility.currentWeekStart || getCurrentMonday()
   const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []
@@ -63,7 +88,10 @@ export default function TimesheetListPage({
     try {
       const newTimesheet = await createTimesheet({ weekStart })
       setMissingWeekDialogOpen(false)
-      navigate(`${basePath}/${newTimesheet.id}/edit`, { replace: true })
+      navigate(`${basePath}/${newTimesheet.id}/edit`, {
+        replace: true,
+        state: { returnTo },
+      })
     } catch (err) {
       setError(err.message ?? 'Failed to create timesheet.')
     } finally {
@@ -84,7 +112,8 @@ export default function TimesheetListPage({
             navigate(
               isEditable
                 ? `${basePath}/${currentWeekTimesheet.id}/edit`
-                : `${basePath}/${currentWeekTimesheet.id}`
+                : `${basePath}/${currentWeekTimesheet.id}`,
+              { state: { returnTo } }
             )
           }
         >
@@ -98,7 +127,7 @@ export default function TimesheetListPage({
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate(`${basePath}/new`)}
+          onClick={() => navigate(`${basePath}/new`, { state: { returnTo } })}
         >
           New Timesheet
         </Button>
@@ -138,16 +167,14 @@ export default function TimesheetListPage({
   }
 
   const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
-  const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
+  const pendingCount = timesheets.filter((ts) => isConsultantPendingStatus(ts.status)).length
   const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
-  const approvedOrPaidCount = timesheets.filter(
-    (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
-  ).length
+  const approvedOrPaidCount = timesheets.filter((ts) => isConsultantApprovedStatus(ts.status)).length
 
   const displayTimesheets = timesheets.filter((ts) =>
     activeTab === 0
-      ? ts.status === 'DRAFT' || ts.status === 'PENDING' || ts.status === 'REJECTED'
-      : ts.status === 'APPROVED' || ts.status === 'COMPLETED'
+      ? ts.status === 'DRAFT' || isConsultantPendingStatus(ts.status) || ts.status === 'REJECTED'
+      : isConsultantApprovedStatus(ts.status)
   )
 
   return (
@@ -157,79 +184,59 @@ export default function TimesheetListPage({
         {renderMissingWeekButton()}
       </PageHeader>
 
-      {/* Compact status summary from ui-tweak1, kept above the existing list/table views. */}
       {!error && timesheets.length > 0 && (
-        <Paper
-          elevation={0}
+        <Box
           sx={{
             mb: 4,
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            borderRadius: 3,
-            border: '1px solid rgba(0,0,0,0.08)',
-            background: 'linear-gradient(to right, rgba(255,255,255,0.7), rgba(252,252,252,0.8))',
-            backdropFilter: 'blur(10px)',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 },
+            pb: 3,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gap: { xs: 3, sm: 4 },
           }}
         >
           {[
-            { label: 'Drafts', count: draftCount, color: 'text.secondary' },
-            { label: 'Pending', count: pendingCount, color: '#ed6c02' },
-            { label: 'Rejected', count: rejectedCount, color: '#d32f2f' },
-            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2e7d32' },
-          ].map((item, index) => (
-            <Box
-              key={item.label}
-              sx={{
-                flex: 1,
-                textAlign: 'center',
-                borderRight: {
-                  xs: 'none',
-                  sm: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                },
-                borderBottom: {
-                  xs: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                  sm: 'none',
-                },
-                pb: { xs: index !== 3 ? 2 : 0, sm: 0 },
-                width: '100%',
-              }}
-            >
+            { label: 'Drafts', count: draftCount, color: 'text.primary' },
+            { label: 'Pending', count: pendingCount, color: '#8a5a00' },
+            { label: 'Rejected', count: rejectedCount, color: '#e55c58' },
+            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2f6b36' },
+          ].map((item) => (
+            <Box key={item.label}>
               <Typography
-                variant="caption"
                 sx={{
-                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  fontWeight: 500,
                   color: 'text.secondary',
                   textTransform: 'uppercase',
-                  letterSpacing: 1,
-                  display: 'block',
+                  letterSpacing: '0.18em',
+                  mb: 1,
                 }}
               >
                 {item.label}
               </Typography>
               <Typography
-                variant="h5"
                 sx={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontWeight: 800,
+                  fontFamily: '"Outfit", system-ui, sans-serif',
+                  fontWeight: 400,
+                  fontSize: { xs: '2.2rem', sm: '2.6rem' },
+                  lineHeight: 1,
+                  letterSpacing: '-0.03em',
                   color: item.color,
-                  mt: 0.5,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {item.count}
               </Typography>
             </Box>
           ))}
-        </Paper>
+        </Box>
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={(_e, val) => { setActiveTab(val); navigate(`${basePath}${val === 1 ? '?tab=approved' : ''}`, { replace: true }) }}>
-          <Tab label="Pending & Drafts" />
-          <Tab label="Approved & Paid" />
+        <Tabs value={activeTab} onChange={(_e, val) => setTab(val === 1 ? 'history' : 'active')}>
+          <Tab label={`Pending & Drafts (${draftCount + pendingCount + rejectedCount})`} />
+          <Tab label={`Approved & Paid (${approvedOrPaidCount})`} />
         </Tabs>
       </Box>
 
@@ -246,19 +253,21 @@ export default function TimesheetListPage({
       )}
 
       {!error && displayTimesheets.length === 0 && (
-        <Paper
+        <Box
           sx={{
-            p: 6,
+            py: 6,
             textAlign: 'center',
-            borderStyle: 'dashed',
+            borderTop: '1px dashed',
+            borderBottom: '1px dashed',
+            borderColor: 'divider',
           }}
         >
           <Typography
             sx={{
-              fontFamily: 'Poppins, Georgia, serif',
-              fontSize: '1.2rem',
-              color: 'text.secondary',
-              mb: 1,
+              fontFamily: '"Outfit", system-ui, sans-serif',
+              fontSize: '1.3rem',
+              color: 'text.primary',
+              mb: 0.5,
             }}
           >
             {timesheets.length === 0
@@ -267,149 +276,194 @@ export default function TimesheetListPage({
                 ? 'No pending or draft timesheets'
                 : 'No approved or paid timesheets'}
           </Typography>
-          <Typography
-            variant="body2"
-            color="text.secondary"
-            sx={{
-              fontFamily: '"Instrument Serif", Georgia, serif',
-              fontSize: '1.2rem',
-              mb: 1,
-            }}
-          >
-            {timesheets.length === 0 ? 'Create one to get started.' : ''}
-          </Typography>
-        </Paper>
+          {timesheets.length === 0 && (
+            <Typography variant="body2" color="text.secondary">
+              Create one to get started.
+            </Typography>
+          )}
+        </Box>
       )}
 
       {!error &&
         displayTimesheets.length > 0 &&
         (isMobile ? (
-          <Stack spacing={1.5}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+            spacing={0}
+          >
             {displayTimesheets.map((ts) => {
-              const isEditable = isConsultantEditableStatus(ts.status)
-              const actionLabel = isEditable ? 'Edit Timesheet' : 'View Timesheet'
-              const ActionIcon = isEditable ? EditIcon : VisibilityIcon
-              const destination = isEditable ? `${basePath}/${ts.id}/edit` : `${basePath}/${ts.id}`
-
               return (
-                <Paper key={ts.id} sx={{ p: 2.5 }}>
-                  <Stack spacing={2}>
-                    <Box
-                      sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'flex-start',
-                        gap: 1.5,
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                          Week of
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          {formatWeekStart(ts.weekStart)}
-                        </Typography>
-                      </Box>
-                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
-                    </Box>
-
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Work Categories
+                <ButtonBase
+                  key={ts.id}
+                  component="button"
+                  type="button"
+                  onClick={() => setSelectedMobileId(ts.id)}
+                  aria-label={`Open details for timesheet week of ${formatWeekStart(ts.weekStart)}`}
+                  sx={{
+                    width: '100%',
+                    display: 'block',
+                    textAlign: 'left',
+                    py: 2.25,
+                    px: 1,
+                    mx: -1,
+                    borderRadius: 1.5,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': { backgroundColor: 'action.hover' },
+                  }}
+                >
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                    <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }} noWrap>
+                        {formatWeekStart(ts.weekStart)}
                       </Typography>
-                      <Typography variant="body2" fontWeight={500}>
+                      <Typography variant="body2" color="text.secondary" noWrap>
                         {getWorkSummaryDisplayLabel(ts.workSummary, 2)}
+                        {ts.totalHours != null && ` · ${Number(ts.totalHours).toFixed(2)} hrs`}
                       </Typography>
                     </Box>
-
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Total Hours
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '1rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
-                      </Typography>
-                    </Box>
-
-                    <Button
-                      variant="outlined"
-                      startIcon={<ActionIcon sx={{ fontSize: '0.95rem' }} />}
-                      onClick={() => navigate(destination)}
-                    >
-                      {actionLabel}
-                    </Button>
+                    <TimesheetStatusDisplay
+                      status={getConsultantVisibleStatus(ts.status)}
+                      submittedLate={ts.submittedLate}
+                    />
                   </Stack>
-                </Paper>
+                </ButtonBase>
               )
             })}
           </Stack>
         ) : (
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
+          <TableContainer component={Paper}>
+            <Table sx={{ tableLayout: 'auto' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '15%' }}>Week of</TableCell>
-                  <TableCell sx={{ width: '35%' }}>Work Categories</TableCell>
-                  <TableCell sx={{ width: '20%' }}>Status</TableCell>
-                  <TableCell align="right" sx={{ width: '10%' }}>Total Hours</TableCell>
-                  <TableCell align="right" sx={{ width: '20%' }}>Actions</TableCell>
+                  <TableCell>Week of</TableCell>
+                  <TableCell>Work Categories</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Total Hours</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {displayTimesheets.map((ts) => (
-                  <TableRow key={ts.id}>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
-                    <TableCell>
-                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.85rem',
-                        }}
-                      >
-                        {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right">
-                      {isConsultantEditableStatus(ts.status) ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`${basePath}/${ts.id}/edit`)}
+                {displayTimesheets.map((ts) => {
+                  const editable = isConsultantEditableStatus(ts.status)
+                  const destination = editable
+                    ? `${basePath}/${ts.id}/edit`
+                    : `${basePath}/${ts.id}`
+                  return (
+                    <TableRow
+                      key={ts.id}
+                      hover
+                      tabIndex={0}
+                      onClick={() => navigate(destination, { state: { returnTo } })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(destination, { state: { returnTo } })
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        },
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {formatWeekStart(ts.weekStart)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
+                      <TableCell>
+                        <TimesheetStatusDisplay
+                          status={getConsultantVisibleStatus(ts.status)}
+                          submittedLate={ts.submittedLate}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.85rem',
+                          }}
                         >
-                          Edit
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`${basePath}/${ts.id}`)}
-                        >
-                          View
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        {editable ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
+                            onClick={() =>
+                              navigate(`${basePath}/${ts.id}/edit`, { state: { returnTo } })
+                            }
+                          >
+                            Edit
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
+                            onClick={() =>
+                              navigate(`${basePath}/${ts.id}`, { state: { returnTo } })
+                            }
+                          >
+                            View
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
               </TableBody>
             </Table>
           </TableContainer>
         ))}
+
+      {isMobile && selectedMobileTimesheet && (
+        <MobileDetailDrawer
+          open={!!selectedMobileId}
+          onClose={() => setSelectedMobileId(null)}
+          title={`Week of ${formatWeekStart(selectedMobileTimesheet.weekStart)}`}
+          subtitle={getWorkSummaryDisplayLabel(selectedMobileTimesheet.workSummary, 3)}
+          data={[
+            {
+              label: 'Status',
+              node: (
+                <Stack direction="row" sx={{ mt: 0.5 }}>
+                  <TimesheetStatusDisplay
+                    status={getConsultantVisibleStatus(selectedMobileTimesheet.status)}
+                    submittedLate={selectedMobileTimesheet.submittedLate}
+                  />
+                </Stack>
+              ),
+            },
+            {
+              label: 'Total Hours',
+              value:
+                selectedMobileTimesheet.totalHours != null
+                  ? `${Number(selectedMobileTimesheet.totalHours).toFixed(2)} hrs`
+                  : '-',
+            },
+          ]}
+          actions={
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              startIcon={<MobileActionIcon />}
+              onClick={() => navigate(mobileDestination, { state: { returnTo } })}
+            >
+              {mobileActionLabel}
+            </Button>
+          }
+        />
+      )}
 
       <Dialog
         open={missingWeekDialogOpen}

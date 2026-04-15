@@ -15,6 +15,9 @@ const TIMESHEET_SELECT = `
          p.total_pay_amount,
          p.margin_amount,
          lr.comment AS rejection_comment,
+         lfr.comment AS finance_return_comment,
+         lfr.created_at AS finance_returned_at,
+         lfr.returned_by_name AS finance_returned_by_name,
          (SELECT COALESCE(SUM(te.hours_worked), 0)
           FROM timesheet_entries te
           WHERE te.timesheet_id = t.timesheet_id
@@ -30,6 +33,14 @@ const TIMESHEET_SELECT = `
     ORDER BY r.review_date DESC, r.review_id DESC
     LIMIT 1
   ) lr ON TRUE
+  LEFT JOIN LATERAL (
+    SELECT fr.comment, fr.created_at, u.name AS returned_by_name
+    FROM finance_returns fr
+    LEFT JOIN users u ON u.user_id = fr.returned_by
+    WHERE fr.timesheet_id = t.timesheet_id
+    ORDER BY fr.created_at DESC, fr.return_id DESC
+    LIMIT 1
+  ) lfr ON TRUE
 `
 
 async function getTimesheetByIdWithDb(db, id) {
@@ -123,19 +134,54 @@ export async function reviewTimesheet(id, reviewerId, decision, comment) {
     await client.query('BEGIN')
     const { rows } = await client.query(
       `UPDATE timesheets SET status = $1, updated_at = NOW()
-       WHERE timesheet_id = $2 AND status = 'PENDING'
+       WHERE timesheet_id = $2 AND status IN ('PENDING', 'FINANCE_REJECTED')
        RETURNING *`,
       [decision, id]
     )
 
     if (rows.length === 0) {
-      throw httpError('Only pending timesheets can be reviewed', 409)
+      throw httpError('Only pending or finance-returned timesheets can be reviewed', 409)
     }
 
     await client.query(
       `INSERT INTO reviews (timesheet_id, reviewer_id, decision, comment)
        VALUES ($1, $2, $3, $4)`,
       [id, reviewerId, decision, comment ?? null]
+    )
+
+    const hydrated = await getTimesheetByIdWithDb(client, id)
+    await client.query('COMMIT')
+    return hydrated
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+}
+
+export async function returnTimesheetToManager(id, returnedBy, comment) {
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    const { rows } = await client.query(
+      `UPDATE timesheets
+       SET status = 'FINANCE_REJECTED',
+           updated_at = NOW()
+       WHERE timesheet_id = $1
+         AND status = 'APPROVED'
+       RETURNING *`,
+      [id]
+    )
+
+    if (rows.length === 0) {
+      throw httpError('Only approved timesheets can be returned to the line manager', 409)
+    }
+
+    await client.query(
+      `INSERT INTO finance_returns (timesheet_id, returned_by, comment)
+       VALUES ($1, $2, $3)`,
+      [id, returnedBy, comment]
     )
 
     const hydrated = await getTimesheetByIdWithDb(client, id)

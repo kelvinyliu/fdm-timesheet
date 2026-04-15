@@ -14,6 +14,7 @@ vi.mock('../models/timesheetModel.js', () => ({
   updateTimesheetStatus: vi.fn(),
   getPreviousWeekEntries: vi.fn(),
   reviewTimesheet: vi.fn(),
+  returnTimesheetToManager: vi.fn(),
 }))
 
 vi.mock('../models/timesheetEntryModel.js', () => ({
@@ -63,6 +64,40 @@ const consultantToken = token({ userId: 'consultant-1', role: 'CONSULTANT' })
 const managerToken   = token({ userId: 'manager-1',    role: 'LINE_MANAGER' })
 const uuidManagerToken = token({ userId: MANAGER_UUID, role: 'LINE_MANAGER' })
 const financeToken   = token({ userId: 'finance-1',    role: 'FINANCE_MANAGER' })
+const authUsers = {
+  'consultant-1': {
+    user_id: 'consultant-1',
+    name: 'Alex Consultant',
+    email: 'alex@example.com',
+    role: 'CONSULTANT',
+    default_pay_rate: '35.00',
+    created_at: '2025-02-03T09:00:00Z',
+  },
+  'manager-1': {
+    user_id: 'manager-1',
+    name: 'Lina Manager',
+    email: 'lina@example.com',
+    role: 'LINE_MANAGER',
+    default_pay_rate: '45.00',
+    created_at: '2025-02-03T09:00:00Z',
+  },
+  [MANAGER_UUID]: {
+    user_id: MANAGER_UUID,
+    name: 'Lina Manager',
+    email: 'lina.uuid@example.com',
+    role: 'LINE_MANAGER',
+    default_pay_rate: '45.00',
+    created_at: '2025-02-03T09:00:00Z',
+  },
+  'finance-1': {
+    user_id: 'finance-1',
+    name: 'Finance User',
+    email: 'finance@example.com',
+    role: 'FINANCE_MANAGER',
+    default_pay_rate: '50.00',
+    created_at: '2025-02-03T09:00:00Z',
+  },
+}
 
 function statusError(message, status) {
   const err = new Error(message)
@@ -115,6 +150,14 @@ const pendingTimesheetWithFeedback = {
   rejection_comment: 'Please correct Monday hours',
 }
 
+const financeReturnedTimesheet = {
+  ...fakeTimesheet,
+  status: 'FINANCE_REJECTED',
+  finance_return_comment: 'Client billing split does not match the work summary',
+  finance_returned_at: '2025-03-28T10:30:00Z',
+  finance_returned_by_name: 'Finance User',
+}
+
 const fakeEntry = {
   entry_id:     'entry-1',
   entry_date:   '2025-03-24',
@@ -137,14 +180,7 @@ beforeEach(() => {
   vi.useFakeTimers()
   vi.setSystemTime(new Date('2025-03-27T12:00:00Z'))
   vi.clearAllMocks()
-  userModel.findUserById.mockResolvedValue({
-    user_id: 'consultant-1',
-    name: 'Alex Consultant',
-    email: 'alex@example.com',
-    role: 'CONSULTANT',
-    default_pay_rate: '35.00',
-    created_at: '2025-02-03T09:00:00Z',
-  })
+  userModel.findUserById.mockImplementation(async (id) => authUsers[id] ?? null)
   timesheetModel.getTimesheetsByConsultant.mockResolvedValue([])
   entryModel.getWorkSummariesByTimesheetIds.mockResolvedValue([])
 })
@@ -160,6 +196,18 @@ describe('GET /api/timesheets', () => {
   it('returns 401 with no token', async () => {
     const res = await request(app).get('/api/timesheets')
     expect(res.status).toBe(401)
+  })
+
+  it('returns 401 when the authenticated user no longer exists', async () => {
+    userModel.findUserById.mockResolvedValueOnce(null)
+
+    const res = await request(app)
+      .get('/api/timesheets')
+      .set('Authorization', consultantToken)
+
+    expect(res.status).toBe(401)
+    expect(res.body.error).toMatch(/no longer exists/i)
+    expect(timesheetModel.getTimesheetsByConsultant).not.toHaveBeenCalled()
   })
 
   it('consultant receives their own timesheets', async () => {
@@ -1126,6 +1174,73 @@ describe('PATCH /api/timesheets/:id/review', () => {
     expect(auditModel.logAction).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'REJECTION', timesheetId: TIMESHEET_ID })
     )
+  })
+
+  it('approves a finance-returned timesheet and keeps finance return metadata in the response', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue(financeReturnedTimesheet)
+    timesheetModel.getTimesheetsForManager.mockResolvedValue([financeReturnedTimesheet])
+    timesheetModel.reviewTimesheet.mockResolvedValue({
+      ...financeReturnedTimesheet,
+      status: 'APPROVED',
+    })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .patch(`/api/timesheets/${TIMESHEET_ID}/review`)
+      .set('Authorization', managerToken)
+      .send({ action: 'APPROVE' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('APPROVED')
+    expect(res.body.financeReturnComment).toBe(financeReturnedTimesheet.finance_return_comment)
+    expect(timesheetModel.reviewTimesheet).toHaveBeenCalledWith(
+      TIMESHEET_ID,
+      'manager-1',
+      'APPROVED',
+      null
+    )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// PATCH /api/timesheets/:id/finance-review
+// ---------------------------------------------------------------------------
+describe('PATCH /api/timesheets/:id/finance-review', () => {
+  it('returns a finance-approved sheet to the line manager with a required comment', async () => {
+    timesheetModel.getTimesheetById.mockResolvedValue({ ...fakeTimesheet, status: 'APPROVED' })
+    timesheetModel.returnTimesheetToManager.mockResolvedValue({
+      ...financeReturnedTimesheet,
+      timesheet_id: TIMESHEET_ID,
+      consultant_name: 'Alex Consultant',
+    })
+    auditModel.logAction.mockResolvedValue({})
+
+    const res = await request(app)
+      .patch(`/api/timesheets/${TIMESHEET_ID}/finance-review`)
+      .set('Authorization', financeToken)
+      .send({ action: 'RETURN', comment: '  Client billing split does not match the work summary  ' })
+
+    expect(res.status).toBe(200)
+    expect(res.body.status).toBe('FINANCE_REJECTED')
+    expect(res.body.financeReturnComment).toBe('Client billing split does not match the work summary')
+    expect(timesheetModel.returnTimesheetToManager).toHaveBeenCalledWith(
+      TIMESHEET_ID,
+      'finance-1',
+      'Client billing split does not match the work summary'
+    )
+    expect(auditModel.logAction).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'FINANCE_RETURN', timesheetId: TIMESHEET_ID })
+    )
+  })
+
+  it('requires a non-blank comment when returning to the line manager', async () => {
+    const res = await request(app)
+      .patch(`/api/timesheets/${TIMESHEET_ID}/finance-review`)
+      .set('Authorization', financeToken)
+      .send({ action: 'RETURN', comment: '   ' })
+
+    expect(res.status).toBe(400)
+    expect(res.body.error).toMatch(/comment/i)
   })
 })
 

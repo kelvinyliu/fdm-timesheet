@@ -2,21 +2,20 @@ import { useState, useEffect, useRef } from 'react'
 import { useLoaderData, useNavigate, useParams, useLocation } from 'react-router'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Snackbar from '@mui/material/Snackbar'
-import Stack from '@mui/material/Stack'
 import SaveIcon from '@mui/icons-material/Save'
 import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditableWeeklyMatrix from '../../components/shared/EditableWeeklyMatrix.jsx'
 import PageHeader from '../../components/shared/PageHeader'
+import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
+import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useGuardedNavigate, useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
-import { palette } from '../../theme.js'
 import { buildAutofillEntries, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import {
   entriesToEditableMatrixRows,
@@ -76,6 +75,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   const localIdRef = useRef(0)
   const autofillWarningShown = useRef(false)
   const { confirm } = useConfirmation()
+  const returnTo = location.state?.returnTo ?? basePath
 
   const [matrixRows, setMatrixRows] = useState(() =>
     entriesToEditableMatrixRows(timesheet?.entries ?? [], nextLocalId)
@@ -108,8 +108,22 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
       message: autofillFeedback.message,
       severity: autofillFeedback.severity,
     })
-    navigate(location.pathname, { replace: true, state: null })
-  }, [location.pathname, location.state, navigate])
+    const {
+      autofillFeedback: _autofillFeedback,
+      autofillWarning: _autofillWarning,
+      ...nextState
+    } = location.state ?? {}
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+      },
+      {
+        replace: true,
+        state: Object.keys(nextState).length > 0 ? nextState : null,
+      }
+    )
+  }, [location.pathname, location.search, location.state, navigate])
 
   useEffect(() => {
     localIdRef.current = 0
@@ -280,7 +294,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
       await updateEntries(id, currentEntriesPayload)
       setSavedEntriesSnapshot(serializeEntries(currentEntriesPayload))
       await submitTimesheet(id)
-      navigate(`${basePath}/${id}`)
+      navigate(`${basePath}/${id}`, { state: { returnTo } })
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to submit timesheet.', 'error')
       setSubmitting(false)
@@ -352,7 +366,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         <Alert severity="error" sx={{ mb: 3 }}>
           {fetchError}
         </Alert>
-        <Button variant="outlined" onClick={() => guardedNavigate(basePath)}>
+        <Button variant="outlined" onClick={() => guardedNavigate(returnTo)}>
           Back to Timesheets
         </Button>
       </Box>
@@ -360,7 +374,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   }
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader
         title="Edit Timesheet"
         subtitle={`Week of ${formatWeekStart(timesheet.weekStart)}`}
@@ -368,7 +382,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => guardedNavigate(basePath)}
+          onClick={() => guardedNavigate(returnTo)}
         >
           Back
         </Button>
@@ -414,30 +428,37 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         onRowHoursChange={handleRowHoursChange}
       />
 
-      <Paper sx={{ p: { xs: 2.5, sm: 3 }, mt: 3, backgroundColor: palette.surfaceRaised }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
-          <Button
-            variant="outlined"
-            startIcon={<SaveIcon />}
-            onClick={saveDraft}
-            disabled={isBusy}
-            size="large"
-          >
-            {saving ? 'Saving...' : 'Save Draft'}
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<SendIcon />}
-            onClick={() => {
-              void handleSubmit()
-            }}
-            disabled={isBusy}
-            size="large"
-          >
-            {submitting ? 'Submitting...' : 'Submit for Review'}
-          </Button>
-        </Stack>
-      </Paper>
+      <StickyActionBar
+        sx={{ mt: { sm: 4 } }}
+        secondary={
+          saving ? (
+            <SaveStateBanner state="saving" message="Saving..." />
+          ) : isDirty ? (
+            <SaveStateBanner state="dirty" message="Unsaved changes" />
+          ) : null
+        }
+      >
+        <Button
+          variant="outlined"
+          startIcon={<SaveIcon />}
+          onClick={saveDraft}
+          disabled={isBusy}
+          size="large"
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<SendIcon />}
+          onClick={() => {
+            void handleSubmit()
+          }}
+          disabled={isBusy}
+          size="large"
+        >
+          {submitting ? 'Submitting...' : 'Submit'}
+        </Button>
+      </StickyActionBar>
 
       <Snackbar
         open={snackbar.open}

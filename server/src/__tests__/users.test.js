@@ -28,9 +28,15 @@ const financeToken = token({ userId: 'finance-1', role: 'FINANCE_MANAGER' })
 const adminToken = token({ userId: 'admin-1', role: 'SYSTEM_ADMIN' })
 const ADMIN_UUID = '11111111-1111-4111-8111-111111111111'
 const uuidAdminToken = token({ userId: ADMIN_UUID, role: 'SYSTEM_ADMIN' })
+const authUsers = {
+  'finance-1': { user_id: 'finance-1', role: 'FINANCE_MANAGER' },
+  'admin-1': { user_id: 'admin-1', role: 'SYSTEM_ADMIN' },
+  [ADMIN_UUID]: { user_id: ADMIN_UUID, role: 'SYSTEM_ADMIN' },
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
+  userModel.findUserById.mockImplementation(async (id) => authUsers[id] ?? null)
 })
 
 describe('GET /api/users/submitters/pay-rates', () => {

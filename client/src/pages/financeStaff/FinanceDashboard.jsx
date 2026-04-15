@@ -1,5 +1,6 @@
 import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -25,7 +26,6 @@ export default function FinanceDashboard() {
   const firstName = user?.name?.split(' ')[0] || 'there'
   const approved = timesheets.filter((t) => t.status === 'APPROVED')
   const completed = timesheets.filter((t) => t.status === 'COMPLETED')
-  const totalApprovedHours = approved.reduce((sum, ts) => sum + Number(ts.totalHours || 0), 0)
   const readyForPayment = [...approved]
     .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
     .slice(0, 5)
@@ -60,6 +60,7 @@ export default function FinanceDashboard() {
         >
           <Box sx={{ flex: 1 }}>
             <Typography
+              component="h1"
               sx={{
                 fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
@@ -126,7 +127,7 @@ export default function FinanceDashboard() {
             value={approved.length}
             subtitle="Approved and ready to process"
             color="#C58A00"
-            onClick={() => navigate('/finance/timesheets')}
+            onClick={() => navigate('/finance/timesheets?tab=to-pay')}
             delay={80}
           />
         </Grid>
@@ -138,7 +139,7 @@ export default function FinanceDashboard() {
             value={completed.length}
             subtitle="Already processed"
             color="#2E7D32"
-            onClick={() => navigate('/finance/timesheets')}
+            onClick={() => navigate('/finance/timesheets?tab=paid')}
             delay={160}
           />
         </Grid>
@@ -150,7 +151,7 @@ export default function FinanceDashboard() {
             value={recentlyApproved}
             subtitle="Approved in the last 7 days"
             color="#1976D2"
-            onClick={() => navigate('/finance/timesheets?status=APPROVED')}
+            onClick={() => navigate('/finance/timesheets?tab=to-pay')}
             delay={240}
           />
         </Grid>
@@ -211,10 +212,16 @@ export default function FinanceDashboard() {
         ) : (
           <Stack spacing={1.5}>
             {readyForPayment.map((ts) => (
-              <Box
+              <ButtonBase
                 key={ts.id}
+                component="button"
+                type="button"
                 onClick={() => navigate(`/finance/timesheets/${ts.id}`)}
+                aria-label={`Open payment details for ${getConsultantDisplayLabel(ts.consultantName)}, week of ${formatWeekStart(ts.weekStart)}`}
                 sx={{
+                  width: '100%',
+                  display: 'block',
+                  textAlign: 'left',
                   p: 2,
                   borderRadius: 2,
                   border: '1px solid',
@@ -249,7 +256,7 @@ export default function FinanceDashboard() {
                     <StatusBadge status={ts.status} />
                   </Stack>
                 </Stack>
-              </Box>
+              </ButtonBase>
             ))}
 
             <Divider sx={{ my: 0.5 }} />

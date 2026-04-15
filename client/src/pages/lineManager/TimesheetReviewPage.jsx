@@ -3,11 +3,11 @@ import { useLocation, useNavigate, useParams, useLoaderData, useRevalidator } fr
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import TextField from '@mui/material/TextField'
 import Divider from '@mui/material/Divider'
 import Stack from '@mui/material/Stack'
+import Chip from '@mui/material/Chip'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
 import DialogContent from '@mui/material/DialogContent'
@@ -22,11 +22,12 @@ import FastForwardIcon from '@mui/icons-material/FastForward'
 import BlockIcon from '@mui/icons-material/Block'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
+import FieldGroup from '../../components/shared/FieldGroup.jsx'
+import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { reviewTimesheet } from '../../api/timesheets'
-import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
-import { palette } from '../../theme.js'
+import { buildWeekDates, formatTimestamp, formatWeekStart } from '../../utils/dateFormatters'
 import {
   getSubmitterDisplayLabel,
   getWorkBucketDisplayLabel,
@@ -35,9 +36,16 @@ import {
 import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
 import { buildManagerTimesheetListPath } from './utils/managerTimesheetFilters.js'
 
+const REJECTION_PRESETS = [
+  'Hours logged are inconsistent with expected schedule.',
+  'Work category allocation is incorrect.',
+  'Needs supporting detail or comment for the recorded hours.',
+  'Timesheet was submitted for the wrong week.',
+]
+
 export default function TimesheetReviewPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const location = useLocation()
   const navigate = useNavigate()
   const revalidator = useRevalidator()
@@ -62,6 +70,7 @@ export default function TimesheetReviewPage() {
   }
 
   const nextId = getNextPendingId()
+  const isFinanceReturned = timesheet?.status === 'FINANCE_REJECTED'
 
   async function handleApprove() {
     setSubmitting(true)
@@ -188,9 +197,16 @@ export default function TimesheetReviewPage() {
 
   const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
   const matrixRows = timesheet ? entriesToReadOnlyMatrixRows(timesheet.entries ?? []) : []
+  const queueContextMessage = nextId
+    ? 'Approve & Next or Reject & Next saves this decision and immediately opens the next pending timesheet in your queue.'
+    : 'This is the last pending timesheet in your current queue.'
+
+  const decisionSummary = isFinanceReturned
+    ? 'Finance returned this timesheet for another manager review before payment can be processed.'
+    : 'Review totals and either approve the sheet for finance or reject it back to the employee.'
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader title="Open Timesheet">
         <Button
           variant="outlined"
@@ -215,22 +231,35 @@ export default function TimesheetReviewPage() {
 
       {timesheet && (
         <>
-          <Paper sx={{ 
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 3, 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            border: '1px solid rgba(0,0,0,0.05)', 
-            background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
-            mb: 3 
-          }}>
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ mb: 4, pb: 4, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Summary
             </Typography>
             <DetailList items={summaryItems} />
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography variant="h6" gutterBottom>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Work Summary
             </Typography>
             {(timesheet.workSummary ?? []).length === 0 ? (
@@ -254,7 +283,7 @@ export default function TimesheetReviewPage() {
                 rowGap={1.25}
               />
             )}
-          </Paper>
+          </Box>
 
           <WeeklyMatrix
             rows={matrixRows}
@@ -263,70 +292,100 @@ export default function TimesheetReviewPage() {
             emptyMessage="No entries recorded for this timesheet."
           />
 
-          {timesheet.status === 'PENDING' && (
-            <Paper sx={{ p: { xs: 2.5, sm: 3 }, backgroundColor: palette.surfaceRaised }}>
-              <Typography variant="h6" gutterBottom>
-                Actions
-              </Typography>
-              <Stack spacing={3}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleIcon />}
-                    onClick={() => openApproveDialog(false)}
-                    disabled={submitting}
-                    fullWidth={isMobile}
-                  >
-                    Approve
-                  </Button>
-                  {nextId && (
-                    <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={<FastForwardIcon />}
-                      onClick={() => openApproveDialog(true)}
-                      disabled={submitting}
-                      fullWidth={isMobile}
-                      sx={{ backgroundColor: '#25562b', '&:hover': { backgroundColor: '#1e4a23' } }}
-                    >
-                      Approve & Next
-                    </Button>
-                  )}
-                </Stack>
+          {isFinanceReturned && timesheet.financeReturnComment && (
+            <Alert severity="warning" sx={{ mt: 3 }}>
+              <strong>Returned by finance</strong>
+              {timesheet.financeReturnedByName ? ` by ${timesheet.financeReturnedByName}` : ''}
+              {timesheet.financeReturnedAt ? ` on ${formatTimestamp(timesheet.financeReturnedAt)}` : ''}.
+              {' '}Reason: {timesheet.financeReturnComment}
+            </Alert>
+          )}
 
-                <Divider />
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<CancelIcon />}
-                    onClick={() => openRejectDialog(false)}
-                    disabled={submitting}
-                    fullWidth={isMobile}
+          {(timesheet.status === 'PENDING' || timesheet.status === 'FINANCE_REJECTED') && (
+            <StickyActionBar
+              sx={{ mt: 4 }}
+              secondary={
+                <Stack spacing={0.75}>
+                  <Typography
+                    sx={{
+                      fontFamily: '"Outfit", system-ui, sans-serif',
+                      fontSize: '0.72rem',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.2em',
+                      color: 'text.secondary',
+                    }}
                   >
-                    Reject
-                  </Button>
-                  {nextId && (
-                    <Button
-                      variant="contained"
-                      color="error"
-                      startIcon={<FastForwardIcon />}
-                      onClick={() => openRejectDialog(true)}
-                      disabled={submitting}
-                      fullWidth={isMobile}
-                      sx={{
-                        backgroundColor: '#b22a25',
-                        '&:hover': { backgroundColor: '#8a201c' },
-                      }}
-                    >
-                      Reject & Next
-                    </Button>
-                  )}
+                    Decision
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                    Review totals: {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'} hours for{' '}
+                    {getSubmitterDisplayLabel(timesheet.consultantName)} in the week starting{' '}
+                    {formatWeekStart(timesheet.weekStart)}.
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                    {decisionSummary}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {queueContextMessage}
+                  </Typography>
                 </Stack>
-              </Stack>
-            </Paper>
+              }
+            >
+              <Button
+                variant="contained"
+                color="success"
+                size="large"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => openApproveDialog(false)}
+                disabled={submitting}
+                fullWidth={isMobile}
+              >
+                Approve
+              </Button>
+              {nextId && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="large"
+                  startIcon={<FastForwardIcon />}
+                  onClick={() => openApproveDialog(true)}
+                  disabled={submitting}
+                  fullWidth={isMobile}
+                  sx={{ backgroundColor: '#25562b', '&:hover': { backgroundColor: '#1e4a23' } }}
+                >
+                  Approve & Next
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                color="error"
+                size="large"
+                startIcon={<CancelIcon />}
+                onClick={() => openRejectDialog(false)}
+                disabled={submitting}
+                fullWidth={isMobile}
+              >
+                Reject
+              </Button>
+              {nextId && (
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="large"
+                  startIcon={<FastForwardIcon />}
+                  onClick={() => openRejectDialog(true)}
+                  disabled={submitting}
+                  fullWidth={isMobile}
+                  sx={{
+                    backgroundColor: '#b22a25',
+                    '&:hover': { backgroundColor: '#8a201c' },
+                  }}
+                >
+                  Reject & Next
+                </Button>
+              )}
+            </StickyActionBar>
           )}
 
           <Dialog
@@ -338,8 +397,9 @@ export default function TimesheetReviewPage() {
             <DialogTitle>Approve timesheet?</DialogTitle>
             <DialogContent>
               <DialogContentText>
-                Approving this timesheet will mark it as approved and make it available to finance
-                for payment processing.
+                {isFinanceReturned
+                  ? 'Approving this timesheet will send it back to finance for payment processing.'
+                  : 'Approving this timesheet will mark it as approved and make it available to finance for payment processing.'}
                 {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
             </DialogContent>
@@ -367,19 +427,44 @@ export default function TimesheetReviewPage() {
             <DialogTitle>Reject timesheet?</DialogTitle>
             <DialogContent>
               <DialogContentText sx={{ mb: 2 }}>
-                Rejecting this timesheet will return it to the submitter for changes.
+                Rejecting this timesheet will return it to the employee for changes.
                 {isNextAction && nextId && ' You will be taken to the next pending timesheet.'}
               </DialogContentText>
-              <TextField
-                label="Rejection Comment"
-                multiline
-                minRows={3}
-                fullWidth
-                value={rejectionComment}
-                onChange={(e) => setRejectionComment(e.target.value)}
+              <Stack direction="row" spacing={1} sx={{ mb: 1.5, flexWrap: 'wrap' }} useFlexGap>
+                {REJECTION_PRESETS.map((preset) => (
+                  <Chip
+                    key={preset}
+                    label={preset.length > 32 ? `${preset.slice(0, 30)}…` : preset}
+                    onClick={() => setRejectionComment(preset)}
+                    size="small"
+                    variant="outlined"
+                    disabled={submitting}
+                    sx={{ mb: 0.5 }}
+                  />
+                ))}
+              </Stack>
+              <FieldGroup
+                label="Rejection comment"
+                htmlFor="rejection-comment"
                 required
-                disabled={submitting}
-              />
+                error={
+                  rejectionComment.length > 0 && !rejectionComment.trim()
+                    ? 'Rejection comment cannot be blank.'
+                    : undefined
+                }
+                helper="A clear reason helps the consultant correct and resubmit quickly."
+              >
+                <TextField
+                  id="rejection-comment"
+                  multiline
+                  minRows={3}
+                  fullWidth
+                  value={rejectionComment}
+                  onChange={(e) => setRejectionComment(e.target.value)}
+                  disabled={submitting}
+                  error={rejectionComment.length > 0 && !rejectionComment.trim()}
+                />
+              </FieldGroup>
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setRejectDialogOpen(false)} disabled={submitting}>

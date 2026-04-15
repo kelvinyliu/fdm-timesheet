@@ -44,16 +44,26 @@ const assignmentRow = {
   consultant_name: 'Alex Consultant',
   assigned_at: '2025-03-24T10:00:00Z',
 }
+const authUsers = {
+  [ADMIN_ID]: { user_id: ADMIN_ID, role: 'SYSTEM_ADMIN' },
+  [CONSULTANT_ID]: { user_id: CONSULTANT_ID, role: 'CONSULTANT' },
+}
+
+function mockUsersById(overrides = {}) {
+  userModel.findUserById.mockImplementation(async (id) => overrides[id] ?? authUsers[id] ?? null)
+}
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mockUsersById()
 })
 
 describe('POST /api/manager-assignments', () => {
   it('returns hydrated assignment data on create', async () => {
-    userModel.findUserById
-      .mockResolvedValueOnce({ user_id: MANAGER_ID, role: 'LINE_MANAGER' })
-      .mockResolvedValueOnce({ user_id: CONSULTANT_ID, role: 'CONSULTANT' })
+    mockUsersById({
+      [MANAGER_ID]: { user_id: MANAGER_ID, role: 'LINE_MANAGER' },
+      [CONSULTANT_ID]: { user_id: CONSULTANT_ID, role: 'CONSULTANT' },
+    })
     managerAssignmentModel.createManagerAssignment.mockResolvedValue(assignmentRow)
 
     const res = await request(app)
@@ -73,9 +83,10 @@ describe('POST /api/manager-assignments', () => {
   })
 
   it('allows a line manager submitter to be assigned to a different manager approver', async () => {
-    userModel.findUserById
-      .mockResolvedValueOnce({ user_id: MANAGER_ID, role: 'LINE_MANAGER' })
-      .mockResolvedValueOnce({ user_id: SUBMITTER_MANAGER_ID, role: 'LINE_MANAGER' })
+    mockUsersById({
+      [MANAGER_ID]: { user_id: MANAGER_ID, role: 'LINE_MANAGER' },
+      [SUBMITTER_MANAGER_ID]: { user_id: SUBMITTER_MANAGER_ID, role: 'LINE_MANAGER' },
+    })
     managerAssignmentModel.createManagerAssignment.mockResolvedValue({
       ...assignmentRow,
       consultant_id: SUBMITTER_MANAGER_ID,
@@ -103,7 +114,8 @@ describe('POST /api/manager-assignments', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/own timesheets/)
-    expect(userModel.findUserById).not.toHaveBeenCalled()
+    expect(userModel.findUserById).toHaveBeenCalledTimes(1)
+    expect(userModel.findUserById).toHaveBeenCalledWith(ADMIN_ID)
     expect(managerAssignmentModel.createManagerAssignment).not.toHaveBeenCalled()
   })
 
@@ -115,7 +127,8 @@ describe('POST /api/manager-assignments', () => {
 
     expect(res.status).toBe(400)
     expect(res.body.error).toMatch(/own timesheets/)
-    expect(userModel.findUserById).not.toHaveBeenCalled()
+    expect(userModel.findUserById).toHaveBeenCalledTimes(1)
+    expect(userModel.findUserById).toHaveBeenCalledWith(ADMIN_ID)
     expect(managerAssignmentModel.createManagerAssignment).not.toHaveBeenCalled()
   })
 })
@@ -187,7 +200,10 @@ describe('PATCH /api/manager-assignments/:id', () => {
 
   it('returns 404 when the new manager does not exist', async () => {
     managerAssignmentModel.getManagerAssignmentById.mockResolvedValue(assignmentRow)
-    userModel.findUserById.mockResolvedValueOnce(null)
+    mockUsersById({
+      [MANAGER_ID]: null,
+      [CONSULTANT_ID]: { user_id: CONSULTANT_ID, role: 'CONSULTANT' },
+    })
 
     const res = await request(app)
       .patch(`/api/manager-assignments/${ASSIGNMENT_ID}`)
@@ -200,9 +216,10 @@ describe('PATCH /api/manager-assignments/:id', () => {
 
   it('returns 400 when the new manager is not a line manager', async () => {
     managerAssignmentModel.getManagerAssignmentById.mockResolvedValue(assignmentRow)
-    userModel.findUserById
-      .mockResolvedValueOnce({ user_id: MANAGER_ID, role: 'CONSULTANT' })
-      .mockResolvedValueOnce({ user_id: CONSULTANT_ID, role: 'CONSULTANT' })
+    mockUsersById({
+      [MANAGER_ID]: { user_id: MANAGER_ID, role: 'CONSULTANT' },
+      [CONSULTANT_ID]: { user_id: CONSULTANT_ID, role: 'CONSULTANT' },
+    })
 
     const res = await request(app)
       .patch(`/api/manager-assignments/${ASSIGNMENT_ID}`)
@@ -215,9 +232,10 @@ describe('PATCH /api/manager-assignments/:id', () => {
 
   it('returns 409 when the consultant is already assigned elsewhere', async () => {
     managerAssignmentModel.getManagerAssignmentById.mockResolvedValue(assignmentRow)
-    userModel.findUserById
-      .mockResolvedValueOnce({ user_id: MANAGER_ID, role: 'LINE_MANAGER' })
-      .mockResolvedValueOnce({ user_id: SECOND_CONSULTANT_ID, role: 'CONSULTANT' })
+    mockUsersById({
+      [MANAGER_ID]: { user_id: MANAGER_ID, role: 'LINE_MANAGER' },
+      [SECOND_CONSULTANT_ID]: { user_id: SECOND_CONSULTANT_ID, role: 'CONSULTANT' },
+    })
     const err = new Error('duplicate key')
     err.code = '23505'
     managerAssignmentModel.updateManagerAssignment.mockRejectedValue(err)
@@ -233,9 +251,10 @@ describe('PATCH /api/manager-assignments/:id', () => {
 
   it('returns hydrated assignment data on update', async () => {
     managerAssignmentModel.getManagerAssignmentById.mockResolvedValue(assignmentRow)
-    userModel.findUserById
-      .mockResolvedValueOnce({ user_id: MANAGER_ID, role: 'LINE_MANAGER' })
-      .mockResolvedValueOnce({ user_id: SECOND_CONSULTANT_ID, role: 'CONSULTANT' })
+    mockUsersById({
+      [MANAGER_ID]: { user_id: MANAGER_ID, role: 'LINE_MANAGER' },
+      [SECOND_CONSULTANT_ID]: { user_id: SECOND_CONSULTANT_ID, role: 'CONSULTANT' },
+    })
     managerAssignmentModel.updateManagerAssignment.mockResolvedValue({
       ...assignmentRow,
       manager_name: 'Nina Manager',

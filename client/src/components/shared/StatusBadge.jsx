@@ -18,6 +18,11 @@ const STATUS_STYLES = {
     color: 'var(--ui-status-approved)',
     border: 'var(--ui-status-approved-border)',
   },
+  FINANCE_REJECTED: {
+    bg: 'var(--ui-status-pending-bg)',
+    color: 'var(--ui-status-pending)',
+    border: 'var(--ui-status-pending-border)',
+  },
   REJECTED: {
     bg: 'var(--ui-status-rejected-bg)',
     color: 'var(--ui-status-rejected)',

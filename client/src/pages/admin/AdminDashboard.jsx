@@ -12,21 +12,7 @@ import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount'
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
 import HistoryIcon from '@mui/icons-material/History'
 import DashboardCard from '../../components/shared/DashboardCard'
-
-function getAuditActionLabel(action) {
-  switch (action) {
-    case 'SUBMISSION':
-      return 'Submitted'
-    case 'APPROVAL':
-      return 'Approved'
-    case 'REJECTION':
-      return 'Rejected'
-    case 'PROCESSING':
-      return 'Processed payment'
-    default:
-      return action
-  }
-}
+import { getAuditActionDisplayLabel } from '../../utils/displayLabels.js'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
@@ -97,6 +83,7 @@ export default function AdminDashboard() {
       >
         <Box>
           <Typography
+            component="h1"
             sx={{
               fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
               lineHeight: 1.15,
@@ -299,53 +286,31 @@ export default function AdminDashboard() {
                 </Typography>
               </Box>
             ) : (
-              <Stack spacing={1.5}>
-        {recentActivity.map((item, index) => {
-          const style = ACTION_STYLES[item.action] || ACTION_STYLES.DEFAULT;
-
-          return (
-            <Box
-              key={item.id}
-              sx={{
-                p: 2,
-                borderRadius: '16px',
-                border: '1px solid',
-                borderColor: 'divider',
-                backgroundColor: 'background.paper',
-                transition: 'all 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 2,
-                animation: 'slideIn 0.5s ease backwards',
-                animationDelay: `${index * 0.1}s`,
-                '@keyframes slideIn': {
-                  from: { opacity: 0, transform: 'translateX(-20px)' },
-                  to: { opacity: 1, transform: 'translateX(0)' },
-                },
-                '&:hover': {
-                  transform: 'scale(1.02)',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.05)',
-                  borderColor: style.color,
-                },
-              }}
-            >
-              <Box 
-                sx={{ 
-                  width: 6, 
-                  height: 40, 
-                  borderRadius: 4, 
-                  bgcolor: style.color 
-                }} 
-              />
-
-              <Box sx={{ flexGrow: 1 }}>
-                <Typography variant="body2" fontWeight={700} sx={{ color: style.color }}>
-                  {style.label}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  {item.createdAt ? new Date(item.createdAt).toLocaleString() : 'Unknown time'}
-                </Typography>
-              </Box>
+              <Stack divider={<Divider flexItem />} spacing={0}>
+                {recentActivity.map((item) => (
+                  <Box key={item.id} sx={{ py: 1.75 }}>
+                    <Stack
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1.5}
+                      justifyContent="space-between"
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    >
+                      <Box>
+                        <Typography variant="body2" fontWeight={600} sx={{ mb: 0.35 }}>
+                          {getAuditActionLabel(item.action)}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {item.createdAt
+                            ? new Date(item.createdAt).toLocaleString([], {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : 'Unknown time'}
+                        </Typography>
+                      </Box>
 
               <Chip 
                 label={item.action} 

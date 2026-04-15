@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import ConsultantDashboard from './consultant/ConsultantDashboard.jsx'
 import AdminDashboard from './admin/AdminDashboard.jsx'
+import FinanceDashboard from './financeStaff/FinanceDashboard.jsx'
 import ManagerDashboard from './lineManager/ManagerDashboard.jsx'
 
 const mocks = vi.hoisted(() => ({
@@ -154,5 +155,38 @@ describe('dashboard pages', () => {
     fireEvent.click(screen.getByText('Approved'))
 
     expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets?status=APPROVED_GROUP')
+  })
+
+  it('routes finance dashboard cards to the correct finance tabs', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-1',
+          status: 'APPROVED',
+          consultantName: 'Avery Approved',
+          weekStart: '2026-04-13',
+          updatedAt: '2026-04-14T09:00:00.000Z',
+        },
+        {
+          id: 'ts-2',
+          status: 'COMPLETED',
+          consultantName: 'Casey Completed',
+          weekStart: '2026-04-06',
+          updatedAt: '2026-04-13T09:00:00.000Z',
+        },
+      ],
+      error: null,
+    })
+
+    render(<FinanceDashboard />)
+
+    fireEvent.click(screen.getByText('Awaiting Payment'))
+    expect(mocks.navigate).toHaveBeenLastCalledWith('/finance/timesheets?tab=to-pay')
+
+    fireEvent.click(screen.getByText('Paid'))
+    expect(mocks.navigate).toHaveBeenLastCalledWith('/finance/timesheets?tab=paid')
+
+    fireEvent.click(screen.getByText('Recently Approved'))
+    expect(mocks.navigate).toHaveBeenLastCalledWith('/finance/timesheets?tab=to-pay')
   })
 })

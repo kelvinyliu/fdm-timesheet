@@ -2,6 +2,7 @@ export const TimesheetStatus = Object.freeze({
   DRAFT:    'DRAFT',
   PENDING:  'PENDING',
   APPROVED:  'APPROVED',
+  FINANCE_REJECTED: 'FINANCE_REJECTED',
   REJECTED:  'REJECTED',
   COMPLETED: 'COMPLETED',
 })

@@ -1,5 +1,6 @@
 import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -17,6 +18,11 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import { useAuth } from '../../context/useAuth'
 import { formatCurrency } from '../../utils/currency'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
+import {
+  getConsultantVisibleStatus,
+  isConsultantApprovedStatus,
+  isConsultantPendingStatus,
+} from '../../utils/timesheetWorkflow.js'
 
 export default function ConsultantDashboard() {
   const navigate = useNavigate()
@@ -30,9 +36,9 @@ export default function ConsultantDashboard() {
   const currentWeekStart = getCurrentMonday()
 
   const drafts = timesheets.filter((t) => t.status === 'DRAFT')
-  const pending = timesheets.filter((t) => t.status === 'PENDING')
+  const pending = timesheets.filter((t) => isConsultantPendingStatus(t.status))
   const rejected = timesheets.filter((t) => t.status === 'REJECTED')
-  const approved = timesheets.filter((t) => t.status === 'APPROVED' || t.status === 'COMPLETED')
+  const approved = timesheets.filter((t) => isConsultantApprovedStatus(t.status))
   const editableTimesheets = timesheets.filter(
     (t) => t.status === 'DRAFT' || t.status === 'REJECTED'
   )
@@ -60,7 +66,7 @@ export default function ConsultantDashboard() {
     .filter((ts) => {
       const date = new Date(ts.weekStart)
       return (
-        (ts.status === 'APPROVED' || ts.status === 'COMPLETED') &&
+        isConsultantApprovedStatus(ts.status) &&
         date.getMonth() === currentMonth &&
         date.getFullYear() === currentYear
       )
@@ -68,7 +74,7 @@ export default function ConsultantDashboard() {
     .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
 
   const pendingPayment = timesheets
-    .filter((ts) => ts.status === 'PENDING' || ts.status === 'APPROVED')
+    .filter((ts) => isConsultantPendingStatus(ts.status) || ts.status === 'APPROVED')
     .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
 
   const currentWeekTimesheet = timesheets.find((ts) => ts.weekStart === currentWeekStart)
@@ -104,6 +110,7 @@ export default function ConsultantDashboard() {
         >
           <Box sx={{ flex: 1 }}>
             <Typography
+              component="h1"
               sx={{
                 fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
@@ -251,7 +258,7 @@ export default function ConsultantDashboard() {
             value={drafts.length}
             subtitle="Still being worked on"
             color="#1976D2"
-            onClick={() => navigate('/consultant/timesheets?tab=approved')}
+            onClick={() => navigate('/consultant/timesheets?tab=draft')}
             delay={80}
           />
         </Grid>
@@ -263,7 +270,7 @@ export default function ConsultantDashboard() {
             value={pending.length}
             subtitle="Waiting for review"
             color="#C58A00"
-            onClick={() => navigate('/consultant/timesheets?tab=approved')}
+            onClick={() => navigate('/consultant/timesheets?tab=pending')}
             delay={160}
           />
         </Grid>
@@ -275,7 +282,7 @@ export default function ConsultantDashboard() {
             value={rejected.length}
             subtitle="Needs correction"
             color="#D32F2F"
-            onClick={() => navigate('/consultant/timesheets?tab=approved')}
+            onClick={() => navigate('/consultant/timesheets?tab=rejected')}
             delay={240}
           />
         </Grid>
@@ -358,10 +365,16 @@ export default function ConsultantDashboard() {
                 : `/consultant/timesheets/${ts.id}`
 
               return (
-                <Box
+                <ButtonBase
                   key={ts.id}
+                  component="button"
+                  type="button"
                   onClick={() => navigate(targetPath)}
+                  aria-label={`Open timesheet for ${formatWeekStart(ts.weekStart)}${ts.totalHours != null ? `, ${Number(ts.totalHours).toFixed(2)} hours` : ''}`}
                   sx={{
+                    width: '100%',
+                    display: 'block',
+                    textAlign: 'left',
                     p: 2,
                     borderRadius: 2,
                     border: '1px solid',
@@ -395,9 +408,9 @@ export default function ConsultantDashboard() {
                       </Typography>
                     </Box>
 
-                    <StatusBadge status={ts.status} />
+                    <StatusBadge status={getConsultantVisibleStatus(ts.status)} />
                   </Stack>
-                </Box>
+                </ButtonBase>
               )
             })}
 

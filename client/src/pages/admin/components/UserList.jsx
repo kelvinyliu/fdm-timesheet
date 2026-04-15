@@ -30,22 +30,33 @@ export default function UserList({
   if (isMobile) {
     if (users.length === 0) {
       return (
-        <Paper sx={{ p: 4, textAlign: 'center', borderStyle: 'dashed' }}>
+        <Box
+          sx={{
+            py: 6,
+            textAlign: 'center',
+            borderTop: '1px dashed',
+            borderBottom: '1px dashed',
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             {emptyMessage}
           </Typography>
-        </Paper>
+        </Box>
       )
     }
 
     return (
-      <Stack spacing={1.5}>
+      <Stack
+        divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+        spacing={0}
+      >
         {users.map((user) => {
           const currentRole = pendingRoles[user.id] ?? user.role
           const isDirty = pendingRoles[user.id] !== undefined && pendingRoles[user.id] !== user.role
 
           return (
-            <Paper key={user.id} sx={{ p: 2.5 }}>
+            <Box key={user.id} sx={{ py: 2.5 }}>
               <Stack spacing={2}>
                 <Box>
                   <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
@@ -57,7 +68,17 @@ export default function UserList({
                 </Box>
 
                 <Box>
-                  <Typography variant="caption" sx={{ display: 'block', mb: 0.75 }}>
+                  <Typography
+                    sx={{
+                      display: 'block',
+                      mb: 0.75,
+                      fontSize: '0.68rem',
+                      fontWeight: 500,
+                      color: 'text.secondary',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.18em',
+                    }}
+                  >
                     Role
                   </Typography>
                   <Select
@@ -65,6 +86,7 @@ export default function UserList({
                     fullWidth
                     value={currentRole}
                     onChange={(e) => onRoleChange(user.id, e.target.value)}
+                    inputProps={{ 'aria-label': `Role for ${user.name}` }}
                   >
                     {roles.map((role) => (
                       <MenuItem key={role} value={role}>
@@ -74,20 +96,8 @@ export default function UserList({
                   </Select>
                 </Box>
 
-                <Stack direction="row" spacing={1.5}>
+                <Stack direction="row" spacing={1.5} justifyContent="flex-end">
                   <Button
-                    fullWidth
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    disabled={!isDirty}
-                    onClick={() => {
-                      void onSaveRole(user.id)
-                    }}
-                  >
-                    Save Role
-                  </Button>
-                  <Button
-                    fullWidth
                     variant="outlined"
                     color="error"
                     startIcon={<DeleteIcon />}
@@ -97,9 +107,19 @@ export default function UserList({
                   >
                     Delete
                   </Button>
+                  <Button
+                    variant="contained"
+                    startIcon={<SaveIcon />}
+                    disabled={!isDirty}
+                    onClick={() => {
+                      void onSaveRole(user.id)
+                    }}
+                  >
+                    Save Role
+                  </Button>
                 </Stack>
               </Stack>
-            </Paper>
+            </Box>
           )
         })}
       </Stack>
@@ -141,6 +161,7 @@ export default function UserList({
                       size="small"
                       value={currentRole}
                       onChange={(e) => onRoleChange(user.id, e.target.value)}
+                      inputProps={{ 'aria-label': `Role for ${user.name}` }}
                       sx={{ minWidth: 180, fontSize: '0.85rem' }}
                     >
                       {roles.map((role) => (
@@ -156,6 +177,7 @@ export default function UserList({
                           size="small"
                           color="primary"
                           disabled={!isDirty}
+                          aria-label={`Save role for ${user.name}`}
                           onClick={() => {
                             void onSaveRole(user.id)
                           }}
@@ -171,6 +193,7 @@ export default function UserList({
                     <IconButton
                       size="small"
                       color="error"
+                      aria-label={`Delete ${user.name}`}
                       onClick={() => {
                         void onDeleteUser(user.id, user.name)
                       }}

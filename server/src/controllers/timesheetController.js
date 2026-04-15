@@ -8,6 +8,7 @@ import {
   updateTimesheetStatus,
   getPreviousWeekEntries,
   reviewTimesheet,
+  returnTimesheetToManager,
 } from '../models/timesheetModel.js'
 import { getAssignmentById, getAssignmentByIdIncludingDeleted } from '../models/clientAssignmentModel.js'
 import { findUserById } from '../models/userModel.js'
@@ -177,6 +178,10 @@ async function tryLogAction(payload, req) {
   }
 }
 
+function shouldIncludeFinanceReturn(role) {
+  return role === Role.LINE_MANAGER || role === Role.FINANCE_MANAGER
+}
+
 export async function listTimesheets(req, res, next) {
   try {
     let timesheets
@@ -194,7 +199,13 @@ export async function listTimesheets(req, res, next) {
     }
     const workSummaryMap = await buildWorkSummaryMap(timesheets.map((timesheet) => timesheet.timesheet_id))
     res.json(
-      timesheets.map((timesheet) => timesheetDto(timesheet, workSummaryMap.get(timesheet.timesheet_id) ?? []))
+      timesheets.map((timesheet) =>
+        timesheetDto(
+          timesheet,
+          workSummaryMap.get(timesheet.timesheet_id) ?? [],
+          { includeFinanceReturn: shouldIncludeFinanceReturn(req.user.role) }
+        )
+      )
     )
   } catch (err) {
     next(err)
@@ -299,7 +310,14 @@ export async function getTimesheet(req, res, next) {
       workSummary = await withSuggestedRates(workSummary, timesheet.consultant_id)
     }
 
-    res.json(timesheetWithEntriesDto(timesheet, entries, workSummary))
+    res.json(
+      timesheetWithEntriesDto(
+        timesheet,
+        entries,
+        workSummary,
+        { includeFinanceReturn: shouldIncludeFinanceReturn(req.user.role) }
+      )
+    )
   } catch (err) {
     next(err)
   }
@@ -497,8 +515,11 @@ export async function reviewTimesheetHandler(req, res, next) {
       return res.status(404).json({ error: 'Timesheet not found' })
     }
 
-    if (timesheet.status !== TimesheetStatus.PENDING) {
-      return res.status(409).json({ error: 'Only pending timesheets can be reviewed' })
+    if (
+      timesheet.status !== TimesheetStatus.PENDING &&
+      timesheet.status !== TimesheetStatus.FINANCE_REJECTED
+    ) {
+      return res.status(409).json({ error: 'Only pending or finance-returned timesheets can be reviewed' })
     }
 
     if (sameUuid(timesheet.consultant_id, req.user.userId)) {
@@ -521,7 +542,47 @@ export async function reviewTimesheetHandler(req, res, next) {
       detail: { decision, comment: comment?.trim() ?? null },
     }, req)
 
-    res.json(timesheetDto(updated))
+    res.json(timesheetDto(updated, [], { includeFinanceReturn: true }))
+  } catch (err) {
+    next(err)
+  }
+}
+
+export async function financeReviewTimesheetHandler(req, res, next) {
+  try {
+    if (!requireUuid(res, req.params.id, 'Timesheet id')) return
+
+    const { action, comment } = req.body
+
+    if (action !== 'RETURN') {
+      return res.status(400).json({ error: 'action must be RETURN' })
+    }
+
+    if (!comment?.trim()) {
+      return res.status(400).json({ error: 'comment is required when returning to the line manager' })
+    }
+
+    const timesheet = await getTimesheetById(req.params.id)
+
+    if (!timesheet) {
+      return res.status(404).json({ error: 'Timesheet not found' })
+    }
+
+    if (timesheet.status !== TimesheetStatus.APPROVED) {
+      return res.status(409).json({ error: 'Only approved timesheets can be returned to the line manager' })
+    }
+
+    const trimmedComment = comment.trim()
+    const updated = await returnTimesheetToManager(req.params.id, req.user.userId, trimmedComment)
+
+    await tryLogAction({
+      action: 'FINANCE_RETURN',
+      performedBy: req.user.userId,
+      timesheetId: req.params.id,
+      detail: { comment: trimmedComment },
+    }, req)
+
+    res.json(timesheetDto(updated, [], { includeFinanceReturn: true }))
   } catch (err) {
     next(err)
   }

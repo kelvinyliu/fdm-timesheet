@@ -9,6 +9,7 @@ export default function LateBadge() {
       sx={{
         display: 'inline-flex',
         alignItems: 'center',
+        justifyContent: 'center',
         px: 1.2,
         py: 0.35,
         borderRadius: '6px',

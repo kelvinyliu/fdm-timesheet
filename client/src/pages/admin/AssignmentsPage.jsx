@@ -13,6 +13,7 @@ import SearchIcon from '@mui/icons-material/Search'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
+import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import {
   createAssignment,
   deleteAssignment,
@@ -35,8 +36,12 @@ const EMPTY_MANAGER_FORM = { managerId: '', consultantId: '' }
 
 export default function AssignmentsPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const revalidator = useRevalidator()
+  const [{ tab: activeTab, q: searchQuery }, setQueryState] = useQueryStateObject({
+    tab: 'client',
+    q: '',
+  })
   const {
     users,
     clientAssignments,
@@ -44,8 +49,6 @@ export default function AssignmentsPage() {
     clientError: loadedClientError,
     managerError: loadedManagerError,
   } = useLoaderData()
-  const [activeTab, setActiveTab] = useState(0)
-  const [searchQuery, setSearchQuery] = useState('')
   const [clientError, setClientError] = useSyncedErrorState(loadedClientError)
   const [managerError, setManagerError] = useSyncedErrorState(loadedManagerError)
   const [clientDialogOpen, setClientDialogOpen] = useState(false)
@@ -304,18 +307,22 @@ export default function AssignmentsPage() {
       />
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={(_, newValue) => setActiveTab(newValue)}>
-          <Tab label="Client Assignments" />
-          <Tab label="Manager Assignments" />
+        <Tabs
+          value={activeTab === 'manager' ? 'manager' : 'client'}
+          onChange={(_, newValue) => setQueryState({ tab: newValue })}
+        >
+          <Tab value="client" label={`Client Assignments (${clientAssignments.length})`} />
+          <Tab value="manager" label={`Manager Assignments (${managerAssignments.length})`} />
         </Tabs>
       </Box>
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField
-          placeholder="Search assignments..."
+          label="Search assignments"
+          placeholder="Client or employee"
           size="small"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => setQueryState({ q: e.target.value })}
           sx={{ minWidth: 250, flexGrow: { xs: 1, sm: 0 } }}
           slotProps={{
             input: {
@@ -328,7 +335,7 @@ export default function AssignmentsPage() {
           }}
         />
         <Box sx={{ flexGrow: 1 }} />
-        {activeTab === 0 ? (
+        {activeTab !== 'manager' ? (
           <Button variant="contained" startIcon={<AddIcon />} onClick={openClientDialog}>
             Add Client Assignment
           </Button>
@@ -339,7 +346,7 @@ export default function AssignmentsPage() {
         )}
       </Box>
 
-      {activeTab === 0 ? (
+      {activeTab !== 'manager' ? (
         <ClientAssignmentsPanel
           assignments={filteredClientAssignments}
           isMobile={isMobile}

@@ -1,7 +1,7 @@
 -- Enums
 CREATE TYPE user_role AS ENUM ('CONSULTANT', 'LINE_MANAGER', 'FINANCE_MANAGER', 'SYSTEM_ADMIN');
-CREATE TYPE timesheet_status AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'COMPLETED');
-CREATE TYPE audit_action AS ENUM ('SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING');
+CREATE TYPE timesheet_status AS ENUM ('DRAFT', 'PENDING', 'APPROVED', 'FINANCE_REJECTED', 'REJECTED', 'COMPLETED');
+CREATE TYPE audit_action AS ENUM ('SUBMISSION', 'APPROVAL', 'REJECTION', 'FINANCE_RETURN', 'PROCESSING');
 CREATE TYPE payment_status AS ENUM ('COMPLETED', 'PENDING');
 
 -- Users (all roles in one table)
@@ -76,6 +76,15 @@ CREATE TABLE reviews (
   decision     VARCHAR(10) NOT NULL CHECK (decision IN ('APPROVED', 'REJECTED')),
   comment      TEXT,
   review_date  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Finance returns (finance decision to send an approved sheet back to the line manager)
+CREATE TABLE finance_returns (
+  return_id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  timesheet_id UUID NOT NULL REFERENCES timesheets(timesheet_id) ON DELETE CASCADE,
+  returned_by  UUID NOT NULL REFERENCES users(user_id),
+  comment      TEXT NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Payments (one per approved timesheet)

@@ -1,5 +1,6 @@
-import { render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import TimesheetListPage from './TimesheetListPage.jsx'
 
 const mocks = vi.hoisted(() => ({
@@ -94,11 +95,13 @@ describe('TimesheetListPage', () => {
       eligibilityError: null,
     })
 
-    render(<TimesheetListPage />)
+    render(
+      <MemoryRouter initialEntries={['/consultant/timesheets']}>
+        <TimesheetListPage />
+      </MemoryRouter>
+    )
 
-    expect(
-      screen.getByRole('button', { name: 'New Timesheet' })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'New Timesheet' })).toBeInTheDocument()
 
     expect(within(screen.getByText('Drafts').closest('div')).getByText('1')).toBeInTheDocument()
     expect(within(screen.getByText('Pending').closest('div')).getByText('1')).toBeInTheDocument()
@@ -106,5 +109,65 @@ describe('TimesheetListPage', () => {
     expect(
       within(screen.getByText('Approved / Paid').closest('div')).getByText('2')
     ).toBeInTheDocument()
+  })
+
+  it('preserves the selected tab in navigation state when leaving the list', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-completed',
+          weekStart: '2026-04-20',
+          totalHours: 41,
+          status: 'COMPLETED',
+          workSummary: [],
+        },
+      ],
+      eligibility: {
+        currentWeekStart: '2026-04-27',
+        missingPastWeekStarts: [],
+      },
+      error: null,
+      eligibilityError: null,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/consultant/timesheets?tab=history']}>
+        <TimesheetListPage />
+      </MemoryRouter>
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'View' }))
+
+    expect(mocks.navigate).toHaveBeenCalledWith('/consultant/timesheets/ts-completed', {
+      state: { returnTo: '/consultant/timesheets?tab=history' },
+    })
+  })
+
+  it('treats the legacy approved tab query as the approved and paid tab', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-completed',
+          weekStart: '2026-04-20',
+          totalHours: 41,
+          status: 'COMPLETED',
+          workSummary: [],
+        },
+      ],
+      eligibility: {
+        currentWeekStart: '2026-04-27',
+        missingPastWeekStarts: [],
+      },
+      error: null,
+      eligibilityError: null,
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/consultant/timesheets?tab=approved']}>
+        <TimesheetListPage />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByRole('button', { name: 'View' })).toBeInTheDocument()
   })
 })

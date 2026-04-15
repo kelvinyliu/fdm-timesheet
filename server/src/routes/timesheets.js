@@ -11,6 +11,7 @@ import {
   submitTimesheet,
   autofillTimesheet,
   reviewTimesheetHandler,
+  financeReviewTimesheetHandler,
   processPaymentHandler,
   getNotesHandler,
 } from '../controllers/timesheetController.js'
@@ -27,6 +28,7 @@ router.put('/:id/entries', requireRole(Role.CONSULTANT, Role.LINE_MANAGER), upda
 router.post('/:id/submit', requireRole(Role.CONSULTANT, Role.LINE_MANAGER), submitTimesheet)
 router.get('/:id/autofill', requireRole(Role.CONSULTANT, Role.LINE_MANAGER), autofillTimesheet)
 router.patch('/:id/review', requireRole(Role.LINE_MANAGER), reviewTimesheetHandler)
+router.patch('/:id/finance-review', requireRole(Role.FINANCE_MANAGER), financeReviewTimesheetHandler)
 router.post('/:id/payment', requireRole(Role.FINANCE_MANAGER), processPaymentHandler)
 router.get('/:id/notes', requireRole(Role.FINANCE_MANAGER), getNotesHandler)
 

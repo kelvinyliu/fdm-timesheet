@@ -25,6 +25,13 @@ export async function getManagerAssignments(requestOptions = {}) {
   return apiClient('/api/manager-assignments', requestOptions)
 }
 
+export async function getMyManager(options = {}, requestOptions = {}) {
+  const params = new URLSearchParams()
+  if (options.timesheetId) params.set('timesheetId', options.timesheetId)
+  const query = params.toString()
+  return apiClient(`/api/manager-assignments/me${query ? `?${query}` : ''}`, requestOptions)
+}
+
 export async function createManagerAssignment(body) {
   return apiClient('/api/manager-assignments', {
     method: 'POST',

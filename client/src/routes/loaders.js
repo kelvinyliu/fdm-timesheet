@@ -1,5 +1,10 @@
 import { redirect } from 'react-router'
-import { getAllAssignments, getAssignments, getManagerAssignments } from '../api/assignments.js'
+import {
+  getAllAssignments,
+  getAssignments,
+  getManagerAssignments,
+  getMyManager,
+} from '../api/assignments.js'
 import { getAuditLog } from '../api/audit.js'
 import {
   getEligibleWeeks,
@@ -105,12 +110,18 @@ export function createTimesheetCreateLoader({
 } = {}) {
   return async function timesheetCreateLoader({ request }) {
     const weekStart = getCurrentMonday()
+    const managerPromise = getMyManager({}, { signal: request.signal })
+      .then((managerInfo) => ({ managerInfo, managerError: null }))
+      .catch((err) => ({
+        managerInfo: null,
+        managerError: getErrorMessage(err, 'Failed to load sheet manager.'),
+      }))
 
     try {
-      const allTimesheets = await getTimesheets(
-        { scope: timesheetScope },
-        { signal: request.signal }
-      )
+      const [allTimesheets, managerResult] = await Promise.all([
+        getTimesheets({ scope: timesheetScope }, { signal: request.signal }),
+        managerPromise,
+      ])
       const currentWeekTimesheet = getTimesheetForWeek(allTimesheets, weekStart)
 
       if (currentWeekTimesheet) {
@@ -120,10 +131,18 @@ export function createTimesheetCreateLoader({
         return redirect(destination)
       }
 
-      return { weekStart, error: null }
-    } catch (err) {
       return {
         weekStart,
+        managerInfo: managerResult.managerInfo,
+        managerError: managerResult.managerError,
+        error: null,
+      }
+    } catch (err) {
+      const managerResult = await managerPromise
+      return {
+        weekStart,
+        managerInfo: managerResult.managerInfo,
+        managerError: managerResult.managerError,
         error: getErrorMessage(
           err,
           'Unable to confirm whether a current-week timesheet already exists.'
@@ -138,11 +157,24 @@ export function createTimesheetEditLoader({
   timesheetScope,
 } = {}) {
   return async function timesheetEditLoader({ params, request }) {
+    const managerPromise = getMyManager(
+      { timesheetId: params.id },
+      { signal: request.signal }
+    )
+      .then((managerInfo) => ({ managerInfo, managerError: null }))
+      .catch((err) => ({
+        managerInfo: null,
+        managerError: getErrorMessage(err, 'Failed to load sheet manager.'),
+      }))
+
     try {
-      const [timesheet, assignments, allTimesheets] = await Promise.all([
-        getTimesheet(params.id, { signal: request.signal }),
-        getAssignments({ signal: request.signal }),
-        getTimesheets({ scope: timesheetScope }, { signal: request.signal }),
+      const [[timesheet, assignments, allTimesheets], managerResult] = await Promise.all([
+        Promise.all([
+          getTimesheet(params.id, { signal: request.signal }),
+          getAssignments({ signal: request.signal }),
+          getTimesheets({ scope: timesheetScope }, { signal: request.signal }),
+        ]),
+        managerPromise,
       ])
 
       if (!isConsultantEditableStatus(timesheet.status)) {
@@ -153,13 +185,18 @@ export function createTimesheetEditLoader({
         timesheet,
         assignments,
         preferredAssignmentId: getMostRecentClientAssignmentId(allTimesheets, params.id),
+        managerInfo: managerResult.managerInfo,
+        managerError: managerResult.managerError,
         error: null,
       }
     } catch (err) {
+      const managerResult = await managerPromise
       return {
         timesheet: null,
         assignments: [],
         preferredAssignmentId: null,
+        managerInfo: managerResult.managerInfo,
+        managerError: managerResult.managerError,
         error: getErrorMessage(err, 'Failed to load timesheet'),
       }
     }
@@ -260,11 +297,35 @@ export async function auditLogLoader({ request }) {
 }
 
 export async function timesheetDetailLoader({ params, request }) {
+  const managerPromise = getMyManager(
+    { timesheetId: params.id },
+    { signal: request.signal }
+  )
+    .then((managerInfo) => ({ managerInfo, managerError: null }))
+    .catch((err) => ({
+      managerInfo: null,
+      managerError: getErrorMessage(err, 'Failed to load sheet manager.'),
+    }))
+
   try {
-    const timesheet = await getTimesheet(params.id, { signal: request.signal })
-    return { timesheet, error: null }
+    const [timesheet, managerResult] = await Promise.all([
+      getTimesheet(params.id, { signal: request.signal }),
+      managerPromise,
+    ])
+    return {
+      timesheet,
+      managerInfo: managerResult.managerInfo,
+      managerError: managerResult.managerError,
+      error: null,
+    }
   } catch (err) {
-    return { timesheet: null, error: err.message ?? 'Failed to load timesheet' }
+    const managerResult = await managerPromise
+    return {
+      timesheet: null,
+      managerInfo: managerResult.managerInfo,
+      managerError: managerResult.managerError,
+      error: err.message ?? 'Failed to load timesheet',
+    }
   }
 }
 

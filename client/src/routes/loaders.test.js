@@ -8,6 +8,7 @@ import {
   createTimesheetEditLoader,
   createTimesheetListLoader,
   financeTimesheetListLoader,
+  timesheetDetailLoader,
   timesheetReviewLoader,
 } from './loaders.js'
 
@@ -15,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   getAllAssignments: vi.fn(),
   getAssignments: vi.fn(),
   getManagerAssignments: vi.fn(),
+  getMyManager: vi.fn(),
   getAuditLog: vi.fn(),
   getEligibleWeeks: vi.fn(),
   getTimesheet: vi.fn(),
@@ -29,6 +31,7 @@ vi.mock('../api/assignments.js', () => ({
   getAllAssignments: mocks.getAllAssignments,
   getAssignments: mocks.getAssignments,
   getManagerAssignments: mocks.getManagerAssignments,
+  getMyManager: mocks.getMyManager,
 }))
 
 vi.mock('../api/audit.js', () => ({
@@ -59,6 +62,14 @@ describe('route loaders', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.getCurrentMonday.mockReturnValue('2026-04-06')
+    mocks.getMyManager.mockResolvedValue({
+      manager: {
+        id: 'manager-1',
+        name: 'Lina Manager',
+        email: 'lina@example.com',
+      },
+      source: 'current',
+    })
   })
 
   it('loads consultant timesheets and missing-week eligibility together', async () => {
@@ -106,6 +117,15 @@ describe('route loaders', () => {
 
     await expect(loader({ request })).resolves.toEqual({
       weekStart: '2026-04-06',
+      managerInfo: {
+        manager: {
+          id: 'manager-1',
+          name: 'Lina Manager',
+          email: 'lina@example.com',
+        },
+        source: 'current',
+      },
+      managerError: null,
       error: 'Timesheet lookup unavailable',
     })
     expect(mocks.getTimesheets).toHaveBeenCalledWith({}, { signal: request.signal })
@@ -136,6 +156,56 @@ describe('route loaders', () => {
       timesheet,
       assignments,
       preferredAssignmentId: 'assignment-1',
+      managerInfo: {
+        manager: {
+          id: 'manager-1',
+          name: 'Lina Manager',
+          email: 'lina@example.com',
+        },
+        source: 'current',
+      },
+      managerError: null,
+      error: null,
+    })
+  })
+
+  it('keeps editable timesheet data when manager lookup fails', async () => {
+    const request = createRequest('/consultant/timesheets/ts-2/edit')
+    const loader = createTimesheetEditLoader()
+    const timesheet = { id: 'ts-2', status: 'DRAFT', entries: [] }
+
+    mocks.getTimesheet.mockResolvedValue(timesheet)
+    mocks.getAssignments.mockResolvedValue([])
+    mocks.getTimesheets.mockResolvedValue([timesheet])
+    mocks.getMyManager.mockRejectedValue(new Error('Manager service unavailable'))
+
+    await expect(loader({ params: { id: 'ts-2' }, request })).resolves.toEqual({
+      timesheet,
+      assignments: [],
+      preferredAssignmentId: null,
+      managerInfo: null,
+      managerError: 'Manager service unavailable',
+      error: null,
+    })
+  })
+
+  it('loads detail timesheet data with manager info', async () => {
+    const request = createRequest('/consultant/timesheets/ts-2')
+    const timesheet = { id: 'ts-2', status: 'PENDING' }
+
+    mocks.getTimesheet.mockResolvedValue(timesheet)
+
+    await expect(timesheetDetailLoader({ params: { id: 'ts-2' }, request })).resolves.toEqual({
+      timesheet,
+      managerInfo: {
+        manager: {
+          id: 'manager-1',
+          name: 'Lina Manager',
+          email: 'lina@example.com',
+        },
+        source: 'current',
+      },
+      managerError: null,
       error: null,
     })
   })

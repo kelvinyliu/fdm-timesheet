@@ -283,7 +283,7 @@ export default function LoginPage() {
             Welcome Back
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mb: 4 }}>
-            Sign in to your account to continue. Use the same work email you use for timesheet access.
+            Sign in with your work email to continue.
           </Typography>
 
           {error && (

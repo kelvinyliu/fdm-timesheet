@@ -9,6 +9,7 @@ import SendIcon from '@mui/icons-material/Send'
 import AutoFixHighIcon from '@mui/icons-material/AutoFixHigh'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import EditableWeeklyMatrix from '../../components/shared/EditableWeeklyMatrix.jsx'
+import DetailList from '../../components/shared/DetailList.jsx'
 import PageHeader from '../../components/shared/PageHeader'
 import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
 import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
@@ -16,6 +17,7 @@ import { useConfirmation } from '../../context/useConfirmation.js'
 import { useGuardedNavigate, useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { updateEntries, submitTimesheet, autofillTimesheet } from '../../api/timesheets'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
+import { getSheetManagerDisplayLabel } from '../../utils/displayLabels'
 import { buildAutofillEntries, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import {
   entriesToEditableMatrixRows,
@@ -71,7 +73,14 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   const navigate = useNavigate()
   const guardedNavigate = useGuardedNavigate()
   const location = useLocation()
-  const { timesheet, assignments, preferredAssignmentId, error: fetchError } = useLoaderData()
+  const {
+    timesheet,
+    assignments,
+    preferredAssignmentId,
+    managerInfo,
+    managerError,
+    error: fetchError,
+  } = useLoaderData()
   const localIdRef = useRef(0)
   const autofillWarningShown = useRef(false)
   const { confirm } = useConfirmation()
@@ -139,6 +148,11 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   )
   const isBusy = saving || submitting || autofilling
   const canChangeBuckets = isConsultantEditableStatus(timesheet?.status)
+  const managerLabel =
+    managerInfo?.source === 'snapshot' || managerInfo?.source === 'legacy_fallback'
+      ? 'Sheet Manager'
+      : 'Current Sheet Manager'
+  const isSubmitBlockedForMissingManager = !managerError && !managerInfo?.manager
 
   const totalHours = getMatrixTotalHours(matrixRows, weekDates)
 
@@ -273,6 +287,10 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
 
   async function handleSubmit() {
     if (!validateMatrixRows()) return
+    if (isSubmitBlockedForMissingManager) {
+      showSnackbar('Assign a sheet manager before submitting this timesheet.', 'warning')
+      return
+    }
 
     const result = await confirm({
       variant: 'info',
@@ -284,6 +302,13 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
       summaryItems: [
         { key: 'week', label: 'Week of', value: formatWeekStart(timesheet.weekStart) },
         { key: 'hours', label: 'Total hours', value: `${totalHours.toFixed(2)}h` },
+        {
+          key: 'manager',
+          label: managerLabel,
+          value: managerError
+            ? 'Unable to load sheet manager'
+            : getSheetManagerDisplayLabel(managerInfo?.manager),
+        },
       ],
     })
 
@@ -402,6 +427,34 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         </Alert>
       )}
 
+      {managerError && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          {managerError} You can keep editing and try submission again later.
+        </Alert>
+      )}
+
+      {!managerError && !managerInfo?.manager && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          No manager is currently assigned. This draft can still be edited, but submission is
+          blocked until an approver is assigned.
+        </Alert>
+      )}
+
+      <Box sx={{ mb: 3, p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+        <DetailList
+          items={[
+            {
+              key: 'manager',
+              label: managerLabel,
+              value: managerError
+                ? 'Unable to load sheet manager'
+                : getSheetManagerDisplayLabel(managerInfo?.manager),
+            },
+          ]}
+          rowGap={1}
+        />
+      </Box>
+
       {assignments.length === 0 && archivedAssignments.length === 0 && (
         <Alert severity="info" sx={{ mb: 3 }}>
           No client assignments are currently available. You can still record Internal work.
@@ -453,7 +506,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
           onClick={() => {
             void handleSubmit()
           }}
-          disabled={isBusy}
+          disabled={isBusy || isSubmitBlockedForMissingManager}
           size="large"
         >
           {submitting ? 'Submitting...' : 'Submit'}

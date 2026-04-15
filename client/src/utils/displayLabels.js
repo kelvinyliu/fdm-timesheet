@@ -83,3 +83,13 @@ export function getAuditActionDisplayLabel(action) {
       return action ?? 'Unknown'
   }
 }
+
+export function getSheetManagerDisplayLabel(manager) {
+  if (!manager) return 'No manager assigned'
+  if (hasText(manager.name) && hasText(manager.email)) {
+    return `${manager.name} <${manager.email}>`
+  }
+  if (hasText(manager.name)) return manager.name
+  if (hasText(manager.email)) return manager.email
+  return 'No manager assigned'
+}

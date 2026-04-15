@@ -73,6 +73,15 @@ describe('TimesheetDetailPage', () => {
     })
     mocks.useLoaderData.mockReturnValue({
       error: null,
+      managerInfo: {
+        manager: {
+          id: 'manager-1',
+          name: 'Lina Manager',
+          email: 'lina@example.com',
+        },
+        source: 'snapshot',
+      },
+      managerError: null,
       timesheet: {
         id: 'ts-1',
         entries: [],
@@ -124,5 +133,12 @@ describe('TimesheetDetailPage', () => {
     render(<TimesheetDetailPage />)
 
     expect(screen.queryByText('You were paid')).not.toBeInTheDocument()
+  })
+
+  it('shows the sheet manager summary value', () => {
+    render(<TimesheetDetailPage />)
+
+    expect(screen.getByText('Sheet Manager')).toBeInTheDocument()
+    expect(screen.getByText('Lina Manager <lina@example.com>')).toBeInTheDocument()
   })
 })

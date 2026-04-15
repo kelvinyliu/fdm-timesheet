@@ -7,13 +7,15 @@ import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import PageHeader from '../../components/shared/PageHeader'
+import DetailList from '../../components/shared/DetailList.jsx'
 import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
+import { getSheetManagerDisplayLabel } from '../../utils/displayLabels'
 
 export default function TimesheetCreatePage({ basePath = '/consultant/timesheets' }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { weekStart, error: loadError } = useLoaderData()
+  const { weekStart, error: loadError, managerInfo, managerError } = useLoaderData()
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
   const returnTo = location.state?.returnTo ?? basePath
@@ -44,7 +46,15 @@ export default function TimesheetCreatePage({ basePath = '/consultant/timesheets
       <Box sx={{ maxWidth: 560 }}>
         <Stack spacing={3}>
           {loadError && <Alert severity="warning">{loadError}</Alert>}
+          {managerError && <Alert severity="warning">{managerError}</Alert>}
           {submitError && <Alert severity="error">{submitError}</Alert>}
+
+          {!managerError && !managerInfo?.manager && (
+            <Alert severity="info">
+              No manager is currently assigned. You can create a draft, but submission will stay
+              blocked until an approver is assigned.
+            </Alert>
+          )}
 
           <Box>
             <Typography variant="body1" sx={{ mb: 1 }}>
@@ -55,6 +65,21 @@ export default function TimesheetCreatePage({ basePath = '/consultant/timesheets
               You can split a day across multiple clients and non-client work after the draft is
               created.
             </Typography>
+          </Box>
+
+          <Box sx={{ p: 2.5, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+            <DetailList
+              items={[
+                {
+                  key: 'manager',
+                  label: 'Current Sheet Manager',
+                  value: managerError
+                    ? 'Unable to load sheet manager'
+                    : getSheetManagerDisplayLabel(managerInfo?.manager),
+                },
+              ]}
+              rowGap={1}
+            />
           </Box>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>

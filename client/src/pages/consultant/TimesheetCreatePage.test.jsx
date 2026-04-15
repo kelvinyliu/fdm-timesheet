@@ -44,6 +44,15 @@ describe('TimesheetCreatePage', () => {
     mocks.useLoaderData.mockReturnValue({
       weekStart: '2026-04-27',
       error: null,
+      managerInfo: {
+        manager: {
+          id: 'manager-1',
+          name: 'Lina Manager',
+          email: 'lina@example.com',
+        },
+        source: 'current',
+      },
+      managerError: null,
     })
     mocks.useLocation.mockReturnValue({
       pathname: '/consultant/timesheets/new',
@@ -77,5 +86,12 @@ describe('TimesheetCreatePage', () => {
       replace: true,
       state: { returnTo: '/consultant/timesheets?tab=history' },
     })
+  })
+
+  it('shows the current sheet manager details', () => {
+    render(<TimesheetCreatePage />)
+
+    expect(screen.getByText('Current Sheet Manager')).toBeInTheDocument()
+    expect(screen.getByText('Lina Manager <lina@example.com>')).toBeInTheDocument()
   })
 })

@@ -12,7 +12,11 @@ import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDispl
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { formatCurrency } from '../../utils/currency.js'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
-import { getWorkBucketDisplayLabel, getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
+import {
+  getSheetManagerDisplayLabel,
+  getWorkBucketDisplayLabel,
+  getWorkSummaryDisplayLabel,
+} from '../../utils/displayLabels'
 import { getConsultantVisibleStatus, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
 
@@ -20,7 +24,7 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
   const { id } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const { timesheet, error } = useLoaderData()
+  const { timesheet, error, managerInfo, managerError } = useLoaderData()
   const returnTo = location.state?.returnTo ?? basePath
 
   if (error) {
@@ -40,6 +44,10 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
   const workSummary = timesheet.workSummary ?? []
   const hasManagerFeedback =
     timesheet.status === 'REJECTED' && Boolean(timesheet.rejectionComment)
+  const managerLabel =
+    managerInfo?.source === 'snapshot' || managerInfo?.source === 'legacy_fallback'
+      ? 'Sheet Manager'
+      : 'Current Sheet Manager'
   const detailItems = [
     {
       key: 'week',
@@ -75,6 +83,13 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
       key: 'buckets',
       label: 'Work Categories',
       value: getWorkSummaryDisplayLabel(workSummary, 3),
+    },
+    {
+      key: 'manager',
+      label: managerLabel,
+      value: managerError
+        ? 'Unable to load sheet manager'
+        : getSheetManagerDisplayLabel(managerInfo?.manager),
     },
     ...(timesheet.status === 'COMPLETED' && timesheet.totalPayAmount != null
       ? [
@@ -120,6 +135,12 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
       {hasManagerFeedback && (
         <Alert severity="error" sx={{ mb: 3 }}>
           <strong>Rejected:</strong> {timesheet.rejectionComment}
+        </Alert>
+      )}
+
+      {managerError && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          {managerError}
         </Alert>
       )}
 

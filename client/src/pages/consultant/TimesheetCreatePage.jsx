@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLoaderData, useNavigate } from 'react-router'
+import { useLoaderData, useLocation, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
@@ -11,17 +11,22 @@ import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart } from '../../utils/dateFormatters'
 
 export default function TimesheetCreatePage({ basePath = '/consultant/timesheets' }) {
+  const location = useLocation()
   const navigate = useNavigate()
   const { weekStart, error: loadError } = useLoaderData()
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState(null)
+  const returnTo = location.state?.returnTo ?? basePath
 
   async function handleCreate() {
     setSubmitError(null)
     setSubmitting(true)
     try {
       const newTimesheet = await createTimesheet({ weekStart })
-      navigate(`${basePath}/${newTimesheet.id}/edit`, { replace: true })
+      navigate(`${basePath}/${newTimesheet.id}/edit`, {
+        replace: true,
+        state: { returnTo },
+      })
     } catch (err) {
       setSubmitError(err.message ?? 'Failed to create timesheet.')
       setSubmitting(false)
@@ -31,7 +36,7 @@ export default function TimesheetCreatePage({ basePath = '/consultant/timesheets
   return (
     <Box>
       <PageHeader title="New Timesheet" subtitle={`Week of ${formatWeekStart(weekStart)}`}>
-        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(returnTo)}>
           Back
         </Button>
       </PageHeader>
@@ -56,7 +61,7 @@ export default function TimesheetCreatePage({ basePath = '/consultant/timesheets
             <Button variant="contained" onClick={handleCreate} disabled={submitting}>
               {submitting ? 'Creating...' : 'Create Timesheet'}
             </Button>
-            <Button variant="outlined" onClick={() => navigate(basePath)} disabled={submitting}>
+            <Button variant="outlined" onClick={() => navigate(returnTo)} disabled={submitting}>
               Cancel
             </Button>
           </Stack>

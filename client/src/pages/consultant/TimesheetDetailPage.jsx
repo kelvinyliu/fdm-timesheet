@@ -1,4 +1,4 @@
-import { useNavigate, useParams, useLoaderData } from 'react-router'
+import { useLoaderData, useLocation, useNavigate, useParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -17,8 +17,10 @@ import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
 
 export default function TimesheetDetailPage({ basePath = '/consultant/timesheets' }) {
   const { id } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const { timesheet, error } = useLoaderData()
+  const returnTo = location.state?.returnTo ?? basePath
 
   if (error) {
     return (
@@ -26,7 +28,7 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(returnTo)}>
           Back to Timesheets
         </Button>
       </Box>
@@ -83,12 +85,12 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
           <Button
             variant="contained"
             startIcon={<EditIcon />}
-            onClick={() => navigate(`${basePath}/${id}/edit`)}
+            onClick={() => navigate(`${basePath}/${id}/edit`, { state: { returnTo } })}
           >
             Edit
           </Button>
         )}
-        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(returnTo)}>
           Back
         </Button>
       </PageHeader>

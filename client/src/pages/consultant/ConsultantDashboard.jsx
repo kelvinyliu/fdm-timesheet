@@ -110,6 +110,8 @@ export default function ConsultantDashboard() {
   const { timesheets, error } = useLoaderData()
 
   const firstName = user?.name?.split(' ')[0] || 'there'
+  const defaultPayRate = Number(user?.defaultPayRate)
+  const hasDefaultPayRate = Number.isFinite(defaultPayRate) && defaultPayRate > 0
   const now = new Date()
   const currentMonth = now.getMonth()
   const currentYear = now.getFullYear()
@@ -143,18 +145,26 @@ export default function ConsultantDashboard() {
 
   const monthlyEarnings = timesheets
     .filter((ts) => {
-      const date = new Date(ts.weekStart)
-      return (
-        (ts.status === 'APPROVED' || ts.status === 'COMPLETED') &&
-        date.getMonth() === currentMonth &&
-        date.getFullYear() === currentYear
-      )
+      if (ts.status !== 'COMPLETED') return false
+
+      const paidDate = new Date(ts.updatedAt || ts.weekStart)
+      return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear
     })
-    .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
+    .reduce((acc, ts) => acc + (ts.totalPayAmount || 0), 0)
 
   const pendingPayment = timesheets
-    .filter((ts) => ts.status === 'PENDING' || ts.status === 'APPROVED')
-    .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
+    .filter((ts) => ts.status === 'APPROVED')
+    .reduce((acc, ts) => {
+      if (ts.totalPayAmount != null) {
+        return acc + Number(ts.totalPayAmount)
+      }
+
+      if (hasDefaultPayRate) {
+        return acc + (Number(ts.totalHours) || 0) * defaultPayRate
+      }
+
+      return acc
+    }, 0)
 
   const currentWeekTimesheet = timesheets.find((ts) => ts.weekStart === currentWeekStart)
   const hoursThisWeek = Number(currentWeekTimesheet?.totalHours) || 0

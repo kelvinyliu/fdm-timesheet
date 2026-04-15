@@ -291,7 +291,7 @@ export default function FinanceDashboard() {
           label="Workload"
           value={totalApprovedHours}
           suffix="hrs"
-          onClick={() => navigate('/finance/timesheets?status=APPROVED')}
+          onClick={() => navigate('/finance/timesheets')}
         />
         <FigureCell
           label="YTD margin"

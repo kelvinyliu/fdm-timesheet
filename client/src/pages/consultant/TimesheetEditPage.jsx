@@ -75,6 +75,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   const localIdRef = useRef(0)
   const autofillWarningShown = useRef(false)
   const { confirm } = useConfirmation()
+  const returnTo = location.state?.returnTo ?? basePath
 
   const [matrixRows, setMatrixRows] = useState(() =>
     entriesToEditableMatrixRows(timesheet?.entries ?? [], nextLocalId)
@@ -107,8 +108,22 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
       message: autofillFeedback.message,
       severity: autofillFeedback.severity,
     })
-    navigate(location.pathname, { replace: true, state: null })
-  }, [location.pathname, location.state, navigate])
+    const {
+      autofillFeedback: _autofillFeedback,
+      autofillWarning: _autofillWarning,
+      ...nextState
+    } = location.state ?? {}
+    navigate(
+      {
+        pathname: location.pathname,
+        search: location.search,
+      },
+      {
+        replace: true,
+        state: Object.keys(nextState).length > 0 ? nextState : null,
+      }
+    )
+  }, [location.pathname, location.search, location.state, navigate])
 
   useEffect(() => {
     localIdRef.current = 0
@@ -279,7 +294,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
       await updateEntries(id, currentEntriesPayload)
       setSavedEntriesSnapshot(serializeEntries(currentEntriesPayload))
       await submitTimesheet(id)
-      navigate(`${basePath}/${id}`)
+      navigate(`${basePath}/${id}`, { state: { returnTo } })
     } catch (err) {
       showSnackbar(err.message ?? 'Failed to submit timesheet.', 'error')
       setSubmitting(false)
@@ -351,7 +366,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         <Alert severity="error" sx={{ mb: 3 }}>
           {fetchError}
         </Alert>
-        <Button variant="outlined" onClick={() => guardedNavigate(basePath)}>
+        <Button variant="outlined" onClick={() => guardedNavigate(returnTo)}>
           Back to Timesheets
         </Button>
       </Box>
@@ -367,7 +382,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
-          onClick={() => guardedNavigate(basePath)}
+          onClick={() => guardedNavigate(returnTo)}
         >
           Back
         </Button>

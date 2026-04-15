@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLoaderData, useNavigate } from 'react-router'
+import { useLoaderData, useLocation, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -28,6 +28,8 @@ import VisibilityIcon from '@mui/icons-material/Visibility'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import MobileDetailDrawer from '../../components/shared/MobileDetailDrawer.jsx'
+import useQueryState from '../../hooks/useQueryState.js'
 import { createTimesheet } from '../../api/timesheets'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
 import { getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
@@ -39,13 +41,23 @@ export default function TimesheetListPage({
   subtitle = 'View and manage your weekly timesheets',
 }) {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const location = useLocation()
   const navigate = useNavigate()
   const { timesheets, eligibility, error: loadError, eligibilityError } = useLoaderData()
   const [error, setError] = useState(loadError)
   const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
   const [creatingWeekStart, setCreatingWeekStart] = useState(null)
-  const [activeTab, setActiveTab] = useState(0)
+  const [selectedMobileId, setSelectedMobileId] = useState(null)
+  const [tab, setTab] = useQueryState('tab', 'active')
+  const activeTab = tab === 'history' ? 1 : 0
+  const returnTo = `${location.pathname}${location.search}`
+
+  const selectedMobileTimesheet = timesheets.find((ts) => ts.id === selectedMobileId)
+  const isMobileEditable = selectedMobileTimesheet ? isConsultantEditableStatus(selectedMobileTimesheet.status) : false
+  const mobileActionLabel = isMobileEditable ? 'Edit Timesheet' : 'View Timesheet'
+  const MobileActionIcon = selectedMobileTimesheet && isMobileEditable ? EditIcon : VisibilityIcon
+  const mobileDestination = selectedMobileTimesheet ? (isMobileEditable ? `${basePath}/${selectedMobileId}/edit` : `${basePath}/${selectedMobileId}`) : ''
 
   const currentMonday = eligibility.currentWeekStart || getCurrentMonday()
   const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []
@@ -62,7 +74,10 @@ export default function TimesheetListPage({
     try {
       const newTimesheet = await createTimesheet({ weekStart })
       setMissingWeekDialogOpen(false)
-      navigate(`${basePath}/${newTimesheet.id}/edit`, { replace: true })
+      navigate(`${basePath}/${newTimesheet.id}/edit`, {
+        replace: true,
+        state: { returnTo },
+      })
     } catch (err) {
       setError(err.message ?? 'Failed to create timesheet.')
     } finally {
@@ -83,7 +98,8 @@ export default function TimesheetListPage({
             navigate(
               isEditable
                 ? `${basePath}/${currentWeekTimesheet.id}/edit`
-                : `${basePath}/${currentWeekTimesheet.id}`
+                : `${basePath}/${currentWeekTimesheet.id}`,
+              { state: { returnTo } }
             )
           }
         >
@@ -97,7 +113,7 @@ export default function TimesheetListPage({
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => navigate(`${basePath}/new`)}
+          onClick={() => navigate(`${basePath}/new`, { state: { returnTo } })}
         >
           New Timesheet
         </Button>
@@ -206,9 +222,9 @@ export default function TimesheetListPage({
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)}>
-          <Tab label="Pending & Drafts" />
-          <Tab label="Approved & Paid" />
+        <Tabs value={activeTab} onChange={(_e, val) => setTab(val === 1 ? 'history' : 'active')}>
+          <Tab label={`Pending & Drafts (${draftCount + pendingCount + rejectedCount})`} />
+          <Tab label={`Approved & Paid (${approvedOrPaidCount})`} />
         </Tabs>
       </Box>
 
@@ -259,17 +275,15 @@ export default function TimesheetListPage({
       {!error &&
         displayTimesheets.length > 0 &&
         (isMobile ? (
-          <Stack divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />} spacing={0}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+            spacing={0}
+          >
             {displayTimesheets.map((ts) => {
-              const isEditable = isConsultantEditableStatus(ts.status)
-              const actionLabel = isEditable ? 'Edit' : 'View'
-              const ActionIcon = isEditable ? EditIcon : VisibilityIcon
-              const destination = isEditable ? `${basePath}/${ts.id}/edit` : `${basePath}/${ts.id}`
-
               return (
                 <Box
                   key={ts.id}
-                  onClick={() => navigate(destination)}
+                  onClick={() => setSelectedMobileId(ts.id)}
                   sx={{
                     py: 2.25,
                     px: 1,
@@ -280,35 +294,17 @@ export default function TimesheetListPage({
                     '&:hover': { backgroundColor: 'action.hover' },
                   }}
                 >
-                  <Stack spacing={1.25}>
-                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
-                      <Typography variant="body2" fontWeight={600}>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
+                    <Box>
+                      <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
                         {formatWeekStart(ts.weekStart)}
                       </Typography>
-                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">
-                      {getWorkSummaryDisplayLabel(ts.workSummary, 2)}
-                    </Typography>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography
-                        variant="body2"
-                        sx={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500 }}
-                      >
-                        {ts.totalHours != null ? `${Number(ts.totalHours).toFixed(2)} hrs` : '-'}
+                      <Typography variant="body2" color="text.secondary">
+                        {getWorkSummaryDisplayLabel(ts.workSummary, 2)}
+                        {ts.totalHours != null && ` · ${Number(ts.totalHours).toFixed(2)} hrs`}
                       </Typography>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        startIcon={<ActionIcon sx={{ fontSize: '0.9rem' }} />}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(destination)
-                        }}
-                      >
-                        {actionLabel}
-                      </Button>
-                    </Stack>
+                    </Box>
+                    <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                   </Stack>
                 </Box>
               )
@@ -329,75 +325,124 @@ export default function TimesheetListPage({
               <TableBody>
                 {displayTimesheets.map((ts) => {
                   const editable = isConsultantEditableStatus(ts.status)
-                  const destination = editable ? `${basePath}/${ts.id}/edit` : `${basePath}/${ts.id}`
+                  const destination = editable
+                    ? `${basePath}/${ts.id}/edit`
+                    : `${basePath}/${ts.id}`
                   return (
-                  <TableRow
-                    key={ts.id}
-                    hover
-                    tabIndex={0}
-                    onClick={() => navigate(destination)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault()
-                        navigate(destination)
-                      }
-                    }}
-                    sx={{
-                      cursor: 'pointer',
-                      '&:focus-visible': {
-                        outline: '2px solid',
-                        outlineColor: 'primary.main',
-                        outlineOffset: -2,
-                      },
-                    }}
-                  >
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(ts.weekStart)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
-                    <TableCell>
-                      <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.85rem',
-                        }}
-                      >
-                        {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
-                      {editable ? (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`${basePath}/${ts.id}/edit`)}
+                    <TableRow
+                      key={ts.id}
+                      hover
+                      tabIndex={0}
+                      onClick={() => navigate(destination, { state: { returnTo } })}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          navigate(destination, { state: { returnTo } })
+                        }
+                      }}
+                      sx={{
+                        cursor: 'pointer',
+                        '&:focus-visible': {
+                          outline: '2px solid',
+                          outlineColor: 'primary.main',
+                          outlineOffset: -2,
+                        },
+                      }}
+                    >
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {formatWeekStart(ts.weekStart)}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>{getWorkSummaryDisplayLabel(ts.workSummary, 2)}</TableCell>
+                      <TableCell>
+                        <TimesheetStatusDisplay
+                          status={ts.status}
+                          submittedLate={ts.submittedLate}
+                        />
+                      </TableCell>
+                      <TableCell align="right">
+                        <Typography
+                          sx={{
+                            fontFamily: '"JetBrains Mono", monospace',
+                            fontSize: '0.85rem',
+                          }}
                         >
-                          Edit
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          variant="outlined"
-                          startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
-                          onClick={() => navigate(`${basePath}/${ts.id}`)}
-                        >
-                          View
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                          {ts.totalHours != null ? Number(ts.totalHours).toFixed(2) : '-'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="right" onClick={(e) => e.stopPropagation()}>
+                        {editable ? (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<EditIcon sx={{ fontSize: '0.9rem' }} />}
+                            onClick={() =>
+                              navigate(`${basePath}/${ts.id}/edit`, { state: { returnTo } })
+                            }
+                          >
+                            Edit
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<VisibilityIcon sx={{ fontSize: '0.9rem' }} />}
+                            onClick={() =>
+                              navigate(`${basePath}/${ts.id}`, { state: { returnTo } })
+                            }
+                          >
+                            View
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
                   )
                 })}
               </TableBody>
             </Table>
           </TableContainer>
         ))}
+
+      {isMobile && selectedMobileTimesheet && (
+        <MobileDetailDrawer
+          open={!!selectedMobileId}
+          onClose={() => setSelectedMobileId(null)}
+          title={`Week of ${formatWeekStart(selectedMobileTimesheet.weekStart)}`}
+          subtitle={getWorkSummaryDisplayLabel(selectedMobileTimesheet.workSummary, 3)}
+          data={[
+            {
+              label: 'Status',
+              node: (
+                <Stack direction="row" sx={{ mt: 0.5 }}>
+                  <TimesheetStatusDisplay
+                    status={selectedMobileTimesheet.status}
+                    submittedLate={selectedMobileTimesheet.submittedLate}
+                  />
+                </Stack>
+              ),
+            },
+            {
+              label: 'Total Hours',
+              value:
+                selectedMobileTimesheet.totalHours != null
+                  ? `${Number(selectedMobileTimesheet.totalHours).toFixed(2)} hrs`
+                  : '-',
+            },
+          ]}
+          actions={
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              startIcon={<MobileActionIcon />}
+              onClick={() => navigate(mobileDestination, { state: { returnTo } })}
+            >
+              {mobileActionLabel}
+            </Button>
+          }
+        />
+      )}
 
       <Dialog
         open={missingWeekDialogOpen}

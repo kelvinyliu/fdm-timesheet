@@ -38,7 +38,7 @@ describe('dashboard pages', () => {
     mocks.navigate.mockReset()
     mocks.useLoaderData.mockReset()
     mocks.useAuth.mockReset()
-    mocks.useAuth.mockReturnValue({ user: { name: 'Alex Consultant' } })
+    mocks.useAuth.mockReturnValue({ user: { name: 'Alex Consultant', defaultPayRate: 25 } })
   })
 
   it('renders consultant dashboard content from loader data and shows loader errors inline', () => {
@@ -64,6 +64,8 @@ describe('dashboard pages', () => {
   })
 
   it('formats consultant financial summaries in GBP and bases utilization on the current week', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-04-15T12:00:00.000Z'))
     mocks.useLoaderData.mockReturnValue({
       timesheets: [
         {
@@ -73,6 +75,15 @@ describe('dashboard pages', () => {
           updatedAt: '2026-04-14T09:00:00.000Z',
           totalHours: 32,
           totalBillAmount: 1200,
+        },
+        {
+          id: 'ts-paid-this-month-from-last-week',
+          status: 'COMPLETED',
+          weekStart: '2026-03-30',
+          updatedAt: '2026-04-02T09:00:00.000Z',
+          totalHours: 24,
+          totalBillAmount: 800,
+          totalPayAmount: 520,
         },
         {
           id: 'ts-older-edited',
@@ -93,10 +104,11 @@ describe('dashboard pages', () => {
         {
           id: 'ts-paid',
           status: 'COMPLETED',
-          weekStart: '2026-04-01',
-          updatedAt: '2026-04-02T09:00:00.000Z',
+          weekStart: '2026-04-07',
+          updatedAt: '2026-04-09T09:00:00.000Z',
           totalHours: 20,
           totalBillAmount: 800,
+          totalPayAmount: 640,
         },
       ],
       error: null,
@@ -104,8 +116,8 @@ describe('dashboard pages', () => {
 
     render(<ConsultantDashboard />)
 
-    expect(screen.getByText('£2,000.00')).toBeInTheDocument()
-    expect(screen.getByText('£1,700.00')).toBeInTheDocument()
+    expect(screen.getByText('£1,160.00')).toBeInTheDocument()
+    expect(screen.getByText('£800.00')).toBeInTheDocument()
     expect(screen.getByText('80%')).toBeInTheDocument()
     expect(screen.getByText('32 / 40 hrs')).toBeInTheDocument()
   })

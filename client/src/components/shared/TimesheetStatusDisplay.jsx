@@ -4,7 +4,13 @@ import LateBadge from './LateBadge.jsx'
 
 export default function TimesheetStatusDisplay({ status, submittedLate }) {
   return (
-    <Stack direction="row" spacing={0.75} useFlexGap flexWrap="wrap" alignItems="center">
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={0.5}
+      useFlexGap
+      alignItems="center"
+      sx={{ flexShrink: 0, flexWrap: 'nowrap' }}
+    >
       <StatusBadge status={status} />
       {submittedLate && <LateBadge />}
     </Stack>

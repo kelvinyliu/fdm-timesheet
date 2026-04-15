@@ -271,12 +271,12 @@ export default function ManagerTimesheetListPage() {
                   '&:hover': { backgroundColor: 'action.hover' },
                 }}
               >
-                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
-                  <Box>
-                    <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1.5}>
+                  <Box sx={{ minWidth: 0, overflow: 'hidden' }}>
+                    <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }} noWrap>
                       {getSubmitterDisplayLabel(timesheet.consultantName)}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" noWrap>
                       {formatWeekStart(timesheet.weekStart)}
                       {timesheet.totalHours != null &&
                         ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}

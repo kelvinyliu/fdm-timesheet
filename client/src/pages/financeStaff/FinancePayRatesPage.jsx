@@ -364,7 +364,7 @@ export default function FinancePayRatesPage() {
                 const isSaving = savingIds.includes(consultant.id)
 
                 return (
-                  <TableRow key={consultant.id} hover selected={rowMeta.isDirty}>
+                  <TableRow key={consultant.id} hover selected={rowMeta.isDirty} sx={{ height: 80 }}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
                         {consultant.name}
@@ -381,7 +381,7 @@ export default function FinancePayRatesPage() {
                         {consultant.email}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={{ width: 260 }}>
+                    <TableCell sx={{ width: 260, verticalAlign: 'middle' }}>
                       <TextField
                         size="small"
                         label="Default Pay Rate"
@@ -393,6 +393,13 @@ export default function FinancePayRatesPage() {
                             startAdornment: <InputAdornment position="start">£</InputAdornment>,
                           },
                           htmlInput: { min: '0.01', step: '0.01' },
+                          formHelperText: {
+                            sx: {
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            },
+                          },
                         }}
                         error={Boolean(rowError)}
                         helperText={
@@ -449,6 +456,7 @@ export default function FinancePayRatesPage() {
           variant="contained"
           size="large"
           startIcon={<SaveIcon />}
+          sx={{ minWidth: 220 }}
           disabled={savingIds.length > 0 || dirtyConsultants.length === 0 || invalidDirtyConsultants.length > 0}
           onClick={() => {
             void handleSaveAll()

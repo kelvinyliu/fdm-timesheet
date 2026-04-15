@@ -348,13 +348,13 @@ export default function FinancePayRatesPage() {
         </Stack>
       ) : (
         <TableContainer component={Paper}>
-          <Table size="small">
+          <Table size="small" sx={{ tableLayout: 'fixed', width: '100%' }}>
               <TableHead>
                 <TableRow>
-                <TableCell>Employee</TableCell>
-                <TableCell>Email</TableCell>
-                <TableCell>Default Pay Rate</TableCell>
-                <TableCell>Status</TableCell>
+                <TableCell sx={{ width: '25%' }}>Employee</TableCell>
+                <TableCell sx={{ width: '30%' }}>Email</TableCell>
+                <TableCell sx={{ width: '30%' }}>Default Pay Rate</TableCell>
+                <TableCell sx={{ width: '15%' }}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -381,7 +381,7 @@ export default function FinancePayRatesPage() {
                         {consultant.email}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={{ width: 260, verticalAlign: 'middle' }}>
+                    <TableCell sx={{ verticalAlign: 'middle' }}>
                       <TextField
                         size="small"
                         label="Default Pay Rate"

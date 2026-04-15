@@ -25,6 +25,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker'
 import dayjs from 'dayjs'
 import PageHeader from '../../components/shared/PageHeader'
 import FilterBottomSheet from '../../components/shared/FilterBottomSheet.jsx'
+import MobileDetailDrawer from '../../components/shared/MobileDetailDrawer.jsx'
 import { getAuditActorDisplayLabel, getAuditTimesheetDisplayLabel } from '../../utils/displayLabels'
 import { formatTimestamp } from '../../utils/dateFormatters'
 import ActionBadge from '../../components/shared/ActionBadge'
@@ -96,11 +97,12 @@ function formatDetail(action, detail) {
 
 export default function AuditLogPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { entries, error: loadError } = useLoaderData()
   const [error, setError] = useState(loadError)
   const [filterValues, setFilterValues] = useQueryStateObject(FILTER_CONFIG)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
+  const [selectedMobileId, setSelectedMobileId] = useState(null)
 
   const actionFilter = filterValues.action || null
   const authorFilter = filterValues.author || null
@@ -174,6 +176,8 @@ export default function AuditLogPage() {
     if (dateTo && dayjs(e.createdAt).isAfter(dateTo, 'day')) return false
     return true
   })
+
+  const selectedMobileLog = entries.find(e => e.id === selectedMobileId)
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -346,7 +350,19 @@ export default function AuditLogPage() {
               spacing={0}
             >
               {filtered.map((e) => (
-                <Box key={e.id} sx={{ py: 2.25 }}>
+                <Box
+                  key={e.id}
+                  onClick={() => setSelectedMobileId(e.id)}
+                  sx={{
+                    py: 2.25,
+                    px: 1,
+                    mx: -1,
+                    borderRadius: 1.5,
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease',
+                    '&:hover': { backgroundColor: 'action.hover' },
+                  }}
+                >
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start" mb={1.25} spacing={1.5}>
                     <ActionBadge action={e.action} />
                     <Typography
@@ -363,29 +379,56 @@ export default function AuditLogPage() {
                   <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
                     {getAuditActorDisplayLabel(e.performedByName)}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  <Typography variant="body2" color="text.secondary">
                     {getAuditTimesheetDisplayLabel({
                       consultantName: e.timesheetConsultantName,
                       weekStart: e.timesheetWeekStart,
                     })}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontFamily: '"JetBrains Mono", monospace',
-                      fontSize: '0.75rem',
-                      color: 'text.primary',
-                      whiteSpace: 'normal',
-                      overflowWrap: 'anywhere',
-                      wordBreak: 'break-word',
-                    }}
-                  >
-                    {formatDetail(e.action, e.detail)}
                   </Typography>
                 </Box>
               ))}
             </Stack>
           )}
         </Box>
+
+        {isMobile && selectedMobileLog && (
+          <MobileDetailDrawer
+            open={!!selectedMobileId}
+            onClose={() => setSelectedMobileId(null)}
+            title={getAuditActorDisplayLabel(selectedMobileLog.performedByName)}
+            subtitle={formatTimestamp(selectedMobileLog.createdAt)}
+            data={[
+              {
+                label: 'Action',
+                node: <ActionBadge action={selectedMobileLog.action} sx={{ display: 'inline-flex', mt: 0.5 }} />
+              },
+              {
+                label: 'Timesheet',
+                value: getAuditTimesheetDisplayLabel({
+                  consultantName: selectedMobileLog.timesheetConsultantName,
+                  weekStart: selectedMobileLog.timesheetWeekStart,
+                })
+              },
+              {
+                label: 'Details',
+                node: (
+                  <Typography
+                    sx={{
+                      fontFamily: '"JetBrains Mono", monospace',
+                      fontSize: '0.85rem',
+                      color: 'text.primary',
+                      whiteSpace: 'normal',
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {formatDetail(selectedMobileLog.action, selectedMobileLog.detail)}
+                  </Typography>
+                )
+              }
+            ]}
+          />
+        )}
 
         {filtered.length > 0 && (
           <Typography

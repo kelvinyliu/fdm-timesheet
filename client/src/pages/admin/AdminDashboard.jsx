@@ -12,21 +12,7 @@ import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount'
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts'
 import HistoryIcon from '@mui/icons-material/History'
 import DashboardCard from '../../components/shared/DashboardCard'
-
-function getAuditActionLabel(action) {
-  switch (action) {
-    case 'SUBMISSION':
-      return 'Submitted'
-    case 'APPROVAL':
-      return 'Approved'
-    case 'REJECTION':
-      return 'Rejected'
-    case 'PROCESSING':
-      return 'Processed payment'
-    default:
-      return action
-  }
-}
+import { getAuditActionDisplayLabel } from '../../utils/displayLabels.js'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
@@ -304,7 +290,7 @@ export default function AdminDashboard() {
                     >
                       <Box>
                         <Typography variant="body2" fontWeight={600} sx={{ mb: 0.35 }}>
-                          {getAuditActionLabel(item.action)}
+                    {getAuditActionDisplayLabel(item.action)}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
                           {item.createdAt

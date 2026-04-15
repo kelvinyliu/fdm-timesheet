@@ -22,7 +22,8 @@ export function workSummaryDto(row) {
   return dto
 }
 
-export function timesheetDto(row, workSummary = []) {
+export function timesheetDto(row, workSummary = [], options = {}) {
+  const includeFinanceReturn = options.includeFinanceReturn === true
   const dto = {
     id: row.timesheet_id,
     consultantId: row.consultant_id,
@@ -40,6 +41,12 @@ export function timesheetDto(row, workSummary = []) {
     updatedAt: row.updated_at,
   }
 
+  if (includeFinanceReturn) {
+    dto.financeReturnComment = row.finance_return_comment ?? null
+    dto.financeReturnedAt = row.finance_returned_at ?? null
+    dto.financeReturnedByName = row.finance_returned_by_name ?? null
+  }
+
   if (
     row.total_bill_amount != null ||
     row.total_pay_amount != null ||
@@ -53,10 +60,10 @@ export function timesheetDto(row, workSummary = []) {
   return dto
 }
 
-export function timesheetWithEntriesDto(row, entries, workSummary = []) {
+export function timesheetWithEntriesDto(row, entries, workSummary = [], options = {}) {
   const totalHours = entries.reduce((sum, e) => sum + parseFloat(e.hours_worked || 0), 0)
   return {
-    ...timesheetDto(row, workSummary),
+    ...timesheetDto(row, workSummary, options),
     totalHours,
     entries: entries.map(entryDto),
   }

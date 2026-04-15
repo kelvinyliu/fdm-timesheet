@@ -277,7 +277,9 @@ export async function timesheetReviewLoader({ params, request }) {
 
     return {
       timesheet,
-      pendingQueue: allTimesheets.filter((item) => item.status === 'PENDING'),
+      pendingQueue: allTimesheets.filter(
+        (item) => item.status === 'PENDING' || item.status === 'FINANCE_REJECTED'
+      ),
       error: null,
     }
   } catch (err) {

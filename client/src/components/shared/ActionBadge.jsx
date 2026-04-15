@@ -1,11 +1,13 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { palette } from '../../theme.js'
+import { getAuditActionDisplayLabel } from '../../utils/displayLabels.js'
 
 const ACTION_COLORS = {
   SUBMISSION: 'var(--ui-info)',
   APPROVAL: 'var(--ui-success)',
   REJECTION: 'var(--ui-error)',
+  FINANCE_RETURN: 'var(--ui-warning)',
   PROCESSING: 'var(--ui-warning)',
 }
 
@@ -25,6 +27,8 @@ export default function ActionBadge({ action }) {
             ? 'var(--ui-success-bg)'
             : action === 'REJECTION'
               ? 'var(--ui-error-bg)'
+              : action === 'FINANCE_RETURN'
+                ? 'var(--ui-warning-bg)'
               : action === 'PROCESSING'
                 ? 'var(--ui-warning-bg)'
                 : 'var(--ui-info-bg)',
@@ -33,6 +37,8 @@ export default function ActionBadge({ action }) {
             ? '1px solid var(--ui-status-approved-border)'
             : action === 'REJECTION'
               ? '1px solid var(--ui-status-rejected-border)'
+              : action === 'FINANCE_RETURN'
+                ? '1px solid var(--ui-status-pending-border)'
               : action === 'PROCESSING'
                 ? '1px solid var(--ui-status-pending-border)'
                 : '1px solid var(--ui-status-completed-border)',
@@ -47,7 +53,7 @@ export default function ActionBadge({ action }) {
           letterSpacing: '0.03em',
         }}
       >
-        {action}
+        {getAuditActionDisplayLabel(action)}
       </Typography>
     </Box>
   )

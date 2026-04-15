@@ -4,8 +4,10 @@ import FinancePaymentPage from './FinancePaymentPage.jsx'
 
 const mocks = vi.hoisted(() => ({
   confirm: vi.fn(),
+  financeReviewTimesheet: vi.fn(),
   guardedNavigate: vi.fn(),
   navigate: vi.fn(),
+  processPayment: vi.fn(),
   useLoaderData: vi.fn(),
   useLocation: vi.fn(),
   useMediaQuery: vi.fn(),
@@ -80,14 +82,17 @@ vi.mock('../../context/useUnsavedChanges.js', () => ({
 }))
 
 vi.mock('../../api/timesheets', () => ({
-  processPayment: vi.fn(),
+  financeReviewTimesheet: (...args) => mocks.financeReviewTimesheet(...args),
+  processPayment: (...args) => mocks.processPayment(...args),
 }))
 
 describe('FinancePaymentPage', () => {
   beforeEach(() => {
     mocks.confirm.mockReset()
+    mocks.financeReviewTimesheet.mockReset()
     mocks.guardedNavigate.mockReset()
     mocks.navigate.mockReset()
+    mocks.processPayment.mockReset()
     mocks.useLoaderData.mockReset()
     mocks.useLocation.mockReset()
     mocks.useMediaQuery.mockReset()
@@ -123,5 +128,11 @@ describe('FinancePaymentPage', () => {
     render(<FinancePaymentPage />)
 
     expect(screen.getByText('No entries recorded for this timesheet.')).toBeInTheDocument()
+  })
+
+  it('shows the return-to-manager action for approved timesheets', () => {
+    render(<FinancePaymentPage />)
+
+    expect(screen.getByRole('button', { name: 'Return to Manager' })).toBeInTheDocument()
   })
 })

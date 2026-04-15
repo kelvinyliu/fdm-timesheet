@@ -12,7 +12,7 @@ import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDispl
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import { getWorkBucketDisplayLabel, getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
-import { isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
+import { getConsultantVisibleStatus, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
 import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
 
 export default function TimesheetDetailPage({ basePath = '/consultant/timesheets' }) {
@@ -37,9 +37,8 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
 
   const entries = timesheet.entries ?? []
   const workSummary = timesheet.workSummary ?? []
-  const hasManagerFeedback = Boolean(timesheet.rejectionComment)
-  const feedbackSeverity = timesheet.status === 'REJECTED' ? 'error' : 'warning'
-  const feedbackTitle = timesheet.status === 'REJECTED' ? 'Rejected' : 'Manager feedback'
+  const hasManagerFeedback =
+    timesheet.status === 'REJECTED' && Boolean(timesheet.rejectionComment)
   const detailItems = [
     {
       key: 'week',
@@ -50,7 +49,10 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
       key: 'status',
       label: 'Status',
       value: (
-        <TimesheetStatusDisplay status={timesheet.status} submittedLate={timesheet.submittedLate} />
+        <TimesheetStatusDisplay
+          status={getConsultantVisibleStatus(timesheet.status)}
+          submittedLate={timesheet.submittedLate}
+        />
       ),
     },
     {
@@ -96,8 +98,8 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
       </PageHeader>
 
       {hasManagerFeedback && (
-        <Alert severity={feedbackSeverity} sx={{ mb: 3 }}>
-          <strong>{feedbackTitle}:</strong> {timesheet.rejectionComment}
+        <Alert severity="error" sx={{ mb: 3 }}>
+          <strong>Rejected:</strong> {timesheet.rejectionComment}
         </Alert>
       )}
 

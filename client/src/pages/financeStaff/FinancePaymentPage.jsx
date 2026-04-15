@@ -5,6 +5,13 @@ import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
+import Dialog from '@mui/material/Dialog'
+import DialogActions from '@mui/material/DialogActions'
+import DialogContent from '@mui/material/DialogContent'
+import DialogContentText from '@mui/material/DialogContentText'
+import DialogTitle from '@mui/material/DialogTitle'
+import Stack from '@mui/material/Stack'
+import TextField from '@mui/material/TextField'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -18,9 +25,9 @@ import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useGuardedNavigate, useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
 import { palette } from '../../theme.js'
-import { processPayment } from '../../api/timesheets'
+import { financeReviewTimesheet, processPayment } from '../../api/timesheets'
 import { formatCurrency } from '../../utils/currency.js'
-import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
+import { buildWeekDates, formatTimestamp, formatWeekStart } from '../../utils/dateFormatters'
 import {
   getSubmitterDisplayLabel,
   getWorkBucketDisplayLabel,
@@ -117,6 +124,8 @@ export default function FinancePaymentPage() {
   const [notes, setNotes] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [feedback, setFeedback] = useState(null)
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false)
+  const [returnComment, setReturnComment] = useState('')
   const [savedDraftSnapshot, setSavedDraftSnapshot] = useState(() =>
     serializePaymentDraft(buildInitialBucketRates(timesheet), '')
   )
@@ -126,6 +135,8 @@ export default function FinancePaymentPage() {
     setBucketRates(initialRates)
     setSavedDraftSnapshot(serializePaymentDraft(initialRates, ''))
     setNotes('')
+    setReturnComment('')
+    setReturnDialogOpen(false)
   }, [timesheet])
 
   const workSummary = timesheet?.workSummary
@@ -252,13 +263,38 @@ export default function FinancePaymentPage() {
           severity: 'success',
           message: 'Payment processed. Showing next approved timesheet.',
         })
-        navigate(`/finance/timesheets/${nextId}`, { replace: true })
+        navigate(`/finance/timesheets/${nextId}`, {
+          replace: true,
+          state: { returnTo: backDestination },
+        })
       } else {
         setFeedback({ severity: 'success', message: 'Payment processed successfully.' })
         revalidator.revalidate()
       }
     } catch (err) {
       setFeedback({ severity: 'error', message: err.message ?? 'Failed to process payment.' })
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleReturnToManager() {
+    if (!returnComment.trim()) return
+
+    setSubmitting(true)
+    setFeedback(null)
+
+    try {
+      await financeReviewTimesheet(id, {
+        action: 'RETURN',
+        comment: returnComment.trim(),
+      })
+      navigate(backDestination, { replace: true })
+    } catch (err) {
+      setFeedback({
+        severity: 'error',
+        message: err.message ?? 'Failed to return timesheet to the line manager.',
+      })
     } finally {
       setSubmitting(false)
     }
@@ -310,10 +346,20 @@ export default function FinancePaymentPage() {
   const backDestination = location.state?.returnTo ?? '/finance/timesheets?tab=to-pay'
   const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
   const matrixRows = timesheet ? entriesToReadOnlyMatrixRows(timesheet.entries ?? []) : []
+  const canReturnToManager = timesheet?.status === 'APPROVED'
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-      <PageHeader title="Process Payment">
+      <PageHeader title={canReturnToManager ? 'Process Payment' : 'Timesheet Detail'}>
+        {canReturnToManager && (
+          <Button
+            variant="outlined"
+            color="warning"
+            onClick={() => setReturnDialogOpen(true)}
+          >
+            Return to Manager
+          </Button>
+        )}
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
@@ -332,6 +378,15 @@ export default function FinancePaymentPage() {
       {feedback && (
         <Alert severity={feedback.severity} sx={{ mb: 3 }} onClose={() => setFeedback(null)}>
           {feedback.message}
+        </Alert>
+      )}
+
+      {timesheet?.status === 'FINANCE_REJECTED' && timesheet.financeReturnComment && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <strong>Returned to line manager</strong>
+          {timesheet.financeReturnedByName ? ` by ${timesheet.financeReturnedByName}` : ''}
+          {timesheet.financeReturnedAt ? ` on ${formatTimestamp(timesheet.financeReturnedAt)}` : ''}.
+          {' '}Reason: {timesheet.financeReturnComment}
         </Alert>
       )}
 
@@ -427,6 +482,51 @@ export default function FinancePaymentPage() {
           {timesheet.status === 'COMPLETED' && <FinanceNotesPanel notes={fetchedNotes} />}
         </>
       )}
+
+      <Dialog
+        open={returnDialogOpen}
+        onClose={submitting ? undefined : () => setReturnDialogOpen(false)}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>Return timesheet to line manager?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Returning this timesheet removes it from the finance queue and sends it back to the
+            line manager for another review before payment can be processed.
+          </DialogContentText>
+          <Stack spacing={1.25}>
+            <TextField
+              label="Return comment"
+              multiline
+              minRows={3}
+              fullWidth
+              value={returnComment}
+              onChange={(event) => setReturnComment(event.target.value)}
+              disabled={submitting}
+              error={returnComment.length > 0 && !returnComment.trim()}
+              helperText={
+                returnComment.length > 0 && !returnComment.trim()
+                  ? 'Return comment cannot be blank.'
+                  : 'This comment is visible to finance and the line manager only.'
+              }
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setReturnDialogOpen(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button
+            onClick={handleReturnToManager}
+            color="warning"
+            variant="contained"
+            disabled={submitting || !returnComment.trim()}
+          >
+            {submitting ? 'Returning...' : 'Confirm return'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   )
 }

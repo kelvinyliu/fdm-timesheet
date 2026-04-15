@@ -9,8 +9,13 @@ vi.mock('../models/auditModel.js', () => ({
   getAuditLog: vi.fn(),
 }))
 
+vi.mock('../models/userModel.js', () => ({
+  findUserById: vi.fn(),
+}))
+
 import app from '../app.js'
 import * as auditModel from '../models/auditModel.js'
+import * as userModel from '../models/userModel.js'
 
 const SECRET = 'test-secret'
 
@@ -20,6 +25,10 @@ function token(payload) {
 
 const adminToken = token({ userId: 'admin-1', role: 'SYSTEM_ADMIN' })
 const consultantToken = token({ userId: 'consultant-1', role: 'CONSULTANT' })
+const authUsers = {
+  'admin-1': { user_id: 'admin-1', role: 'SYSTEM_ADMIN' },
+  'consultant-1': { user_id: 'consultant-1', role: 'CONSULTANT' },
+}
 
 const auditRow = {
   audit_id: '11111111-1111-4111-8111-111111111111',
@@ -35,6 +44,7 @@ const auditRow = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  userModel.findUserById.mockImplementation(async (id) => authUsers[id] ?? null)
 })
 
 describe('GET /api/audit', () => {

@@ -171,8 +171,8 @@ The root path (`/`) renders `RootRedirect`, which sends authenticated users to t
 
 | Page                   | Path                      | Description                                                                                                                                                                                                                                                                                              |
 | ---------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Timesheets for payment | `/finance/timesheets`     | Lists timesheets with APPROVED or COMPLETED status. `COMPLETED` is displayed in the UI as `Paid`.                                                                                                                                                                                                        |
-| Payment page           | `/finance/timesheets/:id` | Shows timesheet details and hours worked. Accepts an hourly rate (£/hr) and optional payment notes. Calculates the total payment (`hourlyRate × totalHours`) and submits via `POST /api/timesheets/:id/payment`. Once processed, the UI displays the timesheet status as `Paid` and shows finance notes. |
+| Timesheets for payment | `/finance/timesheets`     | Lists timesheets with APPROVED or COMPLETED status. `COMPLETED` is displayed in the UI as `Paid`. Finance-returned items drop out of this queue and reappear for the relevant line manager.                                                                                                             |
+| Payment page           | `/finance/timesheets/:id` | Shows timesheet details and hours worked. Accepts bill/pay rates per work bucket plus optional payment notes, and submits via `POST /api/timesheets/:id/payment`. Finance can also return an approved timesheet to the line manager with an internal comment using `PATCH /api/timesheets/:id/finance-review`. |
 
 ---
 
@@ -184,7 +184,7 @@ The root path (`/`) renders `RootRedirect`, which sends authenticated users to t
 | --------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | User management | `/admin/users`       | Lists all users. Allows creating new users (name, email, password, role), changing a user's role, and deleting users.                                                                                                                                           |
 | Assignments     | `/admin/assignments` | Two sections: (1) client assignments - link a consultant to a client with start/end dates; (2) manager assignments - assign a consultant to a line manager. Client assignments support create and delete; manager assignments support create, edit, and delete. |
-| Audit log       | `/admin/audit-log`   | Append-only log of all significant system events (SUBMISSION, APPROVAL, REJECTION, PROCESSING). Filterable by action type, author, and date range.                                                                                                              |
+| Audit log       | `/admin/audit-log`   | Append-only log of all significant system events (SUBMISSION, APPROVAL, REJECTION, FINANCE_RETURN, PROCESSING). Filterable by action type, author, and date range.                                                                                             |
 
 ---
 

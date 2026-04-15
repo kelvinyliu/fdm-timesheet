@@ -283,6 +283,24 @@ async function insertReview(client, {
   )
 }
 
+async function insertFinanceReturn(client, {
+  timesheetId,
+  returnedBy,
+  comment,
+  createdAt,
+}) {
+  await client.query(
+    `INSERT INTO finance_returns (
+       timesheet_id,
+       returned_by,
+       comment,
+       created_at
+     )
+     VALUES ($1, $2, $3, $4)`,
+    [timesheetId, returnedBy, comment, createdAt]
+  )
+}
+
 async function insertPayment(client, {
   timesheetId,
   processedBy,
@@ -386,12 +404,18 @@ async function createTimesheetScenario(client, {
   submittedAt = null,
   submittedLate = false,
   review = null,
+  financeReturn = null,
   payment = null,
   note = null,
   assignmentsById,
   seededTimesheets,
 }) {
-  const updatedAt = payment?.processedAt ?? review?.reviewedAt ?? submittedAt ?? createdAt
+  const updatedAt =
+    payment?.processedAt ??
+    financeReturn?.returnedAt ??
+    review?.reviewedAt ??
+    submittedAt ??
+    createdAt
 
   const timesheet = await insertTimesheet(client, {
     consultantId: consultant.userId,
@@ -442,6 +466,26 @@ async function createTimesheetScenario(client, {
         comment: review.comment ?? null,
       },
       review.reviewedAt
+    )
+  }
+
+  if (financeReturn) {
+    await insertFinanceReturn(client, {
+      timesheetId: timesheet.timesheet_id,
+      returnedBy: financeReturn.returnedBy,
+      comment: financeReturn.comment,
+      createdAt: financeReturn.returnedAt,
+    })
+
+    await logAudit(
+      client,
+      'FINANCE_RETURN',
+      financeReturn.returnedBy,
+      timesheet.timesheet_id,
+      {
+        comment: financeReturn.comment,
+      },
+      financeReturn.returnedAt
     )
   }
 
@@ -807,6 +851,37 @@ try {
     status: 'DRAFT',
     entries: [],
     createdAt: at(WEEK_STARTS.thisWeek, '08:05:00'),
+    assignmentsById,
+    seededTimesheets,
+  })
+
+  await createTimesheetScenario(client, {
+    scenarioLabel: 'Finance returned sheet awaiting manager re-review',
+    consultant: users.diana,
+    manager: users.alice,
+    primaryAssignmentId: assignmentRows.dianaHsbc.assignment_id,
+    weekStart: WEEK_STARTS.threeWeeksAgo,
+    status: 'FINANCE_REJECTED',
+    entries: mergeEntries(
+      clientWeekEntries(
+        WEEK_STARTS.threeWeeksAgo,
+        assignmentRows.dianaHsbc.assignment_id,
+        [8, 8, 8, 0, 0, 0, 0]
+      ),
+      internalWeekEntries(WEEK_STARTS.threeWeeksAgo, [0, 0, 0, 8, 8, 0, 0])
+    ),
+    createdAt: at(WEEK_STARTS.threeWeeksAgo, '08:10:00'),
+    submittedAt: at(addDays(WEEK_STARTS.threeWeeksAgo, 4), '17:30:00'),
+    review: {
+      reviewerId: users.alice.userId,
+      decision: 'APPROVED',
+      reviewedAt: at(WEEK_STARTS.twoWeeksAgo, '09:05:00'),
+    },
+    financeReturn: {
+      returnedBy: users.finance.userId,
+      comment: 'Client and internal split needs another manager review before payment.',
+      returnedAt: at(WEEK_STARTS.twoWeeksAgo, '11:10:00'),
+    },
     assignmentsById,
     seededTimesheets,
   })

@@ -18,6 +18,11 @@ import StatusBadge from '../../components/shared/StatusBadge'
 import { useAuth } from '../../context/useAuth'
 import { formatCurrency } from '../../utils/currency'
 import { formatWeekStart, getCurrentMonday } from '../../utils/dateFormatters'
+import {
+  getConsultantVisibleStatus,
+  isConsultantApprovedStatus,
+  isConsultantPendingStatus,
+} from '../../utils/timesheetWorkflow.js'
 
 export default function ConsultantDashboard() {
   const navigate = useNavigate()
@@ -31,9 +36,9 @@ export default function ConsultantDashboard() {
   const currentWeekStart = getCurrentMonday()
 
   const drafts = timesheets.filter((t) => t.status === 'DRAFT')
-  const pending = timesheets.filter((t) => t.status === 'PENDING')
+  const pending = timesheets.filter((t) => isConsultantPendingStatus(t.status))
   const rejected = timesheets.filter((t) => t.status === 'REJECTED')
-  const approved = timesheets.filter((t) => t.status === 'APPROVED' || t.status === 'COMPLETED')
+  const approved = timesheets.filter((t) => isConsultantApprovedStatus(t.status))
   const editableTimesheets = timesheets.filter(
     (t) => t.status === 'DRAFT' || t.status === 'REJECTED'
   )
@@ -61,7 +66,7 @@ export default function ConsultantDashboard() {
     .filter((ts) => {
       const date = new Date(ts.weekStart)
       return (
-        (ts.status === 'APPROVED' || ts.status === 'COMPLETED') &&
+        isConsultantApprovedStatus(ts.status) &&
         date.getMonth() === currentMonth &&
         date.getFullYear() === currentYear
       )
@@ -69,7 +74,7 @@ export default function ConsultantDashboard() {
     .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
 
   const pendingPayment = timesheets
-    .filter((ts) => ts.status === 'PENDING' || ts.status === 'APPROVED')
+    .filter((ts) => isConsultantPendingStatus(ts.status) || ts.status === 'APPROVED')
     .reduce((acc, ts) => acc + (ts.totalBillAmount || 0), 0)
 
   const currentWeekTimesheet = timesheets.find((ts) => ts.weekStart === currentWeekStart)
@@ -403,7 +408,7 @@ export default function ConsultantDashboard() {
                       </Typography>
                     </Box>
 
-                    <StatusBadge status={ts.status} />
+                    <StatusBadge status={getConsultantVisibleStatus(ts.status)} />
                   </Stack>
                 </ButtonBase>
               )

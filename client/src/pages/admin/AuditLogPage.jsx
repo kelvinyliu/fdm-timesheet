@@ -28,11 +28,15 @@ import dayjs from 'dayjs'
 import PageHeader from '../../components/shared/PageHeader'
 import FilterBottomSheet from '../../components/shared/FilterBottomSheet.jsx'
 import MobileDetailDrawer from '../../components/shared/MobileDetailDrawer.jsx'
-import { getAuditActorDisplayLabel, getAuditTimesheetDisplayLabel } from '../../utils/displayLabels'
+import {
+  getAuditActionDisplayLabel,
+  getAuditActorDisplayLabel,
+  getAuditTimesheetDisplayLabel,
+} from '../../utils/displayLabels'
 import { formatTimestamp } from '../../utils/dateFormatters'
 import ActionBadge from '../../components/shared/ActionBadge'
 
-const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING']
+const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'FINANCE_RETURN', 'PROCESSING']
 
 const QUERY_STATE_CONFIG = { action: '', author: '', from: '', to: '', page: '1' }
 const DATE_FORMAT = 'YYYY-MM-DD'
@@ -47,6 +51,8 @@ function formatDetail(action, detail) {
       return 'Approved'
     case 'REJECTION':
       return detail.comment ? `Rejected: ${detail.comment}` : 'Rejected'
+    case 'FINANCE_RETURN':
+      return detail.comment ? `Returned to manager: ${detail.comment}` : 'Returned to manager'
     case 'PROCESSING': {
       if (Array.isArray(detail.breakdowns) && detail.breakdowns.length > 0) {
         const incoming =
@@ -432,7 +438,7 @@ export default function AuditLogPage() {
             data={[
               {
                 label: 'Action',
-                node: <ActionBadge action={selectedMobileLog.action} sx={{ display: 'inline-flex', mt: 0.5 }} />
+                value: getAuditActionDisplayLabel(selectedMobileLog.action)
               },
               {
                 label: 'Timesheet',

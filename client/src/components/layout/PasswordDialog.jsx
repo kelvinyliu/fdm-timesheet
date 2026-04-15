@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
@@ -18,6 +18,8 @@ export default function PasswordDialog({ open, onClose }) {
   const theme = useTheme()
   const fullScreen = useMediaQuery(theme.breakpoints.down('md'))
   const { confirm } = useConfirmation()
+  const titleId = useId()
+  const descriptionId = useId()
   const [form, setForm] = useState(EMPTY_PASSWORD_FORM)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -99,9 +101,14 @@ export default function PasswordDialog({ open, onClose }) {
       maxWidth="xs"
       fullWidth
       fullScreen={fullScreen}
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
     >
-      <DialogTitle>Change Password</DialogTitle>
+      <DialogTitle id={titleId}>Change Password</DialogTitle>
       <DialogContent>
+        <p id={descriptionId} className="sr-only">
+          Update your current password by entering the existing password and your new password twice.
+        </p>
         {error && (
           <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
             {error}

@@ -231,7 +231,8 @@ export default function UserManagementPage() {
     <>
       <PageHeader title="User Management" subtitle="Create, manage, and assign roles to users">
         <TextField
-          placeholder="Search users..."
+          label="Search users"
+          placeholder="Name or email"
           size="small"
           value={searchQuery}
           onChange={(e) => setQueryState({ q: e.target.value })}

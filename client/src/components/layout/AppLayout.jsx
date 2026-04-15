@@ -360,6 +360,10 @@ export default function AppLayout() {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh', alignItems: 'stretch' }}>
+      <Box component="a" href="#main-content" className="skip-link">
+        Skip to main content
+      </Box>
+
       {!isCompact && (
         <Box
           component="nav"
@@ -456,7 +460,7 @@ export default function AppLayout() {
 
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <Typography
-                  component="h1"
+                  component="div"
                   sx={{
                     fontFamily: '"Outfit", system-ui, sans-serif',
                     fontSize: { xs: '1.05rem', sm: '1.15rem' },
@@ -589,6 +593,8 @@ export default function AppLayout() {
         {isCompact && <Toolbar sx={{ minHeight: { xs: 60, sm: 68 } }} />}
 
         <Box
+          aria-label="Breadcrumb"
+          component="nav"
           sx={{
             px: { md: 3, lg: 4 },
             borderBottom: `1px solid ${palette.border}`,
@@ -653,6 +659,8 @@ export default function AppLayout() {
 
         <Box
           className="page-enter"
+          id="main-content"
+          tabIndex={-1}
           sx={{
             flex: 1,
             display: 'flex',
@@ -660,6 +668,7 @@ export default function AppLayout() {
             p: { xs: 2, sm: 3, md: 4 },
             width: '100%',
             minWidth: 0,
+            scrollMarginTop: { xs: 72, sm: 80, md: 72 },
           }}
         >
           <Outlet />

@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import Drawer from '@mui/material/Drawer'
 import Box from '@mui/material/Box'
 import Stack from '@mui/material/Stack'
@@ -17,11 +18,16 @@ export default function FilterBottomSheet({
   onApply,
   children,
 }) {
+  const titleId = useId()
+
   return (
     <Drawer
       anchor="bottom"
       open={open}
       onClose={onClose}
+      ModalProps={{
+        'aria-labelledby': titleId,
+      }}
       slotProps={{
         backdrop: {
           sx: {
@@ -72,7 +78,7 @@ export default function FilterBottomSheet({
             transform: 'translateX(-50%)',
           }}
         />
-        <Typography sx={{ fontWeight: 600, fontSize: '1rem', color: palette.textPrimary }}>
+        <Typography id={titleId} sx={{ fontWeight: 600, fontSize: '1rem', color: palette.textPrimary }}>
           {title}
         </Typography>
         <IconButton

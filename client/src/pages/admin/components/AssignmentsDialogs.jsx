@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
@@ -19,6 +20,8 @@ export function ClientAssignmentDialog({
   onChange,
   onSubmit,
 }) {
+  const titleId = useId()
+
   return (
     <Dialog
       open={open}
@@ -26,8 +29,9 @@ export function ClientAssignmentDialog({
       maxWidth="xs"
       fullWidth
       fullScreen={isMobile}
+      aria-labelledby={titleId}
     >
-      <DialogTitle>Add Client Assignment</DialogTitle>
+      <DialogTitle id={titleId}>Add Client Assignment</DialogTitle>
       <DialogContent>
         {error && (
           <Alert severity="error" sx={{ mb: 2, mt: 1 }}>
@@ -88,6 +92,8 @@ export function ManagerAssignmentDialog({
   onChange,
   onSubmit,
 }) {
+  const titleId = useId()
+
   return (
     <Dialog
       open={open}
@@ -95,8 +101,9 @@ export function ManagerAssignmentDialog({
       maxWidth="xs"
       fullWidth
       fullScreen={isMobile}
+      aria-labelledby={titleId}
     >
-      <DialogTitle>
+      <DialogTitle id={titleId}>
         {mode === 'edit' ? 'Edit Manager Assignment' : 'Add Manager Assignment'}
       </DialogTitle>
       <DialogContent>

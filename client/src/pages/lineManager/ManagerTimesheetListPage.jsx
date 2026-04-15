@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
 import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
@@ -121,7 +122,8 @@ export default function ManagerTimesheetListPage() {
     <Box>
       <PageHeader title={pageTitle} subtitle="View and manage your team's submissions">
         <TextField
-          placeholder="Search Timesheets..."
+          label="Search timesheets"
+          placeholder="Employee name"
           size="small"
           value={searchQuery}
           onChange={(e) => setQueryState({ q: e.target.value })}
@@ -247,10 +249,16 @@ export default function ManagerTimesheetListPage() {
             spacing={0}
           >
             {filtered.map((timesheet) => (
-              <Box
+              <ButtonBase
                 key={timesheet.id}
+                component="button"
+                type="button"
                 onClick={() => setSelectedMobileId(timesheet.id)}
+                aria-label={`Open details for ${getSubmitterDisplayLabel(timesheet.consultantName)}, week of ${formatWeekStart(timesheet.weekStart)}`}
                 sx={{
+                  width: '100%',
+                  display: 'block',
+                  textAlign: 'left',
                   py: 2.25,
                   px: 1,
                   mx: -1,
@@ -276,7 +284,7 @@ export default function ManagerTimesheetListPage() {
                     submittedLate={timesheet.submittedLate}
                   />
                 </Stack>
-              </Box>
+              </ButtonBase>
             ))}
           </Stack>
         ) : (

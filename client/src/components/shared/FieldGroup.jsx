@@ -1,3 +1,4 @@
+import { cloneElement, isValidElement } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { palette } from '../../theme.js'
@@ -16,6 +17,27 @@ export default function FieldGroup({
   const describedBy = [error ? errorId : null, !error && helper ? helperId : null]
     .filter(Boolean)
     .join(' ')
+  const control = isValidElement(children)
+    ? cloneElement(children, {
+        id: children.props.id ?? htmlFor,
+        error: typeof children.props.error === 'boolean' ? children.props.error || Boolean(error) : Boolean(error),
+        slotProps: {
+          ...children.props.slotProps,
+          htmlInput: {
+            ...children.props.slotProps?.htmlInput,
+            'aria-describedby':
+              [
+                children.props.slotProps?.htmlInput?.['aria-describedby'],
+                describedBy || undefined,
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined,
+            'aria-invalid':
+              children.props.slotProps?.htmlInput?.['aria-invalid'] ?? (error ? 'true' : undefined),
+          },
+        },
+      })
+    : children
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, ...sx }}>
@@ -38,7 +60,7 @@ export default function FieldGroup({
           )}
         </Typography>
       )}
-      <Box sx={{ '& .MuiInputBase-root': { width: '100%' } }}>{children}</Box>
+      <Box sx={{ '& .MuiInputBase-root': { width: '100%' } }}>{control}</Box>
       {error ? (
         <Typography
           id={errorId}
@@ -55,8 +77,6 @@ export default function FieldGroup({
           {helper}
         </Typography>
       ) : null}
-      {/* Expose describedBy for consumers that render raw inputs */}
-      <span data-describedby={describedBy} hidden />
     </Box>
   )
 }

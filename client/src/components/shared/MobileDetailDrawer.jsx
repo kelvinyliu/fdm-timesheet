@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import SwipeableDrawer from '@mui/material/SwipeableDrawer'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
@@ -15,6 +16,9 @@ export default function MobileDetailDrawer({
   actions, // Action buttons
   data = [], // Array of { label, value, node }
 }) {
+  const titleId = useId()
+  const descriptionId = useId()
+
   return (
     <SwipeableDrawer
       anchor="bottom"
@@ -22,6 +26,10 @@ export default function MobileDetailDrawer({
       onClose={onClose}
       onOpen={onOpen ?? (() => {})}
       disableSwipeToOpen
+      ModalProps={{
+        'aria-labelledby': titleId,
+        'aria-describedby': subtitle ? descriptionId : undefined,
+      }}
       PaperProps={{
         sx: {
           borderTopLeftRadius: 16,
@@ -39,16 +47,26 @@ export default function MobileDetailDrawer({
       {/* Header */}
       <Box sx={{ px: 2.5, pb: 1.5, pt: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
         <Box sx={{ pr: 2 }}>
-          <Typography variant="h6" component="h2" sx={{ fontWeight: 600, fontSize: '1.25rem', lineHeight: 1.2, mb: 0.25 }}>
+          <Typography
+            id={titleId}
+            variant="h6"
+            component="h2"
+            sx={{ fontWeight: 600, fontSize: '1.25rem', lineHeight: 1.2, mb: 0.25 }}
+          >
             {title}
           </Typography>
           {subtitle && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography id={descriptionId} variant="body2" color="text.secondary">
               {subtitle}
             </Typography>
           )}
         </Box>
-        <IconButton size="small" onClick={onClose} sx={{ mt: -0.5, mr: -1 }}>
+        <IconButton
+          size="small"
+          onClick={onClose}
+          aria-label={`Close ${title || 'details'}`}
+          sx={{ mt: -0.5, mr: -1 }}
+        >
           <CloseIcon />
         </IconButton>
       </Box>

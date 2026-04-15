@@ -86,6 +86,7 @@ export default function UserList({
                     fullWidth
                     value={currentRole}
                     onChange={(e) => onRoleChange(user.id, e.target.value)}
+                    inputProps={{ 'aria-label': `Role for ${user.name}` }}
                   >
                     {roles.map((role) => (
                       <MenuItem key={role} value={role}>
@@ -160,6 +161,7 @@ export default function UserList({
                       size="small"
                       value={currentRole}
                       onChange={(e) => onRoleChange(user.id, e.target.value)}
+                      inputProps={{ 'aria-label': `Role for ${user.name}` }}
                       sx={{ minWidth: 180, fontSize: '0.85rem' }}
                     >
                       {roles.map((role) => (
@@ -175,6 +177,7 @@ export default function UserList({
                           size="small"
                           color="primary"
                           disabled={!isDirty}
+                          aria-label={`Save role for ${user.name}`}
                           onClick={() => {
                             void onSaveRole(user.id)
                           }}
@@ -190,6 +193,7 @@ export default function UserList({
                     <IconButton
                       size="small"
                       color="error"
+                      aria-label={`Delete ${user.name}`}
                       onClick={() => {
                         void onDeleteUser(user.id, user.name)
                       }}

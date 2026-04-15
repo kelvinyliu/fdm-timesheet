@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLoaderData, useLocation, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
@@ -288,10 +289,16 @@ export default function TimesheetListPage({
           >
             {displayTimesheets.map((ts) => {
               return (
-                <Box
+                <ButtonBase
                   key={ts.id}
+                  component="button"
+                  type="button"
                   onClick={() => setSelectedMobileId(ts.id)}
+                  aria-label={`Open details for timesheet week of ${formatWeekStart(ts.weekStart)}`}
                   sx={{
+                    width: '100%',
+                    display: 'block',
+                    textAlign: 'left',
                     py: 2.25,
                     px: 1,
                     mx: -1,
@@ -313,7 +320,7 @@ export default function TimesheetListPage({
                     </Box>
                     <TimesheetStatusDisplay status={ts.status} submittedLate={ts.submittedLate} />
                   </Stack>
-                </Box>
+                </ButtonBase>
               )
             })}
           </Stack>

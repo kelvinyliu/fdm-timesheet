@@ -4,9 +4,9 @@
   --color-white: #ffffff;
   --color-black: #000000;
   --color-text: #2a2a28;
-  --color-text-muted: #6c6c6b;
+  --color-text-muted: #55554f;
   --color-border-muted: #e6e4e0;
-  --color-placeholder: #a1a1a0;
+  --color-placeholder: #66665f;
   --color-accent: #b2c784;
   --color-accent-hover: #9fb56b;
   --color-error: #e55c58;
@@ -20,10 +20,10 @@
   --ui-surface-muted: #f5f4f1;
   --ui-surface-raised: #ffffff;
   --ui-text: var(--color-text);
-  --ui-text-secondary: #50504b;
-  --ui-text-muted: var(--color-text-muted);
+  --ui-text-secondary: var(--color-text-muted);
+  --ui-text-muted: var(--color-placeholder);
   --ui-text-inverse: var(--color-white);
-  --ui-text-inverse-muted: rgba(255, 255, 255, 0.7);
+  --ui-text-inverse-muted: rgba(255, 255, 255, 0.82);
   --ui-border: #e6e4e0;
   --ui-border-strong: #d1cfcb;
   --ui-primary: var(--color-accent);
@@ -46,12 +46,12 @@
   --ui-success-bg: #f3faf0;
   --ui-warning: #8a5a00;
   --ui-warning-bg: #fff8e6;
-  --ui-error: var(--color-error);
+  --ui-error: #b3261e;
   --ui-error-bg: #fff5f4;
   --ui-info: #26556f;
   --ui-info-bg: #f0f8fc;
 
-  --ui-status-draft: #6c6c6b;
+  --ui-status-draft: #55554f;
   --ui-status-draft-bg: #f5f4f1;
   --ui-status-draft-border: #e6e4e0;
   --ui-status-pending: #8a5a00;
@@ -60,7 +60,7 @@
   --ui-status-approved: #2f6b36;
   --ui-status-approved-bg: #f3faf0;
   --ui-status-approved-border: #d4ebd0;
-  --ui-status-rejected: var(--color-error);
+  --ui-status-rejected: #b3261e;
   --ui-status-rejected-bg: #fff5f4;
   --ui-status-rejected-border: #fcd5d3;
   --ui-status-completed: #26556f;

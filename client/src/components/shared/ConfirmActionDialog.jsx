@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useId, useRef } from 'react'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
 import Button from '@mui/material/Button'
@@ -65,6 +65,8 @@ export default function ConfirmActionDialog({
   const variantStyle = VARIANT_STYLES[variant] ?? VARIANT_STYLES.info
   const Icon = variantStyle.icon
   const cancelBtnRef = useRef(null)
+  const titleId = useId()
+  const descriptionId = useId()
 
   useEffect(() => {
     if (open && variant === 'danger' && cancelBtnRef.current) {
@@ -86,6 +88,8 @@ export default function ConfirmActionDialog({
       fullWidth
       maxWidth="sm"
       fullScreen={isMobile}
+      aria-labelledby={titleId}
+      aria-describedby={message || summaryItems.length > 0 ? descriptionId : undefined}
       slotProps={{
         transition: {
           onExited,
@@ -107,6 +111,7 @@ export default function ConfirmActionDialog({
       }}
     >
       <DialogTitle
+        id={titleId}
         sx={{
           px: { xs: 3.5, sm: 4.5 },
           pt: { xs: 3.5, sm: 4.5 },
@@ -187,6 +192,7 @@ export default function ConfirmActionDialog({
 
       {(message || summaryItems.length > 0) && (
         <DialogContent
+          id={descriptionId}
           sx={{
             px: { xs: 3.5, sm: 4.5 },
             pt: { xs: 2.5, sm: 3 },

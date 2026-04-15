@@ -90,6 +90,7 @@ export default function AdminDashboard() {
       >
         <Box>
           <Typography
+            component="h1"
             sx={{
               fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
               lineHeight: 1.15,

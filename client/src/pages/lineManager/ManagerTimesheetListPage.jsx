@@ -56,6 +56,9 @@ export default function ManagerTimesheetListPage() {
     ? rawStatus
     : (LEGACY_STATUS_ALIASES[rawStatus] ?? MANAGER_STATUS_FILTERS.ALL)
   const searchQuery = queryState.q
+  const visibleTimesheets = timesheets.filter(
+    (timesheet) => timesheet.status !== 'DRAFT'
+  )
 
   const activeTab = statusFilter === MANAGER_STATUS_FILTERS.PENDING ? 0 : 1
 
@@ -74,7 +77,7 @@ export default function ManagerTimesheetListPage() {
   }
 
   const normalizedSearchQuery = searchQuery.trim().toLowerCase()
-  const filtered = timesheets
+  const filtered = visibleTimesheets
     .filter((timesheet) => {
       const matchesStatus = matchesManagerStatusFilter(timesheet.status, statusFilter)
       const matchesConsultant =
@@ -99,7 +102,7 @@ export default function ManagerTimesheetListPage() {
     emptyMessage = `No timesheets found for employee "${searchQuery.trim()}".`
   }
 
-  const selectedMobileTimesheet = timesheets.find((ts) => ts.id === selectedMobileId)
+  const selectedMobileTimesheet = visibleTimesheets.find((ts) => ts.id === selectedMobileId)
 
   const pageTitle =
     statusFilter === MANAGER_STATUS_FILTERS.PENDING
@@ -107,14 +110,13 @@ export default function ManagerTimesheetListPage() {
       : statusFilter === MANAGER_STATUS_FILTERS.APPROVED_GROUP
         ? 'Approved Timesheets'
         : statusFilter === MANAGER_STATUS_FILTERS.REJECTED
-          ? 'Rejected Timesheets'
-          : statusFilter === MANAGER_STATUS_FILTERS.PAID
-            ? 'Paid Timesheets'
-            : 'Team Timesheets'
-  const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
-  const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
-  const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
-  const approvedOrPaidCount = timesheets.filter(
+        ? 'Rejected Timesheets'
+        : statusFilter === MANAGER_STATUS_FILTERS.PAID
+          ? 'Paid Timesheets'
+          : 'Team Timesheets'
+  const pendingCount = visibleTimesheets.filter((ts) => ts.status === 'PENDING').length
+  const rejectedCount = visibleTimesheets.filter((ts) => ts.status === 'REJECTED').length
+  const approvedOrPaidCount = visibleTimesheets.filter(
     (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
   ).length
 
@@ -156,7 +158,7 @@ export default function ManagerTimesheetListPage() {
           </FormControl>
         )}
       </PageHeader>
-      {!error && timesheets.length > 0 && (
+      {!error && visibleTimesheets.length > 0 && (
         <Box
           sx={{
             mb: 4,
@@ -164,12 +166,11 @@ export default function ManagerTimesheetListPage() {
             borderBottom: '1px solid',
             borderColor: 'divider',
             display: 'grid',
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(3, 1fr)' },
             gap: { xs: 3, sm: 4 },
           }}
         >
           {[
-            { label: 'Drafts', count: draftCount, color: 'text.primary' },
             { label: 'Pending', count: pendingCount, color: '#8a5a00' },
             { label: 'Rejected', count: rejectedCount, color: '#e55c58' },
             { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2f6b36' },

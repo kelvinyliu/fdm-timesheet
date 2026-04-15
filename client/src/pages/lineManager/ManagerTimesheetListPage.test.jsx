@@ -160,4 +160,32 @@ describe('ManagerTimesheetListPage', () => {
       state: { returnTo: '/manager/timesheets?status=PENDING&q=Pat' },
     })
   })
+
+  it('omits the draft summary tile for hidden manager drafts', () => {
+    mocks.useLoaderData.mockReturnValue({
+      timesheets: [
+        {
+          id: 'ts-draft',
+          consultantName: 'Dana Draft',
+          weekStart: '2026-04-06',
+          totalHours: 0,
+          status: 'DRAFT',
+        },
+        {
+          id: 'ts-pending',
+          consultantName: 'Pat Pending',
+          weekStart: '2026-04-06',
+          totalHours: 40,
+          status: 'PENDING',
+        },
+      ],
+      error: '',
+    })
+
+    renderAt('/manager/timesheets')
+
+    expect(screen.queryByText('Drafts')).not.toBeInTheDocument()
+    expect(screen.queryByText('Dana Draft')).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'All Timesheets (1)' })).toBeInTheDocument()
+  })
 })

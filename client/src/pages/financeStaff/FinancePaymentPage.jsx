@@ -334,6 +334,11 @@ export default function FinancePaymentPage() {
           {feedback.message}
         </Alert>
       )}
+      {timesheet?.submittedLate && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          This timesheet was submitted after the deadline. Please review carefully before processing payment.
+        </Alert>
+      )}
 
       {timesheet?.status === 'APPROVED' && (
         <Box sx={{ mb: 3 }}>

@@ -318,7 +318,8 @@ export default function AssignmentsPage() {
 
       <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField
-          placeholder="Search assignments..."
+          label="Search assignments"
+          placeholder="Client or employee"
           size="small"
           value={searchQuery}
           onChange={(e) => setQueryState({ q: e.target.value })}

@@ -106,6 +106,7 @@ export default function PaymentDetailsPanel({
 
         {computedBuckets.map((item) => {
           const bucketKey = getWorkBucketKey(item)
+          const bucketLabel = getWorkBucketDisplayLabel(item.bucketLabel)
           const showBillRateError = item.entryKind === 'CLIENT' && !item.hasValidBillRate
           const showPayRateError = !item.hasValidPayRate
           const billRateHelper =
@@ -149,7 +150,11 @@ export default function PaymentDetailsPanel({
                     startAdornment: <InputAdornment position="start">£</InputAdornment>,
                     readOnly: item.entryKind === 'INTERNAL',
                   },
-                  htmlInput: { min: 0, step: '0.01' },
+                  htmlInput: {
+                    min: 0,
+                    step: '0.01',
+                    'aria-label': `Client bill rate for ${bucketLabel} in pounds per hour`,
+                  },
                 }}
                 disabled={item.entryKind === 'INTERNAL'}
                 fullWidth
@@ -176,7 +181,11 @@ export default function PaymentDetailsPanel({
                   input: {
                     startAdornment: <InputAdornment position="start">£</InputAdornment>,
                   },
-                  htmlInput: { min: 0.01, step: '0.01' },
+                  htmlInput: {
+                    min: 0.01,
+                    step: '0.01',
+                    'aria-label': `Employee pay rate for ${bucketLabel} in pounds per hour`,
+                  },
                 }}
                 fullWidth
                 error={showPayRateError}

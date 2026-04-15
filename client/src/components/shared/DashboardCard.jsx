@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
+import ButtonBase from '@mui/material/ButtonBase'
 
 export default function DashboardCard({
   icon: Icon,
@@ -11,14 +12,20 @@ export default function DashboardCard({
   onClick,
   delay = 0,
 }) {
+  const interactive = Boolean(onClick)
+
   return (
     <Paper
+      component={interactive ? ButtonBase : 'div'}
       onClick={onClick}
+      type={interactive ? 'button' : undefined}
+      aria-label={interactive ? `${label}: ${value}. ${subtitle}` : undefined}
       sx={{
         p: 3,
+        width: '100%',
         minHeight: 190,
         borderRadius: 3,
-        cursor: onClick ? 'pointer' : 'default',
+        cursor: interactive ? 'pointer' : 'default',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
@@ -27,10 +34,16 @@ export default function DashboardCard({
         borderColor: 'divider',
         animation: 'dashboardFadeUp 0.45s ease both',
         animationDelay: `${delay}ms`,
-        '&:hover': onClick
+        '&:hover': interactive
           ? {
               transform: 'translateY(-3px)',
               boxShadow: 3,
+              borderColor: 'text.primary',
+            }
+          : {},
+        '&.Mui-focusVisible': interactive
+          ? {
+              transform: 'translateY(-3px)',
               borderColor: 'text.primary',
             }
           : {},

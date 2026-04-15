@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import Button from '@mui/material/Button'
 import Dialog from '@mui/material/Dialog'
 import DialogActions from '@mui/material/DialogActions'
@@ -5,6 +6,8 @@ import DialogContent from '@mui/material/DialogContent'
 import DialogTitle from '@mui/material/DialogTitle'
 import TextField from '@mui/material/TextField'
 import Alert from '@mui/material/Alert'
+import FormControl from '@mui/material/FormControl'
+import InputLabel from '@mui/material/InputLabel'
 import Select from '@mui/material/Select'
 import MenuItem from '@mui/material/MenuItem'
 
@@ -20,6 +23,8 @@ export default function CreateUserDialog({
   onFieldChange,
   onSubmit,
 }) {
+  const titleId = useId()
+
   return (
     <Dialog
       open={open}
@@ -27,8 +32,9 @@ export default function CreateUserDialog({
       maxWidth="xs"
       fullWidth
       fullScreen={isMobile}
+      aria-labelledby={titleId}
     >
-      <DialogTitle>Create User</DialogTitle>
+      <DialogTitle id={titleId}>Create User</DialogTitle>
       <DialogContent>
         {formError && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -62,18 +68,22 @@ export default function CreateUserDialog({
           required
           sx={{ mb: 2 }}
         />
-        <Select
-          value={form.role}
-          onChange={(e) => onFieldChange('role', e.target.value)}
-          fullWidth
-          displayEmpty
-        >
-          {roles.map((role) => (
-            <MenuItem key={role} value={role}>
-              {getRoleLabel(role)}
-            </MenuItem>
-          ))}
-        </Select>
+        <FormControl fullWidth>
+          <InputLabel id="create-user-role-label">Role</InputLabel>
+          <Select
+            labelId="create-user-role-label"
+            label="Role"
+            value={form.role}
+            onChange={(e) => onFieldChange('role', e.target.value)}
+            fullWidth
+          >
+            {roles.map((role) => (
+              <MenuItem key={role} value={role}>
+                {getRoleLabel(role)}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={formLoading}>

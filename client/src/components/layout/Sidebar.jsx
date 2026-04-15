@@ -74,6 +74,8 @@ export default function Sidebar({ onNavigate, collapsed = false }) {
                 onNavigate?.()
               }
             }}
+            aria-current={isActive ? 'page' : undefined}
+            aria-label={collapsed ? label : undefined}
             sx={{
               width: '100%',
               minHeight: collapsed ? 48 : 44,

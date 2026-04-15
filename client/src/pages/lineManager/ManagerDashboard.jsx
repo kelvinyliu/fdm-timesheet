@@ -1,5 +1,6 @@
 import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -56,6 +57,7 @@ export default function ManagerDashboard() {
         >
           <Box sx={{ flex: 1 }}>
             <Typography
+              component="h1"
               sx={{
                 fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
@@ -221,10 +223,16 @@ export default function ManagerDashboard() {
         ) : (
           <Stack spacing={1.5}>
             {pending.slice(0, 5).map((ts) => (
-              <Box
+              <ButtonBase
                 key={ts.id}
+                component="button"
+                type="button"
                 onClick={() => navigate(`/manager/timesheets/${ts.id}`)}
+                aria-label={`Open pending review for ${getConsultantDisplayLabel(ts.consultantName)}, week of ${formatWeekStart(ts.weekStart)}`}
                 sx={{
+                  width: '100%',
+                  display: 'block',
+                  textAlign: 'left',
                   p: 2,
                   borderRadius: 2,
                   border: '1px solid',
@@ -259,7 +267,7 @@ export default function ManagerDashboard() {
                     <StatusBadge status={ts.status} />
                   </Stack>
                 </Stack>
-              </Box>
+              </ButtonBase>
             ))}
 
             <Divider sx={{ my: 0.5 }} />

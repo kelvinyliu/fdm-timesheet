@@ -234,7 +234,8 @@ export default function FinancePayRatesPage() {
         subtitle="Configure default pay rates used to prefill outgoing payroll costs"
       >
         <TextField
-          placeholder="Search employees..."
+          label="Search employees"
+          placeholder="Name or email"
           size="small"
           value={searchQuery}
           onChange={(event) => setQueryState({ q: event.target.value })}

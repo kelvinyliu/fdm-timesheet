@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useLoaderData } from 'react-router'
 import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Stack from '@mui/material/Stack'
 import Typography from '@mui/material/Typography'
 import TextField from '@mui/material/TextField'
@@ -375,10 +376,16 @@ export default function AuditLogPage() {
               spacing={0}
             >
               {pagedEntries.map((e) => (
-                <Box
+                <ButtonBase
                   key={e.id}
+                  component="button"
+                  type="button"
                   onClick={() => setSelectedMobileId(e.id)}
+                  aria-label={`Open audit log details for ${getAuditActorDisplayLabel(e.performedByName)} at ${formatTimestamp(e.createdAt)}`}
                   sx={{
+                    width: '100%',
+                    display: 'block',
+                    textAlign: 'left',
                     py: 2.25,
                     px: 1,
                     mx: -1,
@@ -410,7 +417,7 @@ export default function AuditLogPage() {
                       weekStart: e.timesheetWeekStart,
                     })}
                   </Typography>
-                </Box>
+                </ButtonBase>
               ))}
             </Stack>
           )}

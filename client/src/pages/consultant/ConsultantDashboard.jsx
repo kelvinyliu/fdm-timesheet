@@ -1,5 +1,6 @@
 import { useLoaderData, useNavigate } from 'react-router'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Grid from '@mui/material/Grid'
 import Paper from '@mui/material/Paper'
 import Typography from '@mui/material/Typography'
@@ -104,6 +105,7 @@ export default function ConsultantDashboard() {
         >
           <Box sx={{ flex: 1 }}>
             <Typography
+              component="h1"
               sx={{
                 fontSize: { xs: '2.4rem', sm: '2.8rem', md: '3.1rem' },
                 lineHeight: 1.15,
@@ -358,10 +360,16 @@ export default function ConsultantDashboard() {
                 : `/consultant/timesheets/${ts.id}`
 
               return (
-                <Box
+                <ButtonBase
                   key={ts.id}
+                  component="button"
+                  type="button"
                   onClick={() => navigate(targetPath)}
+                  aria-label={`Open timesheet for ${formatWeekStart(ts.weekStart)}${ts.totalHours != null ? `, ${Number(ts.totalHours).toFixed(2)} hours` : ''}`}
                   sx={{
+                    width: '100%',
+                    display: 'block',
+                    textAlign: 'left',
                     p: 2,
                     borderRadius: 2,
                     border: '1px solid',
@@ -397,7 +405,7 @@ export default function ConsultantDashboard() {
 
                     <StatusBadge status={ts.status} />
                   </Stack>
-                </Box>
+                </ButtonBase>
               )
             })}
 

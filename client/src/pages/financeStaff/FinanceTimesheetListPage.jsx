@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
 import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
+import ButtonBase from '@mui/material/ButtonBase'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
 import Stack from '@mui/material/Stack'
@@ -150,7 +151,8 @@ export default function FinanceTimesheetListPage() {
     <Box>
       <PageHeader title={pageTitle} subtitle="Process approved timesheets and review paid ones">
         <TextField
-          placeholder="Search employees..."
+          label="Search employees"
+          placeholder="Name or email"
           size="small"
           value={searchQuery}
           onChange={(e) => setQueryState({ q: e.target.value })}
@@ -273,10 +275,16 @@ export default function FinanceTimesheetListPage() {
               const ActionIcon = getActionButtonIcon(timesheet.status)
 
               return (
-                <Box
+                <ButtonBase
                   key={timesheet.id}
+                  component="button"
+                  type="button"
                   onClick={() => handleOpenTimesheet(timesheet.id)}
+                  aria-label={`Open ${getActionButtonLabel(timesheet.status).toLowerCase()} view for ${getSubmitterDisplayLabel(timesheet.consultantName)}, week of ${formatWeekStart(timesheet.weekStart)}`}
                   sx={{
+                    width: '100%',
+                    display: 'block',
+                    textAlign: 'left',
                     py: 2.25,
                     px: 1,
                     mx: -1,
@@ -333,7 +341,7 @@ export default function FinanceTimesheetListPage() {
                       </Button>
                     </Box>
                   </Stack>
-                </Box>
+                </ButtonBase>
               )
             })}
           </Stack>

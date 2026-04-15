@@ -25,12 +25,33 @@ export default function PageHeader({ title, subtitle, children, hideTitleOnMobil
             flex: 1,
             minWidth: 0,
             maxWidth: { md: children ? '55%' : '100%' },
-            display: { xs: hideTitleOnMobile ? 'none' : 'block', md: 'block' },
+            position: 'relative',
+            ...(hideTitleOnMobile
+              ? {
+                  display: 'block',
+                  width: { xs: 1, md: 'auto' },
+                  '& .page-header-title': {
+                    position: { xs: 'absolute', md: 'static' },
+                    width: { xs: 1, md: 'auto' },
+                    height: { xs: 1, md: 'auto' },
+                    p: 0,
+                    m: { xs: -1, md: 0 },
+                    overflow: { xs: 'hidden', md: 'visible' },
+                    clip: { xs: 'rect(0, 0, 0, 0)', md: 'auto' },
+                    whiteSpace: { xs: 'nowrap', md: 'normal' },
+                    border: 0,
+                  },
+                  '& .page-header-subtitle': {
+                    display: { xs: 'none', md: 'block' },
+                  },
+                }
+              : {}),
           }}
         >
           <Typography
             variant="h1"
             component="h1"
+            className="page-header-title"
             sx={{
               fontWeight: 600,
               lineHeight: 1.1,
@@ -45,6 +66,7 @@ export default function PageHeader({ title, subtitle, children, hideTitleOnMobil
           {subtitle && (
             <Typography
               variant="body1"
+              className="page-header-subtitle"
               sx={{ color: 'text.secondary', maxWidth: 560, fontSize: '0.925rem' }}
             >
               {subtitle}

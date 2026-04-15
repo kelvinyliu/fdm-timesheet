@@ -253,7 +253,7 @@ export default function ConsultantDashboard() {
             value={drafts.length}
             subtitle="Still being worked on"
             color="#1976D2"
-            onClick={() => navigate('/consultant/timesheets?tab=approved')}
+            onClick={() => navigate('/consultant/timesheets?tab=draft')}
             delay={80}
           />
         </Grid>
@@ -265,7 +265,7 @@ export default function ConsultantDashboard() {
             value={pending.length}
             subtitle="Waiting for review"
             color="#C58A00"
-            onClick={() => navigate('/consultant/timesheets?tab=approved')}
+            onClick={() => navigate('/consultant/timesheets?tab=pending')}
             delay={160}
           />
         </Grid>
@@ -277,7 +277,7 @@ export default function ConsultantDashboard() {
             value={rejected.length}
             subtitle="Needs correction"
             color="#D32F2F"
-            onClick={() => navigate('/consultant/timesheets?tab=approved')}
+            onClick={() => navigate('/consultant/timesheets?tab=rejected')}
             delay={240}
           />
         </Grid>

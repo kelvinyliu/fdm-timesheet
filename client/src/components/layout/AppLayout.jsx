@@ -655,6 +655,8 @@ export default function AppLayout() {
           className="page-enter"
           sx={{
             flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
             p: { xs: 2, sm: 3, md: 4 },
             width: '100%',
             minWidth: 0,

@@ -374,7 +374,7 @@ export default function TimesheetEditPage({ basePath = '/consultant/timesheets' 
   }
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader
         title="Edit Timesheet"
         subtitle={`Week of ${formatWeekStart(timesheet.weekStart)}`}

@@ -201,7 +201,7 @@ export default function TimesheetReviewPage() {
     : 'This is the last pending timesheet in your current queue.'
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader title="Open Timesheet">
         <Button
           variant="outlined"

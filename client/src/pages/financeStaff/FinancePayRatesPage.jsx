@@ -228,7 +228,7 @@ export default function FinancePayRatesPage() {
         : 'No unsaved pay-rate edits.'
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader
         title="Employee Pay Rates"
         subtitle="Configure default pay rates used to prefill outgoing payroll costs"

@@ -312,7 +312,7 @@ export default function FinancePaymentPage() {
   const matrixRows = timesheet ? entriesToReadOnlyMatrixRows(timesheet.entries ?? []) : []
 
   return (
-    <Box>
+    <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader title="Process Payment">
         <Button
           variant="outlined"

@@ -397,7 +397,7 @@ export default function TimesheetReviewPage() {
           </Dialog>
 
           {(timesheet.status === 'APPROVED' || timesheet.status === 'REJECTED' || timesheet.status === 'COMPLETED') && (
-            <Alert severity={timesheet.status === 'APPROVED' ? 'success' : timesheet.status === 'REJECTED' ? 'error' : 'info'} icon={timesheet.status === 'REJECTED' ? <BlockIcon /> : undefined} sx={{ mt: 2 }}>
+            <Alert severity={timesheet.status === 'APPROVED' ? 'success' : 'info'} icon={timesheet.status === 'REJECTED' ? <BlockIcon /> : undefined} sx={{ mt: 2 }}>
               {timesheet.status === 'APPROVED' ? (
                 <>
                   This timesheet has been <strong>approved</strong>.

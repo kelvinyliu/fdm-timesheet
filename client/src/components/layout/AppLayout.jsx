@@ -219,6 +219,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
         alignItems: 'center',
         gap: 1,
         flexShrink: 0,
+        minWidth: 0,
       }}
     >
       <Box
@@ -264,7 +265,7 @@ function UserFooter({ user, onChangePassword, onLogout, mobile = false, collapse
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', gap: 0.5 }}>
+      <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
         <Tooltip title="Change password">
           <IconButton
             size="small"

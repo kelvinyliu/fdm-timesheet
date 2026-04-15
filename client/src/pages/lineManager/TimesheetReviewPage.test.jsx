@@ -77,7 +77,7 @@ describe('TimesheetReviewPage', () => {
     mocks.useLocation.mockReturnValue({
       pathname: '/manager/timesheets/ts-1',
       search: '',
-      state: { returnTo: '/manager/timesheets?status=PENDING' },
+      state: { returnTo: '/manager/timesheets?status=PENDING&q=Pat' },
     })
     mocks.useLoaderData.mockReturnValue({
       timesheet: {
@@ -89,10 +89,7 @@ describe('TimesheetReviewPage', () => {
         workSummary: [],
         entries: [],
       },
-      pendingQueue: [
-        { id: 'ts-1' },
-        { id: 'ts-2' },
-      ],
+      pendingQueue: [{ id: 'ts-1' }, { id: 'ts-2' }],
       error: '',
     })
   })
@@ -102,7 +99,7 @@ describe('TimesheetReviewPage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Back' }))
 
-    expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets?status=PENDING')
+    expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets?status=PENDING&q=Pat')
   })
 
   it('preserves the filtered return path when approving and moving to the next timesheet', async () => {
@@ -124,7 +121,7 @@ describe('TimesheetReviewPage', () => {
 
     expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets/ts-2', {
       replace: true,
-      state: { returnTo: '/manager/timesheets?status=PENDING' },
+      state: { returnTo: '/manager/timesheets?status=PENDING&q=Pat' },
     })
   })
 

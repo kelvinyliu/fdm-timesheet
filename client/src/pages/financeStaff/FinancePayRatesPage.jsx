@@ -1,90 +1,115 @@
 import { useEffect, useState } from 'react'
 import { useLoaderData } from 'react-router'
+import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
+import InputAdornment from '@mui/material/InputAdornment'
+import Paper from '@mui/material/Paper'
+import Stack from '@mui/material/Stack'
 import Table from '@mui/material/Table'
 import TableBody from '@mui/material/TableBody'
 import TableCell from '@mui/material/TableCell'
 import TableContainer from '@mui/material/TableContainer'
 import TableHead from '@mui/material/TableHead'
 import TableRow from '@mui/material/TableRow'
-import Paper from '@mui/material/Paper'
 import TextField from '@mui/material/TextField'
-import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
+import Typography from '@mui/material/Typography'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import SaveIcon from '@mui/icons-material/Save'
 import SearchIcon from '@mui/icons-material/Search'
-import InputAdornment from '@mui/material/InputAdornment'
 import PageHeader from '../../components/shared/PageHeader'
+import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
+import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
+import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import { updateDefaultPayRate } from '../../api/users'
-import { formatDate } from '../../utils/dateFormatters'
+import { palette } from '../../theme.js'
+
+function getPendingRateValue(consultant) {
+  return consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate)
+}
+
+function getValidationMessage(value) {
+  if (!value.trim()) return 'Enter a default pay rate.'
+
+  const parsedRate = Number(value)
+  if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
+    return 'Enter a pay rate greater than 0.'
+  }
+
+  return ''
+}
+
+function formatRateLabel(rate) {
+  if (rate == null) return 'No default pay rate saved yet.'
+  return `Saved default: £${Number(rate).toFixed(2)}/hr`
+}
 
 export default function FinancePayRatesPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { consultants: loadedConsultants, error: loadError } = useLoaderData()
+  const [{ q: searchQuery }, setQueryState] = useQueryStateObject({ q: '' })
+
   const [consultants, setConsultants] = useState(loadedConsultants)
-  const [searchQuery, setSearchQuery] = useState('')
   const [pendingRates, setPendingRates] = useState(() =>
     Object.fromEntries(
-      loadedConsultants.map((consultant) => [
-        consultant.id,
-        consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
-      ])
+      loadedConsultants.map((consultant) => [consultant.id, getPendingRateValue(consultant)])
     )
   )
-  const [savingById, setSavingById] = useState({})
+  const [savingIds, setSavingIds] = useState([])
   const [error, setError] = useState(loadError)
-  const [feedback, setFeedback] = useState('')
+  const [rowSaveErrors, setRowSaveErrors] = useState({})
+  const [saveState, setSaveState] = useState({
+    state: 'idle',
+    message: 'All default pay rates are up to date.',
+  })
 
   useEffect(() => {
     setConsultants(loadedConsultants)
     setPendingRates(
       Object.fromEntries(
-        loadedConsultants.map((consultant) => [
-          consultant.id,
-          consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate),
-        ])
+        loadedConsultants.map((consultant) => [consultant.id, getPendingRateValue(consultant)])
       )
     )
+    setSavingIds([])
+    setRowSaveErrors({})
     setError(loadError)
+    setSaveState({
+      state: loadError ? 'error' : 'idle',
+      message:
+        loadError
+          ? 'Employee pay rates could not be loaded.'
+          : 'All default pay rates are up to date.',
+    })
   }, [loadedConsultants, loadError])
 
-  async function handleSave(consultantId) {
-    const nextRate = pendingRates[consultantId]
-    const parsedRate = Number(nextRate)
+  const rowMetaById = Object.fromEntries(
+    consultants.map((consultant) => {
+      const currentRate = pendingRates[consultant.id] ?? ''
+      const savedRate = getPendingRateValue(consultant)
+      const isDirty = currentRate !== savedRate
+      const validationMessage = isDirty ? getValidationMessage(currentRate) : ''
 
-    if (!Number.isFinite(parsedRate) || parsedRate <= 0) {
-      setError('Default pay rate must be greater than 0.')
-      return
-    }
-
-    setSavingById((prev) => ({ ...prev, [consultantId]: true }))
-    setError('')
-    setFeedback('')
-    try {
-      const updated = await updateDefaultPayRate(consultantId, parsedRate)
-      setConsultants((prev) =>
-        prev.map((consultant) => (consultant.id === consultantId ? updated : consultant))
-      )
-      setPendingRates((prev) => ({ ...prev, [consultantId]: String(updated.defaultPayRate) }))
-      setFeedback('Employee pay rate updated.')
-    } catch (err) {
-      setError(err.message || 'Failed to update employee pay rate.')
-    } finally {
-      setSavingById((prev) => ({ ...prev, [consultantId]: false }))
-    }
-  }
-
-  const hasUnsavedRateChanges = consultants.some(
-    (consultant) =>
-      (pendingRates[consultant.id] ?? '') !==
-      (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
+      return [
+        consultant.id,
+        {
+          currentRate,
+          savedRate,
+          isDirty,
+          validationMessage,
+          parsedRate: validationMessage ? null : Number(currentRate),
+        },
+      ]
+    })
   )
+
+  const dirtyConsultants = consultants.filter((consultant) => rowMetaById[consultant.id].isDirty)
+  const invalidDirtyConsultants = dirtyConsultants.filter(
+    (consultant) => rowMetaById[consultant.id].validationMessage
+  )
+  const hasUnsavedRateChanges = dirtyConsultants.length > 0
 
   useUnsavedChangesGuard({
     isDirty: hasUnsavedRateChanges,
@@ -95,13 +120,112 @@ export default function FinancePayRatesPage() {
     stayLabel: 'Keep editing',
   })
 
+  function handleRateChange(consultantId, value) {
+    setPendingRates((prev) => ({ ...prev, [consultantId]: value }))
+    setError('')
+    setRowSaveErrors((prev) => {
+      if (!prev[consultantId]) return prev
+
+      const next = { ...prev }
+      delete next[consultantId]
+      return next
+    })
+
+    const pendingValidationMessage = getValidationMessage(value)
+    setSaveState({
+      state: pendingValidationMessage ? 'error' : 'dirty',
+      message: pendingValidationMessage
+        ? 'Fix the highlighted pay-rate rows before saving.'
+        : 'Default pay-rate edits are ready to save.',
+    })
+  }
+
+  async function handleSaveAll() {
+    if (!dirtyConsultants.length) return
+
+    if (invalidDirtyConsultants.length > 0) {
+      const message = `Fix ${invalidDirtyConsultants.length} invalid pay-rate row${invalidDirtyConsultants.length === 1 ? '' : 's'} before saving.`
+      setError(message)
+      setSaveState({ state: 'error', message })
+      return
+    }
+
+    const dirtyIds = dirtyConsultants.map((consultant) => consultant.id)
+    setSavingIds(dirtyIds)
+    setError('')
+    setRowSaveErrors({})
+    setSaveState({
+      state: 'saving',
+      message: `Saving ${dirtyConsultants.length} pay-rate change${dirtyConsultants.length === 1 ? '' : 's'}...`,
+    })
+
+    const results = await Promise.allSettled(
+      dirtyConsultants.map((consultant) =>
+        updateDefaultPayRate(consultant.id, rowMetaById[consultant.id].parsedRate)
+      )
+    )
+
+    const updatedConsultantsById = {}
+    const nextRowErrors = {}
+
+    results.forEach((result, index) => {
+      const consultant = dirtyConsultants[index]
+      if (result.status === 'fulfilled') {
+        updatedConsultantsById[consultant.id] = result.value
+        return
+      }
+
+      nextRowErrors[consultant.id] =
+        result.reason?.message ?? 'This pay rate could not be saved. Try again.'
+    })
+
+    setConsultants((prev) =>
+      prev.map((consultant) => updatedConsultantsById[consultant.id] ?? consultant)
+    )
+    setPendingRates((prev) => {
+      const next = { ...prev }
+      Object.values(updatedConsultantsById).forEach((consultant) => {
+        next[consultant.id] = getPendingRateValue(consultant)
+      })
+      return next
+    })
+    setSavingIds([])
+    setRowSaveErrors(nextRowErrors)
+
+    const failedCount = Object.keys(nextRowErrors).length
+    const savedCount = dirtyConsultants.length - failedCount
+
+    if (failedCount > 0) {
+      const message =
+        savedCount > 0
+          ? `Saved ${savedCount} pay-rate change${savedCount === 1 ? '' : 's'}, but ${failedCount} row${failedCount === 1 ? '' : 's'} still need attention.`
+          : `None of the ${dirtyConsultants.length} edited pay-rate rows could be saved.`
+      setError('Some pay-rate updates failed. Review the marked rows and try again.')
+      setSaveState({ state: 'error', message })
+      return
+    }
+
+    setError('')
+    setSaveState({
+      state: 'saved',
+      message: `Saved ${savedCount} pay-rate change${savedCount === 1 ? '' : 's'}.`,
+    })
+  }
+
   const filteredConsultants = consultants.filter((consultant) => {
-    const q = searchQuery.toLowerCase()
+    const q = searchQuery.trim().toLowerCase()
     return (
       (consultant.name || '').toLowerCase().includes(q) ||
       (consultant.email || '').toLowerCase().includes(q)
     )
   })
+
+  const stickyMessage =
+    invalidDirtyConsultants.length > 0
+      ? `Fix ${invalidDirtyConsultants.length} invalid row${invalidDirtyConsultants.length === 1 ? '' : 's'} before saving.`
+      : dirtyConsultants.length > 0
+        ? `${dirtyConsultants.length} pay-rate change${dirtyConsultants.length === 1 ? '' : 's'} ready to save.`
+        : 'No unsaved pay-rate edits.'
 
   return (
     <Box>
@@ -113,7 +237,7 @@ export default function FinancePayRatesPage() {
           placeholder="Search employees..."
           size="small"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(event) => setQueryState({ q: event.target.value })}
           sx={{ minWidth: { sm: 240 } }}
           slotProps={{
             input: {
@@ -133,28 +257,39 @@ export default function FinancePayRatesPage() {
         </Alert>
       )}
 
-      {feedback && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setFeedback('')}>
-          {feedback}
-        </Alert>
-      )}
-
       {filteredConsultants.length === 0 ? (
-        <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
+        <Box
+          sx={{
+            py: 6,
+            textAlign: 'center',
+            borderTop: '1px dashed',
+            borderBottom: '1px dashed',
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             No employees found.
           </Typography>
-        </Paper>
+        </Box>
       ) : isMobile ? (
-        <Stack spacing={1.5}>
+        <Stack
+          divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+          spacing={0}
+        >
           {filteredConsultants.map((consultant) => {
-            const currentRate = pendingRates[consultant.id] ?? ''
-            const isDirty =
-              currentRate !==
-              (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
+            const rowMeta = rowMetaById[consultant.id]
+            const rowError = rowSaveErrors[consultant.id] ?? rowMeta.validationMessage
+            const isSaving = savingIds.includes(consultant.id)
+            const helperText = rowError
+              ? rowError
+              : isSaving
+                ? 'Saving pay-rate change...'
+                : rowMeta.isDirty
+                  ? 'Ready to save in the sticky action bar.'
+                  : formatRateLabel(consultant.defaultPayRate)
 
             return (
-              <Paper key={consultant.id} sx={{ p: 2.5 }}>
+              <Box key={consultant.id} sx={{ py: 2.5 }}>
                 <Stack spacing={2}>
                   <Box>
                     <Typography variant="body2" fontWeight={600}>
@@ -175,55 +310,61 @@ export default function FinancePayRatesPage() {
                   <TextField
                     label="Default Pay Rate (£/hr)"
                     type="number"
-                    value={currentRate}
-                    onChange={(event) =>
-                      setPendingRates((prev) => ({
-                        ...prev,
-                        [consultant.id]: event.target.value,
-                      }))
-                    }
-                    slotProps={{ htmlInput: { min: '0.01', step: '0.01' } }}
-                    helperText={
-                      consultant.defaultPayRate == null
-                        ? 'No default set yet.'
-                        : `Current default saved on ${formatDate(consultant.createdAt)}`
-                    }
+                    value={rowMeta.currentRate}
+                    onChange={(event) => handleRateChange(consultant.id, event.target.value)}
+                    slotProps={{
+                      input: {
+                        startAdornment: <InputAdornment position="start">£</InputAdornment>,
+                      },
+                      htmlInput: { min: '0.01', step: '0.01' },
+                    }}
+                    error={Boolean(rowError)}
+                    helperText={helperText}
                     fullWidth
                   />
 
-                  <Button
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    disabled={!isDirty || savingById[consultant.id]}
-                    onClick={() => handleSave(consultant.id)}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: rowError
+                        ? palette.error
+                        : rowMeta.isDirty
+                          ? palette.warning
+                          : palette.textSecondary,
+                    }}
                   >
-                    {savingById[consultant.id] ? 'Saving...' : 'Save Pay Rate'}
-                  </Button>
+                    {rowError
+                      ? 'Needs attention'
+                      : isSaving
+                        ? 'Saving...'
+                        : rowMeta.isDirty
+                          ? 'Unsaved change'
+                          : 'Saved'}
+                  </Typography>
                 </Stack>
-              </Paper>
+              </Box>
             )
           })}
         </Stack>
       ) : (
-        <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <TableContainer component={Paper}>
           <Table size="small">
-            <TableHead>
-              <TableRow>
+              <TableHead>
+                <TableRow>
                 <TableCell>Employee</TableCell>
                 <TableCell>Email</TableCell>
                 <TableCell>Default Pay Rate</TableCell>
-                <TableCell align="right">Actions</TableCell>
+                <TableCell>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredConsultants.map((consultant) => {
-                const currentRate = pendingRates[consultant.id] ?? ''
-                const isDirty =
-                  currentRate !==
-                  (consultant.defaultPayRate == null ? '' : String(consultant.defaultPayRate))
+                const rowMeta = rowMetaById[consultant.id]
+                const rowError = rowSaveErrors[consultant.id] ?? rowMeta.validationMessage
+                const isSaving = savingIds.includes(consultant.id)
 
                 return (
-                  <TableRow key={consultant.id}>
+                  <TableRow key={consultant.id} hover selected={rowMeta.isDirty}>
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
                         {consultant.name}
@@ -240,32 +381,50 @@ export default function FinancePayRatesPage() {
                         {consultant.email}
                       </Typography>
                     </TableCell>
-                    <TableCell sx={{ minWidth: 220 }}>
+                    <TableCell sx={{ width: 260 }}>
                       <TextField
                         size="small"
-                        label="£/hr"
+                        label="Default Pay Rate"
                         type="number"
-                        value={currentRate}
-                        onChange={(event) =>
-                          setPendingRates((prev) => ({
-                            ...prev,
-                            [consultant.id]: event.target.value,
-                          }))
+                        value={rowMeta.currentRate}
+                        onChange={(event) => handleRateChange(consultant.id, event.target.value)}
+                        slotProps={{
+                          input: {
+                            startAdornment: <InputAdornment position="start">£</InputAdornment>,
+                          },
+                          htmlInput: { min: '0.01', step: '0.01' },
+                        }}
+                        error={Boolean(rowError)}
+                        helperText={
+                          rowError
+                            ? rowError
+                            : isSaving
+                              ? 'Saving pay-rate change...'
+                              : formatRateLabel(consultant.defaultPayRate)
                         }
-                        slotProps={{ htmlInput: { min: '0.01', step: '0.01' } }}
                         fullWidth
                       />
                     </TableCell>
-                    <TableCell align="right">
-                      <Button
-                        size="small"
-                        variant="contained"
-                        startIcon={<SaveIcon />}
-                        disabled={!isDirty || savingById[consultant.id]}
-                        onClick={() => handleSave(consultant.id)}
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: rowError
+                            ? palette.error
+                            : rowMeta.isDirty
+                              ? palette.warning
+                              : palette.textSecondary,
+                          fontWeight: rowMeta.isDirty || rowError ? 600 : 500,
+                        }}
                       >
-                        {savingById[consultant.id] ? 'Saving...' : 'Save'}
-                      </Button>
+                        {rowError
+                          ? 'Needs attention'
+                          : isSaving
+                            ? 'Saving...'
+                            : rowMeta.isDirty
+                              ? 'Unsaved change'
+                              : 'Saved'}
+                      </Typography>
                     </TableCell>
                   </TableRow>
                 )
@@ -274,6 +433,34 @@ export default function FinancePayRatesPage() {
           </Table>
         </TableContainer>
       )}
+
+      <StickyActionBar
+        sx={{ mt: 3 }}
+        secondary={
+          <Stack spacing={0.75}>
+            <SaveStateBanner state={saveState.state} message={saveState.message} />
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {stickyMessage}
+            </Typography>
+          </Stack>
+        }
+      >
+        <Button
+          variant="contained"
+          size="large"
+          startIcon={<SaveIcon />}
+          disabled={savingIds.length > 0 || dirtyConsultants.length === 0 || invalidDirtyConsultants.length > 0}
+          onClick={() => {
+            void handleSaveAll()
+          }}
+        >
+          {savingIds.length > 0
+            ? 'Saving Pay Rates...'
+            : dirtyConsultants.length > 0
+              ? `Save ${dirtyConsultants.length} Change${dirtyConsultants.length === 1 ? '' : 's'}`
+              : 'All Changes Saved'}
+        </Button>
+      </StickyActionBar>
     </Box>
   )
 }

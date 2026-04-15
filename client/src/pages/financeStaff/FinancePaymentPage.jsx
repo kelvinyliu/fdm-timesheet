@@ -3,9 +3,7 @@ import { useLoaderData, useLocation, useNavigate, useParams, useRevalidator } fr
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
-import Stack from '@mui/material/Stack'
 import Divider from '@mui/material/Divider'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
@@ -14,6 +12,7 @@ import FinanceNotesPanel from './FinanceNotesPanel.jsx'
 import PaymentDetailsPanel from './PaymentDetailsPanel.jsx'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
+import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { useConfirmation } from '../../context/useConfirmation.js'
@@ -105,7 +104,7 @@ function serializePaymentDraft(bucketRates, notes) {
 
 export default function FinancePaymentPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const location = useLocation()
   const navigate = useNavigate()
   const revalidator = useRevalidator()
@@ -164,6 +163,9 @@ export default function FinancePaymentPage() {
     { incoming: 0, outgoing: 0 }
   )
   const netMargin = totals.incoming - totals.outgoing
+  const invalidBucketCount = computedBuckets.filter(
+    (item) => !item.hasValidBillRate || !item.hasValidPayRate
+  ).length
 
   function getNextApprovedId() {
     const idx = approvedQueue.findIndex((ts) => ts.id === id)
@@ -176,6 +178,24 @@ export default function FinancePaymentPage() {
 
   const nextId = getNextApprovedId()
   const isDirty = serializePaymentDraft(bucketRates, notes) !== savedDraftSnapshot
+  const disabledReason =
+    computedBuckets.length === 0
+      ? 'No rate-bearing work categories are available for payment on this timesheet.'
+      : invalidBucketCount > 0
+        ? `Add valid bill and pay rates for ${invalidBucketCount} work categor${invalidBucketCount === 1 ? 'y' : 'ies'} before processing.`
+        : ''
+  const paymentState = submitting
+    ? { state: 'saving', message: 'Processing payment...' }
+    : feedback?.severity === 'error'
+      ? { state: 'error', message: 'Payment processing failed' }
+      : isDirty
+        ? {
+            state: 'dirty',
+            message: `${Object.keys(bucketRates).length > 0 ? 'Rate' : 'Payment'} changes ready to process`,
+          }
+        : isPaymentReady
+          ? { state: 'saved', message: 'Rates complete and ready to process' }
+          : { state: 'idle', message: 'Complete the required rate fields' }
 
   useUnsavedChangesGuard({
     isDirty,
@@ -315,24 +335,43 @@ export default function FinancePaymentPage() {
         </Alert>
       )}
 
+      {timesheet?.status === 'APPROVED' && (
+        <Box sx={{ mb: 3 }}>
+          <SaveStateBanner state={paymentState.state} message={paymentState.message} />
+        </Box>
+      )}
+
       {timesheet && (
         <>
-          <Paper sx={{ 
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 3, 
-            boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-            border: '1px solid rgba(0,0,0,0.05)', 
-            background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
-            mb: 3 
-          }}>
-            <Typography variant="h6" gutterBottom>
+          <Box sx={{ mb: 4, pb: 4, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Summary
             </Typography>
             <DetailList items={summaryItems} />
 
             <Divider sx={{ my: 3 }} />
 
-            <Typography variant="h6" gutterBottom>
+            <Typography
+              sx={{
+                fontFamily: '"Outfit", system-ui, sans-serif',
+                fontSize: '0.72rem',
+                fontWeight: 500,
+                textTransform: 'uppercase',
+                letterSpacing: '0.2em',
+                color: 'text.secondary',
+                mb: 2,
+              }}
+            >
               Work Summary
             </Typography>
             {(workSummary ?? []).length === 0 ? (
@@ -356,7 +395,7 @@ export default function FinancePaymentPage() {
                 rowGap={1.25}
               />
             )}
-          </Paper>
+          </Box>
 
           <WeeklyMatrix
             rows={matrixRows}
@@ -380,6 +419,8 @@ export default function FinancePaymentPage() {
               nextId={nextId}
               onProcessPayment={handleProcessPayment}
               formatCurrency={formatCurrency}
+              saveState={paymentState}
+              disabledReason={disabledReason}
             />
           )}
 

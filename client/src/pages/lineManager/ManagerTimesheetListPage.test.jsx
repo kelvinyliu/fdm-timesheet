@@ -1,11 +1,11 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter } from 'react-router'
 import ManagerTimesheetListPage from './ManagerTimesheetListPage.jsx'
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
   useLoaderData: vi.fn(),
-  useLocation: vi.fn(),
   useMediaQuery: vi.fn(),
 }))
 
@@ -14,10 +14,17 @@ vi.mock('react-router', async () => {
   return {
     ...actual,
     useLoaderData: mocks.useLoaderData,
-    useLocation: mocks.useLocation,
     useNavigate: () => mocks.navigate,
   }
 })
+
+function renderAt(initialPath) {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <ManagerTimesheetListPage />
+    </MemoryRouter>
+  )
+}
 
 vi.mock('@mui/material/useMediaQuery', () => ({
   default: mocks.useMediaQuery,
@@ -60,7 +67,6 @@ describe('ManagerTimesheetListPage', () => {
   beforeEach(() => {
     mocks.navigate.mockReset()
     mocks.useLoaderData.mockReset()
-    mocks.useLocation.mockReset()
     mocks.useMediaQuery.mockReset()
 
     mocks.useLoaderData.mockReturnValue({
@@ -96,18 +102,11 @@ describe('ManagerTimesheetListPage', () => {
       ],
       error: '',
     })
-    mocks.useLocation.mockReturnValue({
-      pathname: '/manager/timesheets',
-      search: '?status=REJECTED',
-      state: null,
-    })
     mocks.useMediaQuery.mockReturnValue(false)
-
-    window.history.replaceState(null, '', '/manager/timesheets?status=REJECTED')
   })
 
   it('initializes the rejected filter from the URL', () => {
-    render(<ManagerTimesheetListPage />)
+    renderAt('/manager/timesheets?status=REJECTED')
 
     expect(screen.getByRole('heading', { name: 'Rejected Timesheets' })).toBeInTheDocument()
     expect(screen.getByText('Riley Rejected')).toBeInTheDocument()
@@ -117,14 +116,7 @@ describe('ManagerTimesheetListPage', () => {
   })
 
   it('maps the legacy approved query param to the combined approved view', () => {
-    mocks.useLocation.mockReturnValue({
-      pathname: '/manager/timesheets',
-      search: '?status=APPROVED',
-      state: null,
-    })
-    window.history.replaceState(null, '', '/manager/timesheets?status=APPROVED')
-
-    render(<ManagerTimesheetListPage />)
+    renderAt('/manager/timesheets?status=APPROVED')
 
     expect(screen.getByRole('heading', { name: 'Approved Timesheets' })).toBeInTheDocument()
     expect(screen.getByText('Amy Approved')).toBeInTheDocument()
@@ -134,15 +126,7 @@ describe('ManagerTimesheetListPage', () => {
   })
 
   it('falls back to all for invalid status values and preserves the selected filter on open', () => {
-    mocks.useLocation.mockReturnValue({
-      pathname: '/manager/timesheets',
-      search: '?status=UNKNOWN',
-      state: null,
-    })
-    window.history.replaceState(null, '', '/manager/timesheets?status=UNKNOWN')
-    const replaceStateSpy = vi.spyOn(window.history, 'replaceState')
-
-    render(<ManagerTimesheetListPage />)
+    renderAt('/manager/timesheets?status=UNKNOWN')
 
     expect(screen.getByRole('heading', { name: 'Team Timesheets' })).toBeInTheDocument()
     expect(screen.getByText('Pat Pending')).toBeInTheDocument()
@@ -155,16 +139,25 @@ describe('ManagerTimesheetListPage', () => {
     })
 
     expect(screen.getByRole('heading', { name: 'Pending Timesheets' })).toBeInTheDocument()
-    expect(replaceStateSpy).toHaveBeenLastCalledWith(
-      window.history.state,
-      '',
-      '/manager/timesheets?status=PENDING'
-    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Timesheet' }))
 
     expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets/ts-pending', {
       state: { returnTo: '/manager/timesheets?status=PENDING' },
+    })
+  })
+
+  it('preserves the search query on open', () => {
+    renderAt('/manager/timesheets?status=PENDING&q=Pat')
+
+    expect(screen.getByRole('heading', { name: 'Pending Timesheets' })).toBeInTheDocument()
+    expect(screen.getByText('Pat Pending')).toBeInTheDocument()
+    expect(screen.queryByText('Amy Approved')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Open Timesheet' }))
+
+    expect(mocks.navigate).toHaveBeenCalledWith('/manager/timesheets/ts-pending', {
+      state: { returnTo: '/manager/timesheets?status=PENDING&q=Pat' },
     })
   })
 })

@@ -1,8 +1,7 @@
-import { useNavigate, useParams, useLoaderData } from 'react-router'
+import { useLoaderData, useLocation, useNavigate, useParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
-import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Divider from '@mui/material/Divider'
 import EditIcon from '@mui/icons-material/Edit'
@@ -18,8 +17,10 @@ import { entriesToReadOnlyMatrixRows } from '../../utils/timesheetMatrix.js'
 
 export default function TimesheetDetailPage({ basePath = '/consultant/timesheets' }) {
   const { id } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
   const { timesheet, error } = useLoaderData()
+  const returnTo = location.state?.returnTo ?? basePath
 
   if (error) {
     return (
@@ -27,7 +28,7 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
         </Alert>
-        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(returnTo)}>
           Back to Timesheets
         </Button>
       </Box>
@@ -84,12 +85,12 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
           <Button
             variant="contained"
             startIcon={<EditIcon />}
-            onClick={() => navigate(`${basePath}/${id}/edit`)}
+            onClick={() => navigate(`${basePath}/${id}/edit`, { state: { returnTo } })}
           >
             Edit
           </Button>
         )}
-        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(basePath)}>
+        <Button variant="outlined" startIcon={<ArrowBackIcon />} onClick={() => navigate(returnTo)}>
           Back
         </Button>
       </PageHeader>
@@ -100,24 +101,35 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
         </Alert>
       )}
 
-      <Paper
-        sx={{
-          p: 3,
-          borderRadius: 3,
-          boxShadow: '0 4px 20px rgba(0,0,0,0.04)',
-          border: '1px solid rgba(0,0,0,0.05)',
-          background: 'linear-gradient(to bottom right, #ffffff, #fdfdfd)',
-          mb: 3,
-        }}
-      >
-        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+      <Box sx={{ mb: 4, pb: 4, borderBottom: '1px solid', borderColor: 'divider' }}>
+        <Typography
+          sx={{
+            fontFamily: '"Outfit", system-ui, sans-serif',
+            fontSize: '0.72rem',
+            fontWeight: 500,
+            textTransform: 'uppercase',
+            letterSpacing: '0.2em',
+            color: 'text.secondary',
+            mb: 2,
+          }}
+        >
           Summary
         </Typography>
         <DetailList items={detailItems} rowGap={2} />
 
         <Divider sx={{ my: 3 }} />
 
-        <Typography variant="h6" component="h2" sx={{ mb: 2 }}>
+        <Typography
+          sx={{
+            fontFamily: '"Outfit", system-ui, sans-serif',
+            fontSize: '0.72rem',
+            fontWeight: 500,
+            textTransform: 'uppercase',
+            letterSpacing: '0.2em',
+            color: 'text.secondary',
+            mb: 2,
+          }}
+        >
           Weekly Work Summary
         </Typography>
         {workSummary.length === 0 ? (
@@ -141,11 +153,20 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
             rowGap={1.25}
           />
         )}
-      </Paper>
+      </Box>
 
-      <Divider sx={{ mb: 3 }} />
-
-      <Typography variant="h6" component="h2" mb={2}>
+      <Typography
+        component="h2"
+        sx={{
+          fontFamily: '"Outfit", system-ui, sans-serif',
+          fontSize: '0.72rem',
+          fontWeight: 500,
+          textTransform: 'uppercase',
+          letterSpacing: '0.2em',
+          color: 'text.secondary',
+          mb: 2,
+        }}
+      >
         Daily Entries
       </Typography>
 

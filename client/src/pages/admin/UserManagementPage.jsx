@@ -16,6 +16,7 @@ import Button from '@mui/material/Button'
 import PageHeader from '../../components/shared/PageHeader'
 import { useConfirmation } from '../../context/useConfirmation.js'
 import { useUnsavedChangesGuard } from '../../context/useUnsavedChanges.js'
+import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import { createUser, updateUserRole, deleteUser } from '../../api/users'
 import CreateUserDialog from './components/CreateUserDialog.jsx'
 import UserList from './components/UserList.jsx'
@@ -31,37 +32,21 @@ function getRoleLabel(role) {
   return role.replace(/_/g, ' ')
 }
 
-function getRoleFilterFromUrl() {
-  const role = new URLSearchParams(window.location.search).get('role')
-  return ROLES.includes(role) ? role : 'ALL'
-}
-
-function replaceRoleFilterInUrl(nextRole) {
-  const nextUrl = new URL(window.location.href)
-
-  if (nextRole === 'ALL') {
-    nextUrl.searchParams.delete('role')
-  } else {
-    nextUrl.searchParams.set('role', nextRole)
-  }
-
-  window.history.replaceState(
-    window.history.state,
-    '',
-    `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
-  )
-}
-
 export default function UserManagementPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const revalidator = useRevalidator()
   const { users, error: loadError } = useLoaderData()
-  const [searchQuery, setSearchQuery] = useState('')
-  const [roleFilter, setRoleFilter] = useState(getRoleFilterFromUrl)
+  const [
+    { q: searchQuery, role: roleFilter, sort: sortBy },
+    setQueryState,
+  ] = useQueryStateObject({
+    q: '',
+    role: 'ALL',
+    sort: 'nameAsc',
+  })
   const [error, setError] = useSyncedErrorState(loadError)
   const [pendingRoles, setPendingRoles] = useState({})
-  const [sortBy, setSortBy] = useState('nameAsc')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [form, setForm] = useState(EMPTY_FORM)
   const [formError, setFormError] = useState('')
@@ -86,8 +71,7 @@ export default function UserManagementPage() {
   })
 
   function handleRoleFilterChange(nextRole) {
-    setRoleFilter(nextRole)
-    replaceRoleFilterInUrl(nextRole)
+    setQueryState({ role: nextRole })
   }
 
   function handleRoleSelectChange(userId, role) {
@@ -212,9 +196,13 @@ export default function UserManagementPage() {
     setFormLoading(false)
   }
 
+  const normalizedRoleFilter = roleFilter === 'ALL' || ROLES.includes(roleFilter) ? roleFilter : 'ALL'
+  const normalizedSort = ['nameAsc', 'nameDesc', 'roleAsc', 'roleDesc'].includes(sortBy)
+    ? sortBy
+    : 'nameAsc'
   const normalizedQuery = searchQuery.trim().toLowerCase()
   const filteredUsers = users.filter((user) => {
-    const matchesRole = roleFilter === 'ALL' || user.role === roleFilter
+    const matchesRole = normalizedRoleFilter === 'ALL' || user.role === normalizedRoleFilter
     const matchesSearch =
       normalizedQuery.length === 0 ||
       (user.name || '').toLowerCase().includes(normalizedQuery) ||
@@ -223,18 +211,18 @@ export default function UserManagementPage() {
     return matchesRole && matchesSearch
   })
   const sortedUsers = [...filteredUsers].sort((a, b) => {
-    if (sortBy === 'nameAsc') return a.name.localeCompare(b.name)
-    if (sortBy === 'nameDesc') return b.name.localeCompare(a.name)
-    if (sortBy === 'roleAsc') return a.role.localeCompare(b.role)
-    if (sortBy === 'roleDesc') return b.role.localeCompare(a.role)
+    if (normalizedSort === 'nameAsc') return a.name.localeCompare(b.name)
+    if (normalizedSort === 'nameDesc') return b.name.localeCompare(a.name)
+    if (normalizedSort === 'roleAsc') return a.role.localeCompare(b.role)
+    if (normalizedSort === 'roleDesc') return b.role.localeCompare(a.role)
     return 0
   })
 
   let emptyMessage = 'No users found.'
-  if (roleFilter !== 'ALL' && normalizedQuery) {
-    emptyMessage = `No users found for "${searchQuery.trim()}" with role "${getRoleLabel(roleFilter)}".`
-  } else if (roleFilter !== 'ALL') {
-    emptyMessage = `No users found with role "${getRoleLabel(roleFilter)}".`
+  if (normalizedRoleFilter !== 'ALL' && normalizedQuery) {
+    emptyMessage = `No users found for "${searchQuery.trim()}" with role "${getRoleLabel(normalizedRoleFilter)}".`
+  } else if (normalizedRoleFilter !== 'ALL') {
+    emptyMessage = `No users found with role "${getRoleLabel(normalizedRoleFilter)}".`
   } else if (normalizedQuery) {
     emptyMessage = `No users found for "${searchQuery.trim()}".`
   }
@@ -246,7 +234,7 @@ export default function UserManagementPage() {
           placeholder="Search users..."
           size="small"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => setQueryState({ q: e.target.value })}
           sx={{ minWidth: { sm: 220 } }}
           slotProps={{
             input: {
@@ -263,7 +251,7 @@ export default function UserManagementPage() {
           <InputLabel id="user-role-filter-label">Role</InputLabel>
           <Select
             labelId="user-role-filter-label"
-            value={roleFilter}
+            value={normalizedRoleFilter}
             label="Role"
             onChange={(e) => handleRoleFilterChange(e.target.value)}
           >
@@ -280,9 +268,9 @@ export default function UserManagementPage() {
           <InputLabel id="user-sort-label">Sort</InputLabel>
           <Select
             labelId="user-sort-label"
-            value={sortBy}
+            value={normalizedSort}
             label="Sort"
-            onChange={(e) => setSortBy(e.target.value)}
+            onChange={(e) => setQueryState({ sort: e.target.value })}
           >
             <MenuItem value="nameAsc">Name (A → Z)</MenuItem>
             <MenuItem value="nameDesc">Name (Z → A)</MenuItem>

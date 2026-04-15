@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLoaderData, useNavigate } from 'react-router'
+import { useQueryStateObject } from '../../hooks/useQueryState.js'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -26,50 +27,48 @@ import RateReviewIcon from '@mui/icons-material/RateReview'
 import SearchIcon from '@mui/icons-material/Search'
 import PageHeader from '../../components/shared/PageHeader'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
+import MobileDetailDrawer from '../../components/shared/MobileDetailDrawer.jsx'
 import { formatWeekStart } from '../../utils/dateFormatters'
 import { getSubmitterDisplayLabel } from '../../utils/displayLabels'
 import {
   buildManagerTimesheetListPath,
-  getManagerStatusFilterFromSearch,
   getManagerStatusFilterLabel,
   MANAGER_STATUS_FILTERS,
   matchesManagerStatusFilter,
 } from './utils/managerTimesheetFilters.js'
 
-function getStatusFilterFromUrl() {
-  return getManagerStatusFilterFromSearch(window.location.search)
-}
+const LEGACY_STATUS_ALIASES = { APPROVED: MANAGER_STATUS_FILTERS.APPROVED_GROUP }
+const VALID_STATUS_FILTERS = new Set(Object.values(MANAGER_STATUS_FILTERS))
 
 export default function ManagerTimesheetListPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const navigate = useNavigate()
   const { timesheets, error } = useLoaderData()
-  const [statusFilter, setStatusFilter] = useState(getStatusFilterFromUrl)
-  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedMobileId, setSelectedMobileId] = useState(null)
+  const [queryState, setQueryState] = useQueryStateObject({
+    status: MANAGER_STATUS_FILTERS.ALL,
+    q: '',
+  })
+  const rawStatus = queryState.status
+  const statusFilter = VALID_STATUS_FILTERS.has(rawStatus)
+    ? rawStatus
+    : (LEGACY_STATUS_ALIASES[rawStatus] ?? MANAGER_STATUS_FILTERS.ALL)
+  const searchQuery = queryState.q
 
-  function handleStatusFilterChange(nextStatusFilter) {
-    setStatusFilter(nextStatusFilter)
-
-    const nextPath = buildManagerTimesheetListPath(nextStatusFilter)
-    window.history.replaceState(window.history.state, '', nextPath)
-  }
-
-  const activeTab = statusFilter === MANAGER_STATUS_FILTERS.PENDING ? 0 : 1;
+  const activeTab = statusFilter === MANAGER_STATUS_FILTERS.PENDING ? 0 : 1
 
   function handleTabChange(event, newValue) {
     if (newValue === 0) {
-      handleStatusFilterChange(MANAGER_STATUS_FILTERS.PENDING);
-    } else {
-      if (statusFilter === MANAGER_STATUS_FILTERS.PENDING) {
-        handleStatusFilterChange(MANAGER_STATUS_FILTERS.ALL);
-      }
+      setQueryState({ status: MANAGER_STATUS_FILTERS.PENDING })
+    } else if (statusFilter === MANAGER_STATUS_FILTERS.PENDING) {
+      setQueryState({ status: MANAGER_STATUS_FILTERS.ALL })
     }
   }
 
   function handleOpenTimesheet(timesheetId) {
     navigate(`/manager/timesheets/${timesheetId}`, {
-      state: { returnTo: buildManagerTimesheetListPath(statusFilter) },
+      state: { returnTo: buildManagerTimesheetListPath(statusFilter, searchQuery) },
     })
   }
 
@@ -83,7 +82,7 @@ export default function ManagerTimesheetListPage() {
           .toLowerCase()
           .includes(normalizedSearchQuery)
 
-    return matchesStatus && matchesConsultant
+      return matchesStatus && matchesConsultant
     })
     .sort((a, b) => {
       const statusOrder = { PENDING: 0, REJECTED: 0, APPROVED: 1, COMPLETED: 2 }
@@ -99,6 +98,8 @@ export default function ManagerTimesheetListPage() {
     emptyMessage = `No timesheets found for employee "${searchQuery.trim()}".`
   }
 
+  const selectedMobileTimesheet = timesheets.find((ts) => ts.id === selectedMobileId)
+
   const pageTitle =
     statusFilter === MANAGER_STATUS_FILTERS.PENDING
       ? 'Pending Timesheets'
@@ -109,12 +110,12 @@ export default function ManagerTimesheetListPage() {
           : statusFilter === MANAGER_STATUS_FILTERS.PAID
             ? 'Paid Timesheets'
             : 'Team Timesheets'
-        const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
-        const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
-        const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
-        const approvedOrPaidCount = timesheets.filter(
-        (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
-        ).length
+  const draftCount = timesheets.filter((ts) => ts.status === 'DRAFT').length
+  const pendingCount = timesheets.filter((ts) => ts.status === 'PENDING').length
+  const rejectedCount = timesheets.filter((ts) => ts.status === 'REJECTED').length
+  const approvedOrPaidCount = timesheets.filter(
+    (ts) => ts.status === 'APPROVED' || ts.status === 'COMPLETED'
+  ).length
 
   return (
     <Box>
@@ -123,7 +124,7 @@ export default function ManagerTimesheetListPage() {
           placeholder="Search Timesheets..."
           size="small"
           value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
+          onChange={(e) => setQueryState({ q: e.target.value })}
           sx={{ minWidth: { sm: 240 } }}
           slotProps={{
             input: {
@@ -142,7 +143,7 @@ export default function ManagerTimesheetListPage() {
               labelId="status-filter-label"
               value={statusFilter}
               label="Status"
-              onChange={(e) => handleStatusFilterChange(e.target.value)}
+              onChange={(e) => setQueryState({ status: e.target.value })}
             >
               <MenuItem value={MANAGER_STATUS_FILTERS.ALL}>All</MenuItem>
               <MenuItem value={MANAGER_STATUS_FILTERS.PENDING}>Pending</MenuItem>
@@ -154,82 +155,65 @@ export default function ManagerTimesheetListPage() {
         )}
       </PageHeader>
       {!error && timesheets.length > 0 && (
-        <Paper
-          elevation={0}
+        <Box
           sx={{
             mb: 4,
-            p: 2,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-around',
-            borderRadius: 3,
-            border: '1px solid rgba(0,0,0,0.08)',
-            background: 'linear-gradient(to right, rgba(255,255,255,0.7), rgba(252,252,252,0.8))',
-            backdropFilter: 'blur(10px)',
-            flexDirection: { xs: 'column', sm: 'row' },
-            gap: { xs: 2, sm: 0 },
+            pb: 3,
+            borderBottom: '1px solid',
+            borderColor: 'divider',
+            display: 'grid',
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gap: { xs: 3, sm: 4 },
           }}
         >
           {[
-            { label: 'Drafts', count: draftCount, color: 'text.secondary' },
-            { label: 'Pending', count: pendingCount, color: '#ed6c02' },
-            { label: 'Rejected', count: rejectedCount, color: '#d32f2f' },
-            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2e7d32' },
-          ].map((item, index) => (
-            <Box
-              key={item.label}
-              sx={{
-                flex: 1,
-                textAlign: 'center',
-                borderRight: {
-                  xs: 'none',
-                  sm: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                },
-                borderBottom: {
-                  xs: index !== 3 ? '1px solid rgba(0,0,0,0.08)' : 'none',
-                  sm: 'none',
-                },
-                pb: { xs: index !== 3 ? 2 : 0, sm: 0 },
-                width: '100%',
-              }}
-            >
+            { label: 'Drafts', count: draftCount, color: 'text.primary' },
+            { label: 'Pending', count: pendingCount, color: '#8a5a00' },
+            { label: 'Rejected', count: rejectedCount, color: '#e55c58' },
+            { label: 'Approved / Paid', count: approvedOrPaidCount, color: '#2f6b36' },
+          ].map((item) => (
+            <Box key={item.label}>
               <Typography
-                variant="caption"
                 sx={{
-                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  fontWeight: 500,
                   color: 'text.secondary',
                   textTransform: 'uppercase',
-                  letterSpacing: 1,
-                  display: 'block',
+                  letterSpacing: '0.18em',
+                  mb: 1,
                 }}
               >
                 {item.label}
               </Typography>
               <Typography
-                variant="h5"
                 sx={{
-                  fontFamily: '"JetBrains Mono", monospace',
-                  fontWeight: 800,
+                  fontFamily: '"Outfit", system-ui, sans-serif',
+                  fontWeight: 400,
+                  fontSize: { xs: '2.2rem', sm: '2.6rem' },
+                  lineHeight: 1,
+                  letterSpacing: '-0.03em',
                   color: item.color,
-                  mt: 0.5,
+                  fontVariantNumeric: 'tabular-nums',
                 }}
               >
                 {item.count}
               </Typography>
             </Box>
           ))}
-        </Paper>
+        </Box>
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3, mx: { xs: 0, sm: 0 } }}>
-        <Tabs 
-          value={activeTab} 
+        <Tabs
+          value={activeTab}
           onChange={handleTabChange}
-          variant={isMobile ? "fullWidth" : "standard"}
-          sx={{ '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500, pb: 1.5 } }}
+          variant={isMobile ? 'fullWidth' : 'standard'}
+          sx={{
+            '& .MuiTab-root': { textTransform: 'none', fontSize: '1rem', fontWeight: 500, pb: 1.5 },
+          }}
         >
-          <Tab label="Pending Approval" />
-          <Tab label="All Timesheets" />
+          <Tab label={`Pending Approval (${pendingCount})`} />
+          <Tab label={`All Timesheets (${pendingCount + rejectedCount + approvedOrPaidCount})`} />
         </Tabs>
       </Box>
 
@@ -240,99 +224,95 @@ export default function ManagerTimesheetListPage() {
       )}
 
       {!error && filtered.length === 0 && (
-        <Paper sx={{ p: 6, textAlign: 'center', borderStyle: 'dashed' }}>
+        <Box
+          sx={{
+            py: 6,
+            textAlign: 'center',
+            borderTop: '1px dashed',
+            borderBottom: '1px dashed',
+            borderColor: 'divider',
+          }}
+        >
           <Typography variant="body2" color="text.secondary">
             {emptyMessage}
           </Typography>
-        </Paper>
+        </Box>
       )}
 
       {!error &&
         filtered.length > 0 &&
         (isMobile ? (
-          <Stack spacing={1.5}>
+          <Stack
+            divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
+            spacing={0}
+          >
             {filtered.map((timesheet) => (
-              <Paper key={timesheet.id} sx={{ p: 2.5 }}>
-                <Stack spacing={2}>
-                  <Box
-                    sx={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: 1.5,
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Submitter
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        {getSubmitterDisplayLabel(timesheet.consultantName)}
-                      </Typography>
-                    </Box>
-                    <TimesheetStatusDisplay
-                      status={timesheet.status}
-                      submittedLate={timesheet.submittedLate}
-                    />
+              <Box
+                key={timesheet.id}
+                onClick={() => setSelectedMobileId(timesheet.id)}
+                sx={{
+                  py: 2.25,
+                  px: 1,
+                  mx: -1,
+                  borderRadius: 1.5,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                  '&:hover': { backgroundColor: 'action.hover' },
+                }}
+              >
+                <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1.5}>
+                  <Box>
+                    <Typography variant="body2" fontWeight={600} sx={{ mb: 0.25 }}>
+                      {getSubmitterDisplayLabel(timesheet.consultantName)}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {formatWeekStart(timesheet.weekStart)}
+                      {timesheet.totalHours != null &&
+                        ` · ${Number(timesheet.totalHours).toFixed(2)} hrs`}
+                    </Typography>
                   </Box>
-
-                  <Box
-                    sx={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                      gap: 1.5,
-                    }}
-                  >
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Week of
-                      </Typography>
-                      <Typography variant="body2" fontWeight={500}>
-                        {formatWeekStart(timesheet.weekStart)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography variant="caption" sx={{ display: 'block', mb: 0.5 }}>
-                        Total Hours
-                      </Typography>
-                      <Typography
-                        sx={{
-                          fontFamily: '"JetBrains Mono", monospace',
-                          fontSize: '0.95rem',
-                          fontWeight: 600,
-                        }}
-                      >
-                        {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  <Button
-                    variant="outlined"
-                    startIcon={<RateReviewIcon sx={{ fontSize: '0.95rem' }} />}
-                    onClick={() => handleOpenTimesheet(timesheet.id)}
-                  >
-                    Open Timesheet
-                  </Button>
+                  <TimesheetStatusDisplay
+                    status={timesheet.status}
+                    submittedLate={timesheet.submittedLate}
+                  />
                 </Stack>
-              </Paper>
+              </Box>
             ))}
           </Stack>
         ) : (
-          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
-            <Table sx={{ tableLayout: 'fixed', minWidth: 650 }}>
+          <TableContainer component={Paper}>
+            <Table sx={{ tableLayout: 'auto' }}>
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ width: '35%' }}>Employee</TableCell>
-                  <TableCell sx={{ width: '15%' }}>Week of</TableCell>
-                  <TableCell sx={{ width: '20%' }}>Status</TableCell>
-                  <TableCell align="right" sx={{ width: '10%' }}>Total Hours</TableCell>
-                  <TableCell align="right" sx={{ width: '20%' }}>Actions</TableCell>
+                  <TableCell>Employee</TableCell>
+                  <TableCell>Week of</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell align="right">Total Hours</TableCell>
+                  <TableCell align="right">Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
                 {filtered.map((timesheet) => (
-                  <TableRow key={timesheet.id}>
+                  <TableRow
+                    key={timesheet.id}
+                    hover
+                    tabIndex={0}
+                    onClick={() => handleOpenTimesheet(timesheet.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        handleOpenTimesheet(timesheet.id)
+                      }
+                    }}
+                    sx={{
+                      cursor: 'pointer',
+                      '&:focus-visible': {
+                        outline: '2px solid',
+                        outlineColor: 'primary.main',
+                        outlineOffset: -2,
+                      },
+                    }}
+                  >
                     <TableCell>
                       <Typography variant="body2" fontWeight={500}>
                         {getSubmitterDisplayLabel(timesheet.consultantName)}
@@ -356,10 +336,12 @@ export default function ManagerTimesheetListPage() {
                           fontSize: '0.85rem',
                         }}
                       >
-                        {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'}
+                        {timesheet.totalHours != null
+                          ? Number(timesheet.totalHours).toFixed(2)
+                          : '-'}
                       </Typography>
                     </TableCell>
-                    <TableCell align="right">
+                    <TableCell align="right" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="small"
                         variant="outlined"
@@ -375,6 +357,46 @@ export default function ManagerTimesheetListPage() {
             </Table>
           </TableContainer>
         ))}
+
+      {isMobile && selectedMobileTimesheet && (
+        <MobileDetailDrawer
+          open={!!selectedMobileId}
+          onClose={() => setSelectedMobileId(null)}
+          title={getSubmitterDisplayLabel(selectedMobileTimesheet.consultantName)}
+          subtitle={`Week of ${formatWeekStart(selectedMobileTimesheet.weekStart)}`}
+          data={[
+            {
+              label: 'Status',
+              node: (
+                <Stack direction="row" sx={{ mt: 0.5 }}>
+                  <TimesheetStatusDisplay
+                    status={selectedMobileTimesheet.status}
+                    submittedLate={selectedMobileTimesheet.submittedLate}
+                  />
+                </Stack>
+              ),
+            },
+            {
+              label: 'Total Hours',
+              value:
+                selectedMobileTimesheet.totalHours != null
+                  ? `${Number(selectedMobileTimesheet.totalHours).toFixed(2)} hrs`
+                  : '-',
+            },
+          ]}
+          actions={
+            <Button
+              variant="contained"
+              fullWidth
+              size="large"
+              startIcon={<RateReviewIcon />}
+              onClick={() => handleOpenTimesheet(selectedMobileId)}
+            >
+              Open Timesheet
+            </Button>
+          }
+        />
+      )}
     </Box>
   )
 }

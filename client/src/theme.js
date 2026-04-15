@@ -82,23 +82,23 @@ const theme = createTheme({
   typography: {
     fontFamily: '"Outfit", system-ui, sans-serif',
     h1: {
-      fontFamily: 'Poppins, Georgia, serif',
-      fontWeight: 400,
-      fontSize: '2.5rem',
+      fontFamily: '"Outfit", system-ui, sans-serif',
+      fontWeight: 600,
+      fontSize: '2rem',
       lineHeight: 1.15,
-      letterSpacing: '-0.02em',
+      letterSpacing: '-0.01em',
     },
     h2: {
-      fontFamily: 'Poppins, Georgia, serif',
-      fontWeight: 400,
-      fontSize: '2rem',
+      fontFamily: '"Outfit", system-ui, sans-serif',
+      fontWeight: 600,
+      fontSize: '1.6rem',
       lineHeight: 1.2,
       letterSpacing: '-0.01em',
     },
     h3: {
-      fontFamily: 'Poppins, Georgia, serif',
-      fontWeight: 400,
-      fontSize: '1.75rem',
+      fontFamily: '"Outfit", system-ui, sans-serif',
+      fontWeight: 600,
+      fontSize: '1.35rem',
       lineHeight: 1.25,
     },
     h4: {
@@ -420,10 +420,10 @@ const theme = createTheme({
     MuiDialogTitle: {
       styleOverrides: {
         root: {
-          fontFamily: 'Poppins, Georgia, serif',
-          fontSize: '2rem',
-          fontWeight: 400,
-          padding: '24px 32px 16px',
+          fontFamily: '"Outfit", system-ui, sans-serif',
+          fontSize: '1.35rem',
+          fontWeight: 600,
+          padding: '20px 24px 12px',
           color: palette.textPrimary,
         },
       },

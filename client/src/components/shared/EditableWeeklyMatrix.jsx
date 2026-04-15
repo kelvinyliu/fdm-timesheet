@@ -182,7 +182,7 @@ export default function EditableWeeklyMatrix({
   onRowHoursChange,
 }) {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const dayCards = buildDayCardData(rows, weekDates)
   const dayTotals = getMatrixDayTotals(rows, weekDates)
   const desktopTableMinWidth =
@@ -227,7 +227,7 @@ export default function EditableWeeklyMatrix({
       >
         <Typography
           sx={{
-            fontFamily: '"Instrument Serif", Georgia, serif',
+            fontFamily: '"Outfit", system-ui, sans-serif',
             fontSize: '1.85rem',
             fontWeight: 400,
             color: palette.textPrimary,
@@ -443,7 +443,7 @@ export default function EditableWeeklyMatrix({
                       <Box>
                         <Typography
                           sx={{
-                            fontFamily: '"Instrument Serif", Georgia, serif',
+                            fontFamily: '"Outfit", system-ui, sans-serif',
                             fontSize: '1.4rem',
                             color: isOverLimit
                               ? palette.error
@@ -657,7 +657,7 @@ export default function EditableWeeklyMatrix({
                       <Box sx={{ maxWidth: 300, mx: 'auto' }}>
                         <Typography
                           sx={{
-                            fontFamily: '"Instrument Serif", Georgia, serif',
+                            fontFamily: '"Outfit", system-ui, sans-serif',
                             fontSize: '1.5rem',
                             color: palette.textSecondary,
                             mb: 1,

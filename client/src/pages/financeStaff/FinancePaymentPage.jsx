@@ -279,7 +279,41 @@ export default function FinancePaymentPage() {
   }
 
   async function handleReturnToManager() {
-    if (!returnComment.trim()) return
+    const trimmedComment = returnComment.trim()
+    if (!trimmedComment) return
+
+    setReturnDialogOpen(false)
+
+    const result = await confirm({
+      variant: 'danger',
+      title: 'Send this timesheet back to the line manager?',
+      message:
+        'This will remove the timesheet from the finance queue and send it back for another manager review before payment can be processed.',
+      confirmLabel: 'Send back to manager',
+      cancelLabel: 'Keep in finance',
+      summaryItems: [
+        {
+          key: 'employee',
+          label: 'Employee',
+          value: getSubmitterDisplayLabel(timesheet.consultantName),
+        },
+        {
+          key: 'week',
+          label: 'Week of',
+          value: formatWeekStart(timesheet.weekStart),
+        },
+        {
+          key: 'comment',
+          label: 'Return comment',
+          value: trimmedComment,
+        },
+      ],
+    })
+
+    if (result !== 'confirm') {
+      setReturnDialogOpen(true)
+      return
+    }
 
     setSubmitting(true)
     setFeedback(null)
@@ -287,7 +321,7 @@ export default function FinancePaymentPage() {
     try {
       await financeReviewTimesheet(id, {
         action: 'RETURN',
-        comment: returnComment.trim(),
+        comment: trimmedComment,
       })
       navigate(backDestination, { replace: true })
     } catch (err) {
@@ -351,15 +385,6 @@ export default function FinancePaymentPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
       <PageHeader title={canReturnToManager ? 'Process Payment' : 'Timesheet Detail'}>
-        {canReturnToManager && (
-          <Button
-            variant="outlined"
-            color="warning"
-            onClick={() => setReturnDialogOpen(true)}
-          >
-            Return to Manager
-          </Button>
-        )}
         <Button
           variant="outlined"
           startIcon={<ArrowBackIcon />}
@@ -473,6 +498,7 @@ export default function FinancePaymentPage() {
               submitting={submitting}
               nextId={nextId}
               onProcessPayment={handleProcessPayment}
+              onOpenReturnDialog={() => setReturnDialogOpen(true)}
               formatCurrency={formatCurrency}
               saveState={paymentState}
               disabledReason={disabledReason}
@@ -519,11 +545,11 @@ export default function FinancePaymentPage() {
           </Button>
           <Button
             onClick={handleReturnToManager}
-            color="warning"
+            color="error"
             variant="contained"
             disabled={submitting || !returnComment.trim()}
           >
-            {submitting ? 'Returning...' : 'Confirm return'}
+            {submitting ? 'Sending back...' : 'Review send back'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import FinancePaymentPage from './FinancePaymentPage.jsx'
 
@@ -61,8 +61,15 @@ vi.mock('../../components/shared/WeeklyMatrix.jsx', () => ({
 }))
 
 vi.mock('./PaymentDetailsPanel.jsx', () => ({
-  default: function MockPaymentDetailsPanel() {
-    return <div>PaymentDetailsPanel</div>
+  default: function MockPaymentDetailsPanel({ onOpenReturnDialog }) {
+    return (
+      <div>
+        <div>PaymentDetailsPanel</div>
+        <button type="button" onClick={onOpenReturnDialog}>
+          Send Back to Manager
+        </button>
+      </div>
+    )
   },
 }))
 
@@ -133,6 +140,39 @@ describe('FinancePaymentPage', () => {
   it('shows the return-to-manager action for approved timesheets', () => {
     render(<FinancePaymentPage />)
 
-    expect(screen.getByRole('button', { name: 'Return to Manager' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Send Back to Manager' })).toBeInTheDocument()
+  })
+
+  it('confirms before sending a timesheet back to the line manager', async () => {
+    mocks.confirm.mockResolvedValue('confirm')
+    mocks.financeReviewTimesheet.mockResolvedValue({})
+
+    render(<FinancePaymentPage />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Send Back to Manager' }))
+    fireEvent.change(screen.getByLabelText('Return comment'), {
+      target: { value: 'Rates need another manager review.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review send back' }))
+
+    await waitFor(() => {
+      expect(mocks.confirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Send this timesheet back to the line manager?',
+          confirmLabel: 'Send back to manager',
+          variant: 'danger',
+          summaryItems: expect.arrayContaining([
+            expect.objectContaining({ label: 'Return comment', value: 'Rates need another manager review.' }),
+          ]),
+        })
+      )
+    })
+
+    await waitFor(() => {
+      expect(mocks.financeReviewTimesheet).toHaveBeenCalledWith('ts-1', {
+        action: 'RETURN',
+        comment: 'Rates need another manager review.',
+      })
+    })
   })
 })

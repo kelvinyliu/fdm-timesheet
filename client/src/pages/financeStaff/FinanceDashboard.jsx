@@ -127,7 +127,7 @@ export default function FinanceDashboard() {
             value={approved.length}
             subtitle="Approved and ready to process"
             color="#C58A00"
-            onClick={() => navigate('/finance/timesheets')}
+            onClick={() => navigate('/finance/timesheets?tab=to-pay')}
             delay={80}
           />
         </Grid>
@@ -139,7 +139,7 @@ export default function FinanceDashboard() {
             value={completed.length}
             subtitle="Already processed"
             color="#2E7D32"
-            onClick={() => navigate('/finance/timesheets')}
+            onClick={() => navigate('/finance/timesheets?tab=paid')}
             delay={160}
           />
         </Grid>
@@ -151,7 +151,7 @@ export default function FinanceDashboard() {
             value={recentlyApproved}
             subtitle="Approved in the last 7 days"
             color="#1976D2"
-            onClick={() => navigate('/finance/timesheets?status=APPROVED')}
+            onClick={() => navigate('/finance/timesheets?tab=to-pay')}
             delay={240}
           />
         </Grid>

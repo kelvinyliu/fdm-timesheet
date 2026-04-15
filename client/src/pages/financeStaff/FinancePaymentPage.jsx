@@ -12,6 +12,7 @@ import FinanceNotesPanel from './FinanceNotesPanel.jsx'
 import PaymentDetailsPanel from './PaymentDetailsPanel.jsx'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
+import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { useConfirmation } from '../../context/useConfirmation.js'
@@ -103,7 +104,7 @@ function serializePaymentDraft(bucketRates, notes) {
 
 export default function FinancePaymentPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const location = useLocation()
   const navigate = useNavigate()
   const revalidator = useRevalidator()
@@ -162,6 +163,9 @@ export default function FinancePaymentPage() {
     { incoming: 0, outgoing: 0 }
   )
   const netMargin = totals.incoming - totals.outgoing
+  const invalidBucketCount = computedBuckets.filter(
+    (item) => !item.hasValidBillRate || !item.hasValidPayRate
+  ).length
 
   function getNextApprovedId() {
     const idx = approvedQueue.findIndex((ts) => ts.id === id)
@@ -174,6 +178,24 @@ export default function FinancePaymentPage() {
 
   const nextId = getNextApprovedId()
   const isDirty = serializePaymentDraft(bucketRates, notes) !== savedDraftSnapshot
+  const disabledReason =
+    computedBuckets.length === 0
+      ? 'No rate-bearing work categories are available for payment on this timesheet.'
+      : invalidBucketCount > 0
+        ? `Add valid bill and pay rates for ${invalidBucketCount} work categor${invalidBucketCount === 1 ? 'y' : 'ies'} before processing.`
+        : ''
+  const paymentState = submitting
+    ? { state: 'saving', message: 'Processing payment...' }
+    : feedback?.severity === 'error'
+      ? { state: 'error', message: 'Payment processing failed' }
+      : isDirty
+        ? {
+            state: 'dirty',
+            message: `${Object.keys(bucketRates).length > 0 ? 'Rate' : 'Payment'} changes ready to process`,
+          }
+        : isPaymentReady
+          ? { state: 'saved', message: 'Rates complete and ready to process' }
+          : { state: 'idle', message: 'Complete the required rate fields' }
 
   useUnsavedChangesGuard({
     isDirty,
@@ -313,6 +335,12 @@ export default function FinancePaymentPage() {
         </Alert>
       )}
 
+      {timesheet?.status === 'APPROVED' && (
+        <Box sx={{ mb: 3 }}>
+          <SaveStateBanner state={paymentState.state} message={paymentState.message} />
+        </Box>
+      )}
+
       {timesheet && (
         <>
           <Box sx={{ mb: 4, pb: 4, borderBottom: '1px solid', borderColor: 'divider' }}>
@@ -391,6 +419,8 @@ export default function FinancePaymentPage() {
               nextId={nextId}
               onProcessPayment={handleProcessPayment}
               formatCurrency={formatCurrency}
+              saveState={paymentState}
+              disabledReason={disabledReason}
             />
           )}
 

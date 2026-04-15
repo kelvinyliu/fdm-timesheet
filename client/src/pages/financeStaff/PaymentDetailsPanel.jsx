@@ -9,6 +9,8 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import FastForwardIcon from '@mui/icons-material/FastForward'
 import PaymentIcon from '@mui/icons-material/Payment'
+import SaveStateBanner from '../../components/shared/SaveStateBanner.jsx'
+import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
 import { palette } from '../../theme.js'
 import { getWorkBucketDisplayLabel } from '../../utils/displayLabels.js'
 import { getWorkBucketKey } from '../../utils/timesheetMatrix.js'
@@ -37,6 +39,8 @@ export default function PaymentDetailsPanel({
   nextId,
   onProcessPayment,
   formatCurrency,
+  saveState,
+  disabledReason,
 }) {
   return (
     <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
@@ -102,6 +106,17 @@ export default function PaymentDetailsPanel({
 
         {computedBuckets.map((item) => {
           const bucketKey = getWorkBucketKey(item)
+          const showBillRateError = item.entryKind === 'CLIENT' && !item.hasValidBillRate
+          const showPayRateError = !item.hasValidPayRate
+          const billRateHelper =
+            item.entryKind === 'INTERNAL'
+              ? 'Internal work uses a fixed bill rate of £0.00.'
+              : showBillRateError
+                ? 'Enter a bill rate greater than 0.'
+                : undefined
+          const payRateHelper = showPayRateError
+            ? 'Enter a pay rate greater than 0.'
+            : undefined
 
           return (
             <Fragment key={bucketKey}>
@@ -138,6 +153,8 @@ export default function PaymentDetailsPanel({
                 }}
                 disabled={item.entryKind === 'INTERNAL'}
                 fullWidth
+                error={showBillRateError}
+                helperText={billRateHelper}
               />
 
               <TextField
@@ -162,6 +179,8 @@ export default function PaymentDetailsPanel({
                   htmlInput: { min: 0.01, step: '0.01' },
                 }}
                 fullWidth
+                error={showPayRateError}
+                helperText={payRateHelper}
               />
             </Fragment>
           )
@@ -316,38 +335,50 @@ export default function PaymentDetailsPanel({
         />
       </Box>
 
-      <Box sx={{ mt: 3 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="flex-end">
+      <StickyActionBar
+        sx={{ mt: 3 }}
+        secondary={
+          <Stack spacing={0.75}>
+            {saveState ? (
+              <SaveStateBanner state={saveState.state} message={saveState.message} />
+            ) : null}
+            {disabledReason ? (
+              <Typography variant="body2" sx={{ color: palette.textSecondary }}>
+                {disabledReason}
+              </Typography>
+            ) : null}
+          </Stack>
+        }
+      >
+        <Button
+          variant="contained"
+          color="primary"
+          size="large"
+          startIcon={<PaymentIcon />}
+          onClick={() => {
+            void onProcessPayment(false)
+          }}
+          disabled={submitting || !isPaymentReady}
+          fullWidth={isMobile}
+        >
+          Process Payment
+        </Button>
+        {nextId && (
           <Button
             variant="contained"
             color="primary"
             size="large"
-            startIcon={<PaymentIcon />}
+            startIcon={<FastForwardIcon />}
             onClick={() => {
-              void onProcessPayment(false)
+              void onProcessPayment(true)
             }}
             disabled={submitting || !isPaymentReady}
             fullWidth={isMobile}
           >
-            Process Payment
+            Process & Next
           </Button>
-          {nextId && (
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              startIcon={<FastForwardIcon />}
-              onClick={() => {
-                void onProcessPayment(true)
-              }}
-              disabled={submitting || !isPaymentReady}
-              fullWidth={isMobile}
-            >
-              Process & Next
-            </Button>
-          )}
-        </Stack>
-      </Box>
+        )}
+      </StickyActionBar>
     </Box>
   )
 }

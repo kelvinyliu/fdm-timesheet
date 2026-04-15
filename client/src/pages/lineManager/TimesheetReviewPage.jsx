@@ -23,6 +23,7 @@ import BlockIcon from '@mui/icons-material/Block'
 import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
 import FieldGroup from '../../components/shared/FieldGroup.jsx'
+import StickyActionBar from '../../components/shared/StickyActionBar.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
 import { reviewTimesheet } from '../../api/timesheets'
@@ -44,7 +45,7 @@ const REJECTION_PRESETS = [
 
 export default function TimesheetReviewPage() {
   const theme = useTheme()
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const location = useLocation()
   const navigate = useNavigate()
   const revalidator = useRevalidator()
@@ -195,6 +196,9 @@ export default function TimesheetReviewPage() {
 
   const weekDates = timesheet ? buildWeekDates(timesheet.weekStart) : []
   const matrixRows = timesheet ? entriesToReadOnlyMatrixRows(timesheet.entries ?? []) : []
+  const queueContextMessage = nextId
+    ? 'Approve & Next or Reject & Next saves this decision and immediately opens the next pending timesheet in your queue.'
+    : 'This is the last pending timesheet in your current queue.'
 
   return (
     <Box>
@@ -284,79 +288,87 @@ export default function TimesheetReviewPage() {
           />
 
           {timesheet.status === 'PENDING' && (
-            <Box sx={{ mt: 4, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-              <Typography
-                sx={{
-                  fontFamily: '"Outfit", system-ui, sans-serif',
-                  fontSize: '0.72rem',
-                  fontWeight: 500,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.2em',
-                  color: 'text.secondary',
-                  mb: 2,
-                }}
+            <StickyActionBar
+              sx={{ mt: 4 }}
+              secondary={
+                <Stack spacing={0.75}>
+                  <Typography
+                    sx={{
+                      fontFamily: '"Outfit", system-ui, sans-serif',
+                      fontSize: '0.72rem',
+                      fontWeight: 500,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.2em',
+                      color: 'text.secondary',
+                    }}
+                  >
+                    Decision
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.primary' }}>
+                    Review totals: {timesheet.totalHours != null ? Number(timesheet.totalHours).toFixed(2) : '-'} hours for{' '}
+                    {getSubmitterDisplayLabel(timesheet.consultantName)} in the week starting{' '}
+                    {formatWeekStart(timesheet.weekStart)}.
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {queueContextMessage}
+                  </Typography>
+                </Stack>
+              }
+            >
+              <Button
+                variant="contained"
+                color="success"
+                size="large"
+                startIcon={<CheckCircleIcon />}
+                onClick={() => openApproveDialog(false)}
+                disabled={submitting}
+                fullWidth={isMobile}
               >
-                Decision
-              </Typography>
-              <Stack spacing={3}>
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <Button
-                    variant="contained"
-                    color="success"
-                    startIcon={<CheckCircleIcon />}
-                    onClick={() => openApproveDialog(false)}
-                    disabled={submitting}
-                    fullWidth={isMobile}
-                  >
-                    Approve
-                  </Button>
-                  {nextId && (
-                    <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={<FastForwardIcon />}
-                      onClick={() => openApproveDialog(true)}
-                      disabled={submitting}
-                      fullWidth={isMobile}
-                      sx={{ backgroundColor: '#25562b', '&:hover': { backgroundColor: '#1e4a23' } }}
-                    >
-                      Approve & Next
-                    </Button>
-                  )}
-                </Stack>
-
-                <Divider />
-
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                  <Button
-                    variant="contained"
-                    color="error"
-                    startIcon={<CancelIcon />}
-                    onClick={() => openRejectDialog(false)}
-                    disabled={submitting}
-                    fullWidth={isMobile}
-                  >
-                    Reject
-                  </Button>
-                  {nextId && (
-                    <Button
-                      variant="contained"
-                      color="error"
-                      startIcon={<FastForwardIcon />}
-                      onClick={() => openRejectDialog(true)}
-                      disabled={submitting}
-                      fullWidth={isMobile}
-                      sx={{
-                        backgroundColor: '#b22a25',
-                        '&:hover': { backgroundColor: '#8a201c' },
-                      }}
-                    >
-                      Reject & Next
-                    </Button>
-                  )}
-                </Stack>
-              </Stack>
-            </Box>
+                Approve
+              </Button>
+              {nextId && (
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="large"
+                  startIcon={<FastForwardIcon />}
+                  onClick={() => openApproveDialog(true)}
+                  disabled={submitting}
+                  fullWidth={isMobile}
+                  sx={{ backgroundColor: '#25562b', '&:hover': { backgroundColor: '#1e4a23' } }}
+                >
+                  Approve & Next
+                </Button>
+              )}
+              <Button
+                variant="contained"
+                color="error"
+                size="large"
+                startIcon={<CancelIcon />}
+                onClick={() => openRejectDialog(false)}
+                disabled={submitting}
+                fullWidth={isMobile}
+              >
+                Reject
+              </Button>
+              {nextId && (
+                <Button
+                  variant="contained"
+                  color="error"
+                  size="large"
+                  startIcon={<FastForwardIcon />}
+                  onClick={() => openRejectDialog(true)}
+                  disabled={submitting}
+                  fullWidth={isMobile}
+                  sx={{
+                    backgroundColor: '#b22a25',
+                    '&:hover': { backgroundColor: '#8a201c' },
+                  }}
+                >
+                  Reject & Next
+                </Button>
+              )}
+            </StickyActionBar>
           )}
 
           <Dialog

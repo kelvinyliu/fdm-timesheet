@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLoaderData, useNavigate } from 'react-router'
+import { useLoaderData, useNavigate, useSearchParams } from 'react-router'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import Button from '@mui/material/Button'
@@ -41,11 +41,12 @@ export default function TimesheetListPage({
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { timesheets, eligibility, error: loadError, eligibilityError } = useLoaderData()
   const [error, setError] = useState(loadError)
   const [missingWeekDialogOpen, setMissingWeekDialogOpen] = useState(false)
   const [creatingWeekStart, setCreatingWeekStart] = useState(null)
-  const [activeTab, setActiveTab] = useState(0)
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') === 'approved' ? 1 : 0)
 
   const currentMonday = eligibility.currentWeekStart || getCurrentMonday()
   const missingPastWeekStarts = eligibility.missingPastWeekStarts ?? []
@@ -226,7 +227,7 @@ export default function TimesheetListPage({
       )}
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)}>
+        <Tabs value={activeTab} onChange={(_e, val) => { setActiveTab(val); navigate(`${basePath}${val === 1 ? '?tab=approved' : ''}`, { replace: true }) }}>
           <Tab label="Pending & Drafts" />
           <Tab label="Approved & Paid" />
         </Tabs>

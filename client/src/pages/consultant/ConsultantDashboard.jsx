@@ -251,7 +251,7 @@ export default function ConsultantDashboard() {
             value={drafts.length}
             subtitle="Still being worked on"
             color="#1976D2"
-            onClick={() => navigate('/consultant/timesheets')}
+            onClick={() => navigate('/consultant/timesheets?tab=approved')}
             delay={80}
           />
         </Grid>
@@ -263,7 +263,7 @@ export default function ConsultantDashboard() {
             value={pending.length}
             subtitle="Waiting for review"
             color="#C58A00"
-            onClick={() => navigate('/consultant/timesheets')}
+            onClick={() => navigate('/consultant/timesheets?tab=approved')}
             delay={160}
           />
         </Grid>
@@ -275,7 +275,7 @@ export default function ConsultantDashboard() {
             value={rejected.length}
             subtitle="Needs correction"
             color="#D32F2F"
-            onClick={() => navigate('/consultant/timesheets')}
+            onClick={() => navigate('/consultant/timesheets?tab=approved')}
             delay={240}
           />
         </Grid>
@@ -287,7 +287,7 @@ export default function ConsultantDashboard() {
             value={approved.length}
             subtitle="Completed submissions"
             color="#2E7D32"
-            onClick={() => navigate('/consultant/timesheets')}
+            onClick={() => navigate('/consultant/timesheets?tab=approved')}
             delay={320}
           />
         </Grid>
@@ -326,7 +326,7 @@ export default function ConsultantDashboard() {
           <Button
             size="small"
             variant="outlined"
-            onClick={() => navigate('/consultant/timesheets')}
+            onClick={() => navigate('/consultant/timesheets?tab=approved')}
           >
             View all timesheets
           </Button>

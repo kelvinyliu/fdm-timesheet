@@ -16,6 +16,7 @@ import Paper from '@mui/material/Paper'
 import Alert from '@mui/material/Alert'
 import Button from '@mui/material/Button'
 import Badge from '@mui/material/Badge'
+import Pagination from '@mui/material/Pagination'
 import useMediaQuery from '@mui/material/useMediaQuery'
 import { useTheme } from '@mui/material/styles'
 import TuneIcon from '@mui/icons-material/Tune'
@@ -32,8 +33,9 @@ import ActionBadge from '../../components/shared/ActionBadge'
 
 const ACTION_OPTIONS = ['SUBMISSION', 'APPROVAL', 'REJECTION', 'PROCESSING']
 
-const FILTER_CONFIG = { action: '', author: '', from: '', to: '' }
+const QUERY_STATE_CONFIG = { action: '', author: '', from: '', to: '', page: '1' }
 const DATE_FORMAT = 'YYYY-MM-DD'
+const PAGE_SIZE = 25
 
 function formatDetail(action, detail) {
   if (detail === null || detail === undefined) return '-'
@@ -100,17 +102,19 @@ export default function AuditLogPage() {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { entries, error: loadError } = useLoaderData()
   const [error, setError] = useState(loadError)
-  const [filterValues, setFilterValues] = useQueryStateObject(FILTER_CONFIG)
+  const [queryState, setQueryState] = useQueryStateObject(QUERY_STATE_CONFIG)
   const [filterSheetOpen, setFilterSheetOpen] = useState(false)
   const [selectedMobileId, setSelectedMobileId] = useState(null)
 
-  const actionFilter = filterValues.action || null
-  const authorFilter = filterValues.author || null
-  const dateFrom = filterValues.from ? dayjs(filterValues.from) : null
-  const dateTo = filterValues.to ? dayjs(filterValues.to) : null
+  const actionFilter = queryState.action || null
+  const authorFilter = queryState.author || null
+  const dateFrom = queryState.from ? dayjs(queryState.from) : null
+  const dateTo = queryState.to ? dayjs(queryState.to) : null
+  const parsedPage = Number.parseInt(queryState.page, 10)
+  const requestedPage = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1
 
   const handleClearFilters = () => {
-    setFilterValues({ action: '', author: '', from: '', to: '' })
+    setQueryState({ action: '', author: '', from: '', to: '', page: '1' })
   }
 
   useEffect(() => {
@@ -129,7 +133,7 @@ export default function AuditLogPage() {
       <Autocomplete
         options={ACTION_OPTIONS}
         value={actionFilter}
-        onChange={(_e, value) => setFilterValues({ action: value ?? '' })}
+        onChange={(_e, value) => setQueryState({ action: value ?? '', page: '1' })}
         size="small"
         sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 180px' }, minWidth: { sm: 180 } }}
         renderInput={(params) => <TextField {...params} label="Action" />}
@@ -137,7 +141,7 @@ export default function AuditLogPage() {
       <Autocomplete
         options={authorOptions}
         value={authorFilter}
-        onChange={(_e, value) => setFilterValues({ author: value ?? '' })}
+        onChange={(_e, value) => setQueryState({ author: value ?? '', page: '1' })}
         size="small"
         sx={{ width: { xs: '100%', sm: 'auto' }, flex: { sm: '1 1 200px' }, minWidth: { sm: 200 } }}
         renderInput={(params) => <TextField {...params} label="Performed By" />}
@@ -146,7 +150,10 @@ export default function AuditLogPage() {
         label="From"
         value={dateFrom}
         onChange={(value) =>
-          setFilterValues({ from: value && value.isValid() ? value.format(DATE_FORMAT) : '' })
+          setQueryState({
+            from: value && value.isValid() ? value.format(DATE_FORMAT) : '',
+            page: '1',
+          })
         }
         slotProps={{
           field: { clearable: true, size: 'small' },
@@ -158,7 +165,10 @@ export default function AuditLogPage() {
         label="To"
         value={dateTo}
         onChange={(value) =>
-          setFilterValues({ to: value && value.isValid() ? value.format(DATE_FORMAT) : '' })
+          setQueryState({
+            to: value && value.isValid() ? value.format(DATE_FORMAT) : '',
+            page: '1',
+          })
         }
         slotProps={{
           field: { clearable: true, size: 'small' },
@@ -177,7 +187,22 @@ export default function AuditLogPage() {
     return true
   })
 
-  const selectedMobileLog = entries.find(e => e.id === selectedMobileId)
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const currentPage = Math.min(requestedPage, totalPages)
+  const pageStart = (currentPage - 1) * PAGE_SIZE
+  const pageEnd = pageStart + PAGE_SIZE
+  const pagedEntries = filtered.slice(pageStart, pageEnd)
+  const selectedMobileLog = pagedEntries.find((e) => e.id === selectedMobileId) ?? null
+
+  useEffect(() => {
+    if (queryState.page !== String(currentPage)) {
+      setQueryState({ page: String(currentPage) })
+    }
+  }, [currentPage, queryState.page, setQueryState])
+
+  useEffect(() => {
+    setSelectedMobileId(null)
+  }, [currentPage, actionFilter, authorFilter, queryState.from, queryState.to])
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -244,7 +269,7 @@ export default function AuditLogPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filtered.map((e) => (
+                {pagedEntries.map((e) => (
                   <TableRow key={e.id}>
                     <TableCell sx={{ whiteSpace: 'nowrap' }}>
                       <Typography
@@ -349,7 +374,7 @@ export default function AuditLogPage() {
               divider={<Box sx={{ borderBottom: '1px solid', borderColor: 'divider' }} />}
               spacing={0}
             >
-              {filtered.map((e) => (
+              {pagedEntries.map((e) => (
                 <Box
                   key={e.id}
                   onClick={() => setSelectedMobileId(e.id)}
@@ -431,16 +456,39 @@ export default function AuditLogPage() {
         )}
 
         {filtered.length > 0 && (
-          <Typography
-            sx={{
-              mt: 2,
-              fontFamily: '"JetBrains Mono", monospace',
-              fontSize: '0.7rem',
-              color: 'text.secondary',
-            }}
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            alignItems={{ xs: 'stretch', sm: 'center' }}
+            justifyContent="space-between"
+            sx={{ mt: 2.5 }}
           >
-            Showing {filtered.length} of {entries.length} entries
-          </Typography>
+            <Typography
+              sx={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.7rem',
+                color: 'text.secondary',
+              }}
+            >
+              Showing {pageStart + 1}-{Math.min(pageEnd, filtered.length)} of {filtered.length} entries
+              {filtered.length !== entries.length ? ` (${entries.length} total)` : ''}
+            </Typography>
+
+            {totalPages > 1 && (
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={(_event, page) => setQueryState({ page: String(page) })}
+                color="primary"
+                shape="circular"
+                size={isMobile ? 'medium' : 'small'}
+                siblingCount={isMobile ? 0 : 1}
+                boundaryCount={1}
+                showFirstButton
+                showLastButton
+              />
+            )}
+          </Stack>
         )}
       </Box>
     </LocalizationProvider>

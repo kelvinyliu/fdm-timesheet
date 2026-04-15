@@ -35,8 +35,9 @@ import {
   timesheetReviewLoader,
   userManagementLoader,
 } from './routes/loaders.js'
+import { skipRevalidationOnSearchChange } from './routes/revalidation.js'
 
-function lazyPage(importPage, props = {}, loader) {
+function lazyPage(importPage, props = {}, loader, shouldRevalidate) {
   return async () => {
     const module = await importPage()
     const Page = module.default
@@ -45,6 +46,7 @@ function lazyPage(importPage, props = {}, loader) {
     }
 
     if (loader) route.loader = loader
+    if (shouldRevalidate) route.shouldRevalidate = shouldRevalidate
 
     return route
   }
@@ -230,7 +232,8 @@ const router = createBrowserRouter(
               lazy={lazyPage(
                 () => import('./pages/financeStaff/FinancePayRatesPage.jsx'),
                 {},
-                financePayRatesLoader
+                financePayRatesLoader,
+                skipRevalidationOnSearchChange
               )}
             />
           </Route>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useLoaderData } from 'react-router'
 import Alert from '@mui/material/Alert'
 import Box from '@mui/material/Box'
@@ -46,49 +46,41 @@ function formatRateLabel(rate) {
   return `Saved default: £${Number(rate).toFixed(2)}/hr`
 }
 
+function createSaveState(loadError) {
+  return {
+    state: loadError ? 'error' : 'idle',
+    message: loadError
+      ? 'Employee pay rates could not be loaded.'
+      : 'All default pay rates are up to date.',
+  }
+}
+
 export default function FinancePayRatesPage() {
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
   const { consultants: loadedConsultants, error: loadError } = useLoaderData()
   const [{ q: searchQuery }, setQueryState] = useQueryStateObject({ q: '' })
 
-  const [consultants, setConsultants] = useState(loadedConsultants)
-  const [pendingRates, setPendingRates] = useState(() =>
-    Object.fromEntries(
-      loadedConsultants.map((consultant) => [consultant.id, getPendingRateValue(consultant)])
-    )
-  )
+  const [pendingRates, setPendingRates] = useState({})
+  const [savedConsultantOverrides, setSavedConsultantOverrides] = useState({})
   const [savingIds, setSavingIds] = useState([])
   const [error, setError] = useState(loadError)
   const [rowSaveErrors, setRowSaveErrors] = useState({})
-  const [saveState, setSaveState] = useState({
-    state: 'idle',
-    message: 'All default pay rates are up to date.',
-  })
+  const [saveState, setSaveState] = useState(() => createSaveState(loadError))
 
-  useEffect(() => {
-    setConsultants(loadedConsultants)
-    setPendingRates(
-      Object.fromEntries(
-        loadedConsultants.map((consultant) => [consultant.id, getPendingRateValue(consultant)])
-      )
-    )
-    setSavingIds([])
-    setRowSaveErrors({})
-    setError(loadError)
-    setSaveState({
-      state: loadError ? 'error' : 'idle',
-      message:
-        loadError
-          ? 'Employee pay rates could not be loaded.'
-          : 'All default pay rates are up to date.',
-    })
-  }, [loadedConsultants, loadError])
+  const consultants = useMemo(
+    () =>
+      loadedConsultants.map(
+        (consultant) => savedConsultantOverrides[consultant.id] ?? consultant
+      ),
+    [loadedConsultants, savedConsultantOverrides]
+  )
 
   const rowMetaById = Object.fromEntries(
     consultants.map((consultant) => {
-      const currentRate = pendingRates[consultant.id] ?? ''
       const savedRate = getPendingRateValue(consultant)
+      const hasPendingRate = Object.prototype.hasOwnProperty.call(pendingRates, consultant.id)
+      const currentRate = hasPendingRate ? pendingRates[consultant.id] : savedRate
       const isDirty = currentRate !== savedRate
       const validationMessage = isDirty ? getValidationMessage(currentRate) : ''
 
@@ -121,7 +113,15 @@ export default function FinancePayRatesPage() {
   })
 
   function handleRateChange(consultantId, value) {
-    setPendingRates((prev) => ({ ...prev, [consultantId]: value }))
+    setPendingRates((prev) => {
+      const next = { ...prev }
+      if (value === rowMetaById[consultantId]?.savedRate) {
+        delete next[consultantId]
+      } else {
+        next[consultantId] = value
+      }
+      return next
+    })
     setError('')
     setRowSaveErrors((prev) => {
       if (!prev[consultantId]) return prev
@@ -179,13 +179,14 @@ export default function FinancePayRatesPage() {
         result.reason?.message ?? 'This pay rate could not be saved. Try again.'
     })
 
-    setConsultants((prev) =>
-      prev.map((consultant) => updatedConsultantsById[consultant.id] ?? consultant)
-    )
+    setSavedConsultantOverrides((prev) => ({
+      ...prev,
+      ...updatedConsultantsById,
+    }))
     setPendingRates((prev) => {
       const next = { ...prev }
-      Object.values(updatedConsultantsById).forEach((consultant) => {
-        next[consultant.id] = getPendingRateValue(consultant)
+      Object.keys(updatedConsultantsById).forEach((consultantId) => {
+        delete next[consultantId]
       })
       return next
     })

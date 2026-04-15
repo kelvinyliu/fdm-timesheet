@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { MemoryRouter, useLocation } from 'react-router'
 import UserManagementPage from './UserManagementPage.jsx'
 
 const mocks = vi.hoisted(() => ({
@@ -10,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   useLoaderData: vi.fn(),
   useMediaQuery: vi.fn(),
   useRevalidator: vi.fn(),
-  useSearchParams: vi.fn(),
 }))
 
 vi.mock('react-router', async () => {
@@ -19,7 +19,6 @@ vi.mock('react-router', async () => {
     ...actual,
     useLoaderData: mocks.useLoaderData,
     useRevalidator: mocks.useRevalidator,
-    useSearchParams: mocks.useSearchParams,
   }
 })
 
@@ -109,6 +108,20 @@ vi.mock('../../context/useUnsavedChanges.js', () => ({
   useUnsavedChangesGuard: vi.fn(),
 }))
 
+function LocationProbe() {
+  const location = useLocation()
+  return <div data-testid="location-search">{location.search}</div>
+}
+
+function renderPage(initialEntry = '/admin/users?role=CONSULTANT') {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <LocationProbe />
+      <UserManagementPage />
+    </MemoryRouter>
+  )
+}
+
 describe('UserManagementPage', () => {
   beforeEach(() => {
     mocks.confirm.mockReset()
@@ -118,7 +131,6 @@ describe('UserManagementPage', () => {
     mocks.useLoaderData.mockReset()
     mocks.useMediaQuery.mockReset()
     mocks.useRevalidator.mockReset()
-    mocks.useSearchParams.mockReset()
 
     mocks.useLoaderData.mockReturnValue({
       users: [
@@ -129,17 +141,10 @@ describe('UserManagementPage', () => {
     })
     mocks.useMediaQuery.mockReturnValue(false)
     mocks.useRevalidator.mockReturnValue({ revalidate: vi.fn() })
-    mocks.useSearchParams.mockImplementation(() => {
-      throw new Error('Role filter should not use router search params.')
-    })
-
-    window.history.replaceState(null, '', '/admin/users?role=CONSULTANT')
   })
 
   it('filters locally and updates the URL without using router search params', () => {
-    const replaceStateSpy = vi.spyOn(window.history, 'replaceState')
-
-    render(<UserManagementPage />)
+    renderPage()
 
     expect(screen.getByText('Alice Consultant')).toBeInTheDocument()
     expect(screen.queryByText('Sam Admin')).not.toBeInTheDocument()
@@ -150,12 +155,7 @@ describe('UserManagementPage', () => {
 
     expect(screen.queryByText('Alice Consultant')).not.toBeInTheDocument()
     expect(screen.getByText('Sam Admin')).toBeInTheDocument()
-    expect(window.location.search).toBe('?role=SYSTEM_ADMIN')
-    expect(replaceStateSpy).toHaveBeenLastCalledWith(
-      window.history.state,
-      '',
-      '/admin/users?role=SYSTEM_ADMIN'
-    )
+    expect(screen.getByTestId('location-search')).toHaveTextContent('?role=SYSTEM_ADMIN')
 
     fireEvent.change(screen.getByLabelText('Role'), {
       target: { value: 'ALL' },
@@ -163,14 +163,13 @@ describe('UserManagementPage', () => {
 
     expect(screen.getByText('Alice Consultant')).toBeInTheDocument()
     expect(screen.getByText('Sam Admin')).toBeInTheDocument()
-    expect(window.location.search).toBe('')
-    expect(replaceStateSpy).toHaveBeenLastCalledWith(window.history.state, '', '/admin/users')
+    expect(screen.getByTestId('location-search')).toHaveTextContent('')
   })
 
   it('shows success feedback after saving a role change', async () => {
     mocks.updateUserRole.mockResolvedValue({})
 
-    render(<UserManagementPage />)
+    renderPage('/admin/users')
 
     fireEvent.change(screen.getByLabelText('Role for Alice Consultant'), {
       target: { value: 'LINE_MANAGER' },

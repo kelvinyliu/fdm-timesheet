@@ -32,8 +32,17 @@ vi.mock('../../components/shared/PageHeader', () => ({
 }))
 
 vi.mock('../../components/shared/DetailList.jsx', () => ({
-  default: function MockDetailList() {
-    return <div>DetailList</div>
+  default: function MockDetailList({ items }) {
+    return (
+      <div>
+        {items.map((item) => (
+          <div key={item.key}>
+            <span>{item.label}</span>
+            <div>{item.value}</div>
+          </div>
+        ))}
+      </div>
+    )
   },
 }))
 
@@ -87,5 +96,33 @@ describe('TimesheetDetailPage', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/consultant/timesheets/ts-1/edit', {
       state: { returnTo: '/consultant/timesheets?tab=history' },
     })
+  })
+
+  it('shows the paid amount in the summary for completed timesheets', () => {
+    mocks.useLoaderData.mockReturnValue({
+      error: null,
+      timesheet: {
+        id: 'ts-1',
+        entries: [],
+        consultantName: 'Pat Pending',
+        status: 'COMPLETED',
+        submittedLate: false,
+        totalHours: 40,
+        totalPayAmount: 1234.5,
+        weekStart: '2026-04-06',
+        workSummary: [],
+      },
+    })
+
+    render(<TimesheetDetailPage />)
+
+    expect(screen.getByText('You were paid')).toBeInTheDocument()
+    expect(screen.getByText('£1,234.50')).toBeInTheDocument()
+  })
+
+  it('does not show the paid amount for non-completed timesheets', () => {
+    render(<TimesheetDetailPage />)
+
+    expect(screen.queryByText('You were paid')).not.toBeInTheDocument()
   })
 })

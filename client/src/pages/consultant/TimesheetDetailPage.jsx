@@ -10,6 +10,7 @@ import PageHeader from '../../components/shared/PageHeader'
 import DetailList from '../../components/shared/DetailList.jsx'
 import TimesheetStatusDisplay from '../../components/shared/TimesheetStatusDisplay.jsx'
 import WeeklyMatrix from '../../components/shared/WeeklyMatrix.jsx'
+import { formatCurrency } from '../../utils/currency.js'
 import { buildWeekDates, formatWeekStart } from '../../utils/dateFormatters'
 import { getWorkBucketDisplayLabel, getWorkSummaryDisplayLabel } from '../../utils/displayLabels'
 import { getConsultantVisibleStatus, isConsultantEditableStatus } from '../../utils/timesheetWorkflow.js'
@@ -75,6 +76,25 @@ export default function TimesheetDetailPage({ basePath = '/consultant/timesheets
       label: 'Work Categories',
       value: getWorkSummaryDisplayLabel(workSummary, 3),
     },
+    ...(timesheet.status === 'COMPLETED' && timesheet.totalPayAmount != null
+      ? [
+          {
+            key: 'paidAmount',
+            label: 'You were paid',
+            value: (
+              <Typography
+                variant="body2"
+                sx={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontWeight: 700,
+                }}
+              >
+                {formatCurrency(timesheet.totalPayAmount)}
+              </Typography>
+            ),
+          },
+        ]
+      : []),
   ]
 
   const weekDates = buildWeekDates(timesheet.weekStart)

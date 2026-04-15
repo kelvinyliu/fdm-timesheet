@@ -5,6 +5,7 @@ import ButtonBase from '@mui/material/ButtonBase'
 
 export default function DashboardCard({
   icon: Icon,
+  iconWrapperSx,
   label,
   value,
   subtitle,
@@ -63,20 +64,27 @@ export default function DashboardCard({
         {Icon ? (
           <Box
             sx={{
-              width: 44,
-              height: 44,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              width: 48,
+              height: 48,
+              borderRadius: '16px',
+              display: 'grid',
+              placeItems: 'center',
               mb: 2,
               backgroundColor: `${color}18`,
+              flexShrink: 0,
+              ...iconWrapperSx,
+
             }}
           >
-            <Icon sx={{ color, fontSize: '1.25rem' }} />
+            <Icon
+              sx={{
+                color,
+                fontSize: '1.4rem',
+                display: 'block',
+              }}
+            />
           </Box>
         ) : null}
-
         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {label}
         </Typography>

@@ -10,7 +10,7 @@ import Alert from '@mui/material/Alert'
 import Chip from '@mui/material/Chip'
 import Divider from '@mui/material/Divider'
 import PaymentsIcon from '@mui/icons-material/Payments'
-import TaskAltIcon from '@mui/icons-material/TaskAlt'
+import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong'
 import DashboardCard from '../../components/shared/DashboardCard'
 import StatusBadge from '../../components/shared/StatusBadge'
@@ -120,9 +120,10 @@ export default function FinanceDashboard() {
       )}
 
       <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md:4 }}>
           <DashboardCard
             icon={PaymentsIcon}
+            iconWrapperSx={{ transform: 'translateX(2.1rem)' }}
             label="Awaiting Payment"
             value={approved.length}
             subtitle="Approved and ready to process"
@@ -132,9 +133,9 @@ export default function FinanceDashboard() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md:4 }}>
           <DashboardCard
-            icon={TaskAltIcon}
+            icon={CheckCircleRoundedIcon}
             label="Paid"
             value={completed.length}
             subtitle="Already processed"
@@ -144,9 +145,10 @@ export default function FinanceDashboard() {
           />
         </Grid>
 
-        <Grid size={{ xs: 12, md: 4 }}>
+        <Grid size={{ xs: 12, md:4 }}>
           <DashboardCard
             icon={ReceiptLongIcon}
+            iconWrapperSx={{ transform: 'translateX(2.2rem)' }}
             label="Recently Approved"
             value={recentlyApproved}
             subtitle="Approved in the last 7 days"
